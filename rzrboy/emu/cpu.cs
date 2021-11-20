@@ -1,7 +1,17 @@
 ﻿namespace emu
 {
-    internal class cpu
+    public class cpu : IProcessingUnit
     {
-        reg reg = reg.DMG();
+        private reg reg = reg.DMG();
+        private mem mem = null;
+
+        public cpu(mem memory) 
+        {
+            mem = memory;
+        }
+
+        public void Tick()
+        {
+        }
     }
 }

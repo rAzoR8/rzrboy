@@ -48,7 +48,5 @@
         public const byte HFlagShift8 = 5;
         public const byte CFlagMask8 = 0b00010000; // CARRY
         public const byte CFlagShift8 = 4;
-
-
     }
 }

@@ -5,10 +5,36 @@
         ushort Start { get; }
         ushort End { get; }
 
-        byte this[ushort index]
+        byte this[ushort address]
         {
             get;
             set;
+        }
+    }
+
+    public class SectionComparer : IComparer<ISection>
+    {
+        public int Compare(ISection? x, ISection? y)
+        {
+            if (x != null && y != null)
+                return x.Start.CompareTo(y.Start);
+
+            if (x == null && y != null) return -1; // x is less
+            else if (x != null && y == null) return 1; // x is more
+            return 0;
+        }
+    }
+
+    // used to reflect address
+    public class EmptySection : ISection
+    {
+        public EmptySection(ushort address) { Start = address; End = address; }
+        public ushort Start { get; }
+        public ushort End { get; }
+        public byte this[ushort address]
+        {
+            get => throw new AccessViolationException();
+            set => throw new AccessViolationException();
         }
     }
 
@@ -27,7 +53,7 @@
             Array.Copy(init, mem, mem.Length);
         }
 
-        public byte this[ushort index] { get => mem[index-Start]; set => mem[index - Start] = value; }
+        public byte this[ushort address] { get => mem[address - Start]; set => mem[address - Start] = value; }
 
         public ushort Start { get; }
 
@@ -40,7 +66,7 @@
 
         public RSection(ushort start, ushort end, byte[] init) : base(start, end, init) { }
 
-        public new byte this[ushort index] { get => base.mem[index - Start]; }
+        public new byte this[ushort address] { get => base.mem[address - Start]; }
     }
 
     public class WSection : RWSection
@@ -49,6 +75,6 @@
 
         public WSection(ushort start, ushort end, byte[] init) : base(start, end, init) { }
 
-        public new byte this[ushort index] { set => base.mem[index - Start] = value; }
+        public new byte this[ushort address] { set => base.mem[address - Start] = value; }
     }
 }
