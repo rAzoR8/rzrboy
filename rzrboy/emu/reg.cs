@@ -1,9 +1,15 @@
 ﻿namespace emu
 {
-    public enum RegType : int
+    public enum Reg8 : int
     {
-        A, F, B, C, D, E, H, L, SP, PC
+        A, F, B, C, D, E, H, L
     }
+
+    public enum Reg16 : int
+    {
+       AF, BC,DE, HL, PC, SP
+    }
+
     public struct reg
     {
         private byte _flags;       
@@ -26,11 +32,69 @@
         public bool HalfCarry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
         public bool Carry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
 
-        //public byte this[RegType type]
-        //{
-        //    get => Find(address)[address];
-        //    set => Find(address)[address] = value;
-        //}
+        public byte this[Reg8 type]
+        {
+            get
+            {
+                switch (type)
+                {
+                    case Reg8.A: return A;
+                    case Reg8.F: return F;
+                    case Reg8.B: return B;
+                    case Reg8.C: return C;
+                    case Reg8.D: return D;
+                    case Reg8.E: return E;
+                    case Reg8.H: return H;
+                    case Reg8.L: return L;
+                    default: throw new ArgumentOutOfRangeException("type");
+                }
+            }
+            set
+            {
+                switch (type)
+                {
+                    case Reg8.A: A = value; break;
+                    case Reg8.F: F = value; break;
+                    case Reg8.B: B = value; break;
+                    case Reg8.C: C = value; break;
+                    case Reg8.D: D = value; break;
+                    case Reg8.E: E = value; break;
+                    case Reg8.H: H = value; break;
+                    case Reg8.L: L = value; break;
+                    default: throw new ArgumentOutOfRangeException("type");
+                }
+            }
+        }
+
+        public ushort this[Reg16 type]
+        {
+            get
+            {
+                switch (type)
+                {
+                    case Reg16.AF: return AF;
+                    case Reg16.BC: return BC;
+                    case Reg16.DE: return DE;
+                    case Reg16.HL: return HL;
+                    case Reg16.SP: return SP;
+                    case Reg16.PC: return PC;
+                    default: throw new ArgumentOutOfRangeException("type");
+                }
+            }
+            set
+            {
+                switch (type)
+                {
+                    case Reg16.AF: AF = value; break;
+                    case Reg16.BC: BC = value; break;
+                    case Reg16.DE: DE = value; break;
+                    case Reg16.HL: HL = value; break;
+                    case Reg16.SP: SP = value; break;
+                    case Reg16.PC: PC = value; break;
+                    default: throw new ArgumentOutOfRangeException("type");
+                }
+            }
+        }
 
         public override string ToString()
         {

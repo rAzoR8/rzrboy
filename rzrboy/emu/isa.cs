@@ -18,7 +18,7 @@
 
         public class ld_bc : instr
         {
-            //public ld_bc() : base(imm(1, r) { }
+            public ld_bc() : base(imm(Reg8.B, Reg8.C)) { }
         }
     }
 }

@@ -12,12 +12,8 @@
         public cpu(mem memory) 
         {
             mem = memory;
-            mem.Add(new RSection(0x0000, 0x3FFF)); // rom bank 0
 
-
-
-            op imm = instr.imm(1, reg.A);
-
+            mem.write(boot.DMG, 0x100);
         }
 
         public void Tick()

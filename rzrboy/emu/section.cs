@@ -85,9 +85,7 @@
 
         public void Add(ISection section)
         {
-            // sort by address
-            int pos = sections.FindIndex(0, s => section.Start < s.Start);
-            sections.Insert(pos == -1 ? 0 : pos, section);
+            sections.Add(section);
         }
 
         private ISection Find(ushort address)
