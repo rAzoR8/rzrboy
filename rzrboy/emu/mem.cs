@@ -5,33 +5,35 @@
         public AddressNotMappedException(ushort address) : base($"0x{address.ToString("X4")} not mapped to any memory section") { }
     }
 
-    public class mem : ISection
+    public class mem : ListSection
     {
-        private List<ISection> sections = new();
+        public const ushort BankSize = 0x4000; // 16k
 
-        public ushort Start => sections.First().Start;
-        public ushort End => sections.Last().End;
+        // nonswitchable
+        private RSection rom0 = null;
+        // switchable
+        private ProxySection romX = new();
 
-        public void Add(ISection section) 
+        private List<RSection> rombanks = new();
+
+        // todo: switchable
+        private ProxySection vram = new(new RWSection(0x8000, 0xA000));
+
+        // todo: switchable
+        private ProxySection eram = new (new RWSection(0xA000, 0xC000));
+
+        private RWSection wram = new RWSection(0xC000, 0xD000);
+
+        private RemapSection echo = new((ushort address) => (ushort)(address - 4096), 0xE000, 0xFDFF);
+
+        public mem()
         {
-            // sort by address
-            int pos = sections.FindIndex(0, s => section.Start < s.Start);
-            sections.Insert(pos == -1 ? 0 : pos, section);
-        }
-
-        private ISection Find(ushort address) 
-        {
-            EmptySection addr = new(address);
-            int pos = sections.BinarySearch(0, sections.Count, addr, new SectionComparer());
-            if (pos >= 0)
-                return sections[pos];
-            throw new AddressNotMappedException(address);
-        }
-
-        public byte this[ushort address] 
-        {
-            get => Find(address)[address]; 
-            set => Find(address)[address] = value;
+            Add(rom0);
+            Add(romX);
+            Add(vram);
+            Add(eram);
+            Add(wram);
+            Add(echo);
         }
     }
 }

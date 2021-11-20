@@ -22,6 +22,8 @@ namespace rzrboy.WinUI
             this.InitializeComponent();
         }
 
+        private emu.gb gb = new emu.gb();
+
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -29,6 +31,8 @@ namespace rzrboy.WinUI
             base.OnLaunched(args);
 
             Microsoft.Maui.Essentials.Platform.OnLaunched(args);
+
+            gb.Run();
         }
     }
 }

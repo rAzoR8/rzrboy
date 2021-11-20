@@ -1,16 +1,22 @@
 ﻿namespace emu
 {
+    public enum RegType : int
+    {
+        A, F, B, C, D, E, H, L, SP, PC
+    }
     public struct reg
     {
+        private byte _flags;       
+
         // REGISTERS
-        public byte A, F;
+        public byte A; public byte F { get => _flags; set => _flags = (byte)(value & FlagMask8); }
         public byte B, C;
         public byte D, E;
         public byte H, L;
         public ushort SP;
         public ushort PC;
 
-        public ushort AF { get { return binutil.Combine(A, F); } set { binutil.Split((ushort)(value & FlagMask16), out A, out F); } }
+        public ushort AF { get { return binutil.Combine(A, F); } set { binutil.Split((ushort)(value & FlagMask16), out A, out _flags); } }
         public ushort BC { get { return binutil.Combine(B, C); } set { binutil.Split(value, out B, out C); } }
         public ushort DE { get { return binutil.Combine(D, E); } set { binutil.Split(value, out D, out E); } }
         public ushort HL { get { return binutil.Combine(H, L); } set { binutil.Split(value, out H, out L); } }
@@ -19,6 +25,12 @@
         public bool Sub { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 6, F); } }
         public bool HalfCarry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
         public bool Carry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
+
+        //public byte this[RegType type]
+        //{
+        //    get => Find(address)[address];
+        //    set => Find(address)[address] = value;
+        //}
 
         public override string ToString()
         {

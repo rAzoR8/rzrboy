@@ -1,6 +1,6 @@
 ﻿namespace emu
 {
-    internal class apu : IProcessingUnit
+    public class apu : IProcessingUnit
     {
         private mem mem;
         public apu(mem memory)

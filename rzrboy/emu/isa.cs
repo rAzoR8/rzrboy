@@ -11,6 +11,14 @@
         static isa() 
         {
             Instr[0x00] =  new nop();
+            Instr[0x01] = new ld_bc();
+        }
+
+        public class nop : instr { }
+
+        public class ld_bc : instr
+        {
+            //public ld_bc() : base(imm(1, r) { }
         }
     }
 }

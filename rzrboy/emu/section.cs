@@ -12,6 +12,44 @@
         }
     }
 
+    public class ProxySection : ISection
+    {
+        public ISection Source { get; set; }
+        public ProxySection(ISection src = null) { Source = src; }
+
+        public ushort Start => Source.Start;
+        public ushort End => Source.End;
+        public byte this[ushort address]
+        {
+            get => Source[address];
+            set => Source[address] = value;
+        }
+    }
+
+    public class RemapSection : ISection
+    {
+        public delegate ushort MapFunc(ushort address);
+        public static MapFunc Identity = (ushort address) => address;
+
+        public MapFunc Map { get; set; } = Identity;
+        public ISection Source { get; set; }
+        public RemapSection(MapFunc map, ushort start, ushort end, ISection src = null)
+        {
+            Map = map;
+            Source = src;
+            Start = start;
+            End = end;
+        }
+
+        public ushort Start { get; }
+        public ushort End { get; }
+        public byte this[ushort address]
+        {
+            get => Source[Map(address)];
+            set => Source[Map(address)] = value;
+        }
+    }
+
     public class SectionComparer : IComparer<ISection>
     {
         public int Compare(ISection? x, ISection? y)
@@ -38,9 +76,39 @@
         }
     }
 
+    public class ListSection : ISection
+    {
+        private List<ISection> sections = new();
+
+        public ushort Start => sections.First().Start;
+        public ushort End => sections.Last().End;
+
+        public void Add(ISection section)
+        {
+            // sort by address
+            int pos = sections.FindIndex(0, s => section.Start < s.Start);
+            sections.Insert(pos == -1 ? 0 : pos, section);
+        }
+
+        private ISection Find(ushort address)
+        {
+            EmptySection addr = new(address);
+            int pos = sections.BinarySearch(0, sections.Count, addr, new SectionComparer());
+            if (pos >= 0)
+                return sections[pos];
+            throw new AddressNotMappedException(address);
+        }
+
+        public byte this[ushort address]
+        {
+            get => Find(address)[address];
+            set => Find(address)[address] = value;
+        }
+    }
+
     public class RWSection : ISection
     {
-        protected byte[] mem;
+        public byte[] mem { get; }
         public RWSection(ushort start, ushort end)
         {
             Start = start;
