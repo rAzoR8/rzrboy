@@ -2,6 +2,6 @@
 {
     internal class cpu
     {
-        registers reg;
+        reg reg = reg.DMG();
     }
 }
