@@ -1,4 +1,6 @@
-﻿namespace emu
+﻿using System.Diagnostics;
+
+namespace emu
 {
     public class cpu : IProcessingUnit
     {
@@ -13,7 +15,7 @@
         {
             mem = memory;
 
-            mem.write(boot.DMG, 0x100);
+            mem.rom.write(boot.DMG, 0x100);
         }
 
         public void Tick()
@@ -32,6 +34,12 @@
                 else
                 {
                     cur_instr = isa.ExtInstr[cur_opcode];
+                }
+
+                if (cur_instr == null)
+                {
+                    Debug.Assert(false, $"Instruction {cur_opcode}:{cur_opcode.ToString("X2")} not implemented");
+                    return;
                 }
             }
         }

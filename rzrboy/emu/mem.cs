@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Diagnostics;
 
 namespace emu
 {
@@ -9,47 +10,45 @@ namespace emu
 
     public class mem : ListSection, IEnumerable<byte>
     {
-        public const ushort BankSize = 0x4000; // 16k
+        public const ushort RomBankSize = 0x4000; // 16KIB
+        public const ushort VRamSize = 0x2000; // 8KiB
+        public const ushort ERamSize = 0x2000; // 8KiB
+        public const ushort WRamSize = 0x1000; // 4KiB
+        public const ushort EchoRamSize = 0xFE00 - 0xE000; //7680B
+        public const ushort OAMSize = 0xFEA0 - 0xFE00; // 160B
+        public const ushort UnusedSize = 0xFF00 - 0xFEA0; // 60B
+        public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
+        public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
+        
+        public RSection rom { get; } = new (0, 0x4000); // nonswitchable        
+        public ProxySection romx { get; } = new(new RSection(0x4000, 0x4000)); // switchable        
+        public ProxySection vram { get; } = new(new RWSection(0x8000, 0x2000)); // In CGB mode, switchable bank 0/1        
+        public ProxySection eram { get; } = new (new RWSection(0xA000, 0x2000)); // From cartridge, switchable bank if any
+        public RWSection wram { get; } = new (0xC000, 0x1000);        
+        public ProxySection wramx { get; } = new (new RWSection(0xD000, 0x1000)); //In CGB mode, switchable bank 1-7
+        public RemapSection echo { get; } = new((ushort address) => (ushort)(address - 4096), 0xE000, EchoRamSize);
+        public RWSection oam { get; } = new(0xFE00, OAMSize);
+        public RSection unused { get; } = new(0xFEA0, UnusedSize);
+        public RWSection io { get; } = new(0xFF00, IOSize);
+        public RWSection hram { get; } = new(0xFF80, HRamSize);
+        public ByteSection IE { get; } = new(0xFFFF, val: 0);
 
-        // nonswitchable
-        private RSection rom = new (0, 0x4000);
-        // switchable
-        private ProxySection romx = new(new RSection(0x4000, 0x8000));
-
-        // In CGB mode, switchable bank 0/1
-        private ProxySection vram = new(new RWSection(0x8000, 0xA000));
-
-        // From cartridge, switchable bank if any
-        private ProxySection eram = new (new RWSection(0xA000, 0xC000));
-
-        private RWSection wram = new (0xC000, 0xD000);
-
-        //In CGB mode, switchable bank 1-7
-        private ProxySection wramx = new (new RWSection(0xD000, 0xE000));
-
-        private RemapSection echo = new((ushort address) => (ushort)(address - 4096), 0xE000, 0xFE00);
-
-        private RWSection oam = new(0xFE00, 0xFEA0);
-
-        private RWSection io = new(0xFF00, 0xFF80);
-
-        private RWSection hram = new(0xFF80, 0xFFFF);
-
-        private ByteSection IE = new(0xFFFF, 0);
         public mem()
         {
-            Add(rom);  // 0000-3FFF 16KiB
-            Add(romx); // 4000-7FFF 16KiB
-            Add(vram); // 8000-9FFF 8KiB
-            Add(eram); // A000-BFFF 8KiB
-            Add(wram); // C000-CFFF 4KiB
-            Add(wramx);// D000-DFFF 4KiB
-            Add(echo); // E000-FE00 7679B
-            Add(oam);  // FE00-FEA0 160B
-            // FEA0-FEFF Not Usable
-            Add(io);   // FF00-FF80 128B
-            Add(hram); // FF80-FFFF 127B
-            Add(IE);   // FFFF      1B
+            Add(rom);    // 0000-3FFF 16KiB
+            Add(romx);   // 4000-7FFF 16KiB
+            Add(vram);   // 8000-9FFF 8KiB
+            Add(eram);   // A000-BFFF 8KiB
+            Add(wram);   // C000-CFFF 4KiB
+            Add(wramx);  // D000-DFFF 4KiB
+            Add(echo);   // E000-FE00 7679B
+            Add(oam);    // FE00-FEA0 160B
+            Add(unused); // FEA0-FEFF 60B Not Usable
+            Add(io);     // FF00-FF80 128B
+            Add(hram);   // FF80-FFFF 127B
+
+            Debug.Assert(Length == 0xFFFF);
+            Add(IE);     // FFFF      1B
         }
 
         public IEnumerator<byte> GetEnumerator()

@@ -3,12 +3,20 @@
     public interface ISection 
     {
         ushort Start { get; }
-        ushort End { get; }
+        ushort Length { get; }
 
         byte this[ushort address]
         {
             get;
             set;
+        }
+    }
+
+    public static class SectionExtensions
+    {
+        public static bool Contains(this ISection section, ushort address)
+        {
+            return address >= section.Start && address < (section.Start + section.Length);
         }
     }
 
@@ -18,7 +26,7 @@
         public ProxySection(ISection src = null) { Source = src; }
 
         public ushort Start => Source.Start;
-        public ushort End => Source.End;
+        public ushort Length => Source.Length;
         public byte this[ushort address]
         {
             get => Source[address];
@@ -33,16 +41,16 @@
 
         public MapFunc Map { get; set; } = Identity;
         public ISection Source { get; set; }
-        public RemapSection(MapFunc map, ushort start, ushort end, ISection src = null)
+        public RemapSection(MapFunc map, ushort start, ushort len, ISection src = null)
         {
             Map = map;
             Source = src;
             Start = start;
-            End = end;
+            Length = len;
         }
 
         public ushort Start { get; }
-        public ushort End { get; }
+        public ushort Length { get; }
         public byte this[ushort address]
         {
             get => Source[Map(address)];
@@ -66,9 +74,9 @@
     // used to reflect address
     public class EmptySection : ISection
     {
-        public EmptySection(ushort address) { Start = address; End = address; }
+        public EmptySection(ushort address) { Start = address; Length = 0; }
         public ushort Start { get; }
-        public ushort End { get; }
+        public ushort Length { get; }
         public byte this[ushort address]
         {
             get => throw new AccessViolationException();
@@ -81,7 +89,7 @@
         private List<ISection> sections = new();
 
         public ushort Start => sections.First().Start;
-        public ushort End => sections.Last().End;
+        public ushort Length => (ushort)sections.Sum( s => s.Length );
 
         public void Add(ISection section)
         {
@@ -90,10 +98,26 @@
 
         private ISection Find(ushort address)
         {
-            EmptySection addr = new(address);
-            int pos = sections.BinarySearch(0, sections.Count, addr, new SectionComparer());
-            if (pos >= 0)
-                return sections[pos];
+            int min = 0;
+            int max = sections.Count - 1;
+
+            while (min <= max)
+            {
+                int mid = (min + max) / 2;
+                if (sections[mid].Contains(address))
+                {
+                    return sections[mid];
+                }
+                else if (address < sections[mid].Start)
+                {
+                    max = mid - 1;
+                }
+                else
+                {
+                    min = mid + 1;
+                }
+            }
+
             throw new AddressNotMappedException(address);
         }
 
@@ -110,7 +134,7 @@
         public ByteSection(ushort start, byte val = 0)
         {
             Start = start;
-            End = start;
+            Length = 1;
             mem = val;
         }
 
@@ -118,45 +142,53 @@
 
         public ushort Start { get; }
 
-        public ushort End { get; }
+        public ushort Length { get; }
     }
 
     public class RWSection : ISection
     {
         public byte[] mem { get; }
-        public RWSection(ushort start, ushort end)
+        public RWSection(ushort start, ushort len)
         {
             Start = start;
-            End = end;
-            mem = new byte[End-Start];
+            Length = len;
+            mem = new byte[len];
         }
 
-        public RWSection(ushort start, ushort end, byte[] init) : this(start, end)
+        public RWSection(ushort start, ushort len, byte[] init) : this(start, len)
         {
-            Array.Copy(init, mem, mem.Length);
+            var size = (ushort)Math.Min(init.Length, len);
+            Array.Copy(init, mem, size);
         }
 
         public byte this[ushort address] { get => mem[address - Start]; set => mem[address - Start] = value; }
 
         public ushort Start { get; }
 
-        public ushort End { get; }
+        public ushort Length { get; }
+
+        public void write(byte[] src, ushort address, ushort len = 0)
+        {
+            address -= Start;
+            len = len != 0 ? Math.Min(len, (ushort)src.Length) : (ushort)src.Length;
+            Array.Copy(src, 0, mem, address, len);
+        }
     }
 
     public class RSection : RWSection
     {
-        public RSection(ushort start, ushort end) : base(start, end){}
+        public RSection(ushort start, ushort len) : base(start, len){}
 
-        public RSection(ushort start, ushort end, byte[] init) : base(start, end, init) { }
+        public RSection(ushort start, ushort len, byte[] init) : base(start, len, init) { }
 
         public new byte this[ushort address] { get => base.mem[address - Start]; }
     }
 
     public class WSection : RWSection
     {
-        public WSection(ushort start, ushort end) : base(start, end) { }
+        public WSection(ushort start, ushort len) : base(start, len) { }
 
-        public WSection(ushort start, ushort end, byte[] init) : base(start, end, init) { }
+        public WSection(ushort start, ushort len, byte[] init) : base(start, len, init) { }
 
         public new byte this[ushort address] { set => base.mem[address - Start] = value; }
     }
