@@ -10,15 +10,9 @@
 
         static isa() 
         {
-            Instr[0x00] =  new nop();
-            Instr[0x01] = new ld_bc();
-        }
-
-        public class nop : instr { }
-
-        public class ld_bc : instr
-        {
-            public ld_bc() : base(imm(Reg8.B, Reg8.C)) { }
+            Instr[0x00] = new();
+            Instr[0x01] = new(instr.ld_imm(Reg8.B, Reg8.C));
+            Instr[0x02] = new(instr.ld_reg_addr(Reg16.BC, Reg8.A));
         }
     }
 }

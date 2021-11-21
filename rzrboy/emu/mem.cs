@@ -41,7 +41,7 @@ namespace emu
             Add(eram);   // A000-BFFF 8KiB
             Add(wram);   // C000-CFFF 4KiB
             Add(wramx);  // D000-DFFF 4KiB
-            Add(echo);   // E000-FE00 7679B
+            Add(echo);   // E000-FE00 7680B
             Add(oam);    // FE00-FEA0 160B
             Add(unused); // FEA0-FEFF 60B Not Usable
             Add(io);     // FF00-FF80 128B
