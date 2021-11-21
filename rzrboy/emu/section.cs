@@ -104,6 +104,23 @@
         }
     }
 
+    public class ByteSection : ISection
+    {
+        public byte mem { get; set; }
+        public ByteSection(ushort start, byte val = 0)
+        {
+            Start = start;
+            End = start;
+            mem = val;
+        }
+
+        public byte this[ushort address] { get => mem; set => mem = value; }
+
+        public ushort Start { get; }
+
+        public ushort End { get; }
+    }
+
     public class RWSection : ISection
     {
         public byte[] mem { get; }
