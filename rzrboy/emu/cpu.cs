@@ -4,7 +4,7 @@ namespace emu
 {
     public class cpu : IProcessingUnit
     {
-        private reg reg = reg.DMG();
+        private reg reg;// = reg.DMG();
         private mem mem = null;
 
         byte cur_opcode;
@@ -14,8 +14,7 @@ namespace emu
         public cpu(mem memory) 
         {
             mem = memory;
-
-            mem.rom0.write(boot.DMG, 0x100);
+            mem.rom0.write(boot.DMG, 0x0);
         }
 
         public void Tick()
@@ -38,7 +37,7 @@ namespace emu
 
                 if (cur_instr == null)
                 {
-                    Debug.Assert(false, $"Instruction {cur_opcode}:0x{cur_opcode.ToString("X2")} not implemented");
+                    //Debug.Assert(false, $"Instruction {cur_opcode}:0x{cur_opcode.ToString("X2")} not implemented");
                     return;
                 }
             }

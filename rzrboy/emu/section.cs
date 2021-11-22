@@ -2,6 +2,7 @@
 {
     public interface ISection 
     {
+        string Name { get; }
         ushort Start { get; }
         ushort Length { get; }
 
@@ -18,6 +19,8 @@
         {
             return address >= section.Start && address < (section.Start + section.Length);
         }
+
+        public static string ToString(this ISection sec) { return sec.Name; }
     }
 
     public class ProxySection : ISection
@@ -25,6 +28,7 @@
         public ISection Source { get; set; }
         public ProxySection(ISection src = null) { Source = src; }
 
+        public string Name => $"({Source.Name})*";
         public ushort Start => Source.Start;
         public ushort Length => Source.Length;
         public byte this[ushort address]
@@ -41,6 +45,7 @@
 
         public CombiSection(ISection low = null, ISection high = null) { Low = low; High = high; }
 
+        public string Name => $"({Low.Name})({High.Name})";
         public ushort Start => Low.Start;
         public ushort Length => (ushort)(Low.Length + High.Length);
 
@@ -68,6 +73,7 @@
             Length = len;
         }
 
+        public string Name => $"{Start}->{Map(Start)}:{Source.Name}";
         public ushort Start { get; }
         public ushort Length { get; }
         public byte this[ushort address]
@@ -94,6 +100,8 @@
     public class EmptySection : ISection
     {
         public EmptySection(ushort address) { Start = address; Length = 0; }
+
+        public string Name => $"{Start}:Empty";
         public ushort Start { get; }
         public ushort Length { get; }
         public byte this[ushort address]
@@ -107,6 +115,7 @@
     {
         private List<ISection> sections = new();
 
+        public string Name => sections.Count != 0 ? $"{sections.First().Name}...{sections.Last().Name}" : "";
         public ushort Start => sections.First().Start;
         public ushort Length => (ushort)sections.Sum( s => s.Length );
 
@@ -150,14 +159,17 @@
     public class ByteSection : ISection
     {
         public byte mem { get; set; }
-        public ByteSection(ushort start, byte val = 0)
+        public ByteSection(ushort start, byte val, string name)
         {
             Start = start;
             Length = 1;
             mem = val;
+            Name = $"{start}:{name}";
         }
 
         public byte this[ushort address] { get => mem; set => mem = value; }
+
+        public string Name { get; }
 
         public ushort Start { get; }
 
@@ -167,14 +179,15 @@
     public class RWSection : ISection
     {
         public byte[] mem { get; }
-        public RWSection(ushort start, ushort len)
+        public RWSection(ushort start, ushort len, string name)
         {
             Start = start;
             Length = len;
             mem = new byte[len];
+            Name = $"{start}:{name}";
         }
 
-        public RWSection(ushort start, ushort len, byte[] init) : this(start, len)
+        public RWSection(ushort start, ushort len, string name, byte[] init) : this(start, len, name)
         {
             var size = (ushort)Math.Min(init.Length, len);
             Array.Copy(init, mem, size);
@@ -182,6 +195,7 @@
 
         public byte this[ushort address] { get => mem[address - Start]; set => mem[address - Start] = value; }
 
+        public string Name { get; }
         public ushort Start { get; }
 
         public ushort Length { get; }
@@ -196,18 +210,18 @@
 
     public class RSection : RWSection
     {
-        public RSection(ushort start, ushort len) : base(start, len){}
+        public RSection(ushort start, ushort len, string name) : base(start, len, name){}
 
-        public RSection(ushort start, ushort len, byte[] init) : base(start, len, init) { }
+        public RSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
 
         public new byte this[ushort address] { get => base.mem[address - Start]; }
     }
 
     public class WSection : RWSection
     {
-        public WSection(ushort start, ushort len) : base(start, len) { }
+        public WSection(ushort start, ushort len, string name) : base(start, len, name) { }
 
-        public WSection(ushort start, ushort len, byte[] init) : base(start, len, init) { }
+        public WSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
 
         public new byte this[ushort address] { set => base.mem[address - Start] = value; }
     }
