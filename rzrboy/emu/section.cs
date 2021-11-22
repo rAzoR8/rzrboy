@@ -34,6 +34,25 @@
         }
     }
 
+    public class CombiSection : ISection
+    {
+        public ISection Low { get; set; }
+        public ISection High { get; set; }
+
+        public CombiSection(ISection low = null, ISection high = null) { Low = low; High = high; }
+
+        public ushort Start => Low.Start;
+        public ushort Length => (ushort)(Low.Length + High.Length);
+
+        public ISection Select(ushort address) => address < High.Start ? Low : High;
+
+        public byte this[ushort address]
+        {
+            get => Select(address)[address];
+            set => Select(address)[address] = value;
+        }
+    }
+
     public class RemapSection : ISection
     {
         public delegate ushort MapFunc(ushort address);

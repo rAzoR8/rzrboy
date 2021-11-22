@@ -20,11 +20,11 @@ namespace emu
         public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
         
-        public RSection rom { get; } = new (0, 0x4000); // nonswitchable        
+        public RSection rom0 { get; } = new (0, 0x4000); // nonswitchable        
         public ProxySection romx { get; } = new(new RSection(0x4000, 0x4000)); // switchable        
         public ProxySection vram { get; } = new(new RWSection(0x8000, 0x2000)); // In CGB mode, switchable bank 0/1        
         public ProxySection eram { get; } = new (new RWSection(0xA000, 0x2000)); // From cartridge, switchable bank if any
-        public RWSection wram { get; } = new (0xC000, 0x1000);        
+        public RWSection wram0 { get; } = new (0xC000, 0x1000);        
         public ProxySection wramx { get; } = new (new RWSection(0xD000, 0x1000)); //In CGB mode, switchable bank 1-7
         public RemapSection echo { get; } = new((ushort address) => (ushort)(address - 4096), 0xE000, EchoRamSize);
         public RWSection oam { get; } = new(0xFE00, OAMSize);
@@ -33,13 +33,17 @@ namespace emu
         public RWSection hram { get; } = new(0xFF80, HRamSize);
         public ByteSection IE { get; } = new(0xFFFF, val: 0);
 
+        // helper sections:
+        public CombiSection rom { get; }
+        public CombiSection wram { get; }
+
         public mem()
         {
-            Add(rom);    // 0000-3FFF 16KiB
+            Add(rom0);   // 0000-3FFF 16KiB
             Add(romx);   // 4000-7FFF 16KiB
             Add(vram);   // 8000-9FFF 8KiB
             Add(eram);   // A000-BFFF 8KiB
-            Add(wram);   // C000-CFFF 4KiB
+            Add(wram0);  // C000-CFFF 4KiB
             Add(wramx);  // D000-DFFF 4KiB
             Add(echo);   // E000-FE00 7680B
             Add(oam);    // FE00-FEA0 160B
@@ -49,6 +53,9 @@ namespace emu
 
             Debug.Assert(Length == 0xFFFF);
             Add(IE);     // FFFF      1B
+
+            rom = new(rom0, romx);
+            wram = new(wram0, wramx);
         }
 
         public IEnumerator<byte> GetEnumerator()
