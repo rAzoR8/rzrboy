@@ -48,6 +48,10 @@
 		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.0.29-preview3" />
 	</ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Maui.Markup" Version="1.0.0-pre2" />
+  </ItemGroup>
+
 	<ItemGroup>
 	  <ProjectReference Include="..\emu\emu.csproj" />
 	</ItemGroup>

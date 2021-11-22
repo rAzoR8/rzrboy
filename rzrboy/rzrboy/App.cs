@@ -5,12 +5,10 @@ using Application = Microsoft.Maui.Controls.Application;
 
 namespace rzrboy
 {
-	public partial class App : Application
+	public class App : Application
 	{
 		public App()
 		{
-			InitializeComponent();
-
 			MainPage = new MainPage();
 		}
 	}
