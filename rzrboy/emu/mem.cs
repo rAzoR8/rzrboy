@@ -8,7 +8,7 @@ namespace emu
         public AddressNotMappedException(ushort address) : base($"0x{address.ToString("X4")} not mapped to any memory section") { }
     }
 
-    public class mem : ListSection, IEnumerable<byte>
+    public class Mem : ListSection, IEnumerable<byte>
     {
         public const ushort RomBankSize = 0x4000; // 16KIB
         public const ushort VRamSize = 0x2000; // 8KiB
@@ -37,7 +37,7 @@ namespace emu
         public CombiSection rom { get; }
         public CombiSection wram { get; }
 
-        public mem()
+        public Mem()
         {
             Add(rom0);   // 0000-3FFF 16KiB
             Add(romx);   // 4000-7FFF 16KiB

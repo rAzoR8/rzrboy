@@ -2,9 +2,9 @@
 {
     public class gb
     {
-        private mem mem;
+        private Mem mem;
         private ppu ppu;
-        private cpu cpu;
+        private Cpu cpu;
         private apu apu;
 
         private ulong cycle = 0u;
@@ -16,7 +16,7 @@
         public gb()
         {
             mem = new();
-            cpu = new cpu(mem);
+            cpu = new Cpu(mem);
             ppu = new ppu(mem);
             apu = new apu(mem);
         }

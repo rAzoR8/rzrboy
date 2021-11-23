@@ -2,8 +2,8 @@
 {
     public class ppu : IProcessingUnit
     {
-        private mem mem;
-        public ppu(mem memory)
+        private Mem mem;
+        public ppu(Mem memory)
         {
             mem = memory;
         }

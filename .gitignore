@@ -3,3 +3,4 @@ rzrboy/emu/obj
 rzrboy/rzrboy/obj
 rzrboy/emu/bin
 rzrboy/rzrboy/bin
+*.user

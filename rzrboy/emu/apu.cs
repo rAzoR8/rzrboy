@@ -2,8 +2,8 @@
 {
     public class apu : IProcessingUnit
     {
-        private mem mem;
-        public apu(mem memory)
+        private Mem mem;
+        public apu(Mem memory)
         {
             mem = memory;
         }
