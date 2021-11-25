@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Diagnostics;
 
 namespace emu
 {
@@ -43,55 +44,103 @@ namespace emu
 
         // reg to reg
         public static op ldreg(Reg8 dst, Reg8 src) => (reg, mem) => { reg[dst] = reg[src]; return true; };
+        public static op ldreg(Reg16 dst, Reg16 src) => (reg, mem) => { reg[dst] = reg[src]; return true; };
+
         // reg to address
-        public static op ldreg(Reg8 dst, Reg16 src_addr) => (reg, mem) => { reg[dst] = mem[reg[src_addr]]; return true; };
+        public static op ldadr(Reg8 dst, Reg16 src_addr) => (reg, mem) => { reg[dst] = mem[reg[src_addr]]; return true; };
         // address to reg
-        public static op ldreg(Reg16 dst_addr, Reg8 src) => (reg, mem) => { mem[reg[dst_addr]] = reg[src]; return true; };
+        public static op ldadr(Reg16 dst_addr, Reg8 src) => (reg, mem) => { mem[reg[dst_addr]] = reg[src]; return true; };
 
         private delegate IBuilder Build<Y, X>(Y y, X x);
-        private static void Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+
+        // returns next opcode for validation
+        private static int Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
                 foreach ((X x, int i) in xs.Indexed())
                 {
+                    Debug.Assert(Instr[offsetX + i] == null);
                     Instr[offsetX + i] = builder(y, x);
                 }
                 offsetX += stepY;
             }
+            return offsetX - stepY + xs.Count();
+        }
+        private static int Fill<Y, X>(byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
+        {
+            return Fill(offsetX, 1, builder, new[] { y }, xs);
+        }
+        private static int Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
+        {
+            return Fill(offsetX, stepY, builder, ys, new[] { x });
         }
 
         static isa() 
         {
+            Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
+
             Instr[0xCB] = new ExtBuilder();
 
-            Instr[0x00] = new Builder(nop);
-            Instr[0x01] = new Builder(ldrom(Reg8.B, Reg8.C));
-            Instr[0x02] = new Builder(ldreg(Reg16.BC, Reg8.A));
+            Instr[0x00] = nop.get();
 
             // single byte reg moves
             // LD B, B | LD B, C ...
-            // LD D, B | LD D, C ...
+            // LD [B D H], [B C D E H L]
             Fill(offsetX: 0x40, stepY: 0x10,
                 (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
                 ys: new[] { Reg8.B, Reg8.D, Reg8.H },
-                xs: new[] { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L });
+                xs: bcdehl);
 
-            // LD (HL), B | LD (HL), C ...
+            // LD [B D H], (HL)
+            Instr[0x46] = ldadr(Reg8.B, Reg16.HL).get();
+            Instr[0x56] = ldadr(Reg8.D, Reg16.HL).get();
+            Instr[0x66] = ldadr(Reg8.H, Reg16.HL).get();
+            //Instr[0x76] = halt.get();
+
+            // LD [B D H], A
+            Instr[0x47] = ldreg(Reg8.B, Reg8.A).get();
+            Instr[0x57] = ldreg(Reg8.D, Reg8.A).get();
+            Instr[0x67] = ldreg(Reg8.H, Reg8.A).get();
+            Instr[0x77] = ldadr(Reg16.HL, Reg8.A).get();
+
+            // LD [C E L], [B C D E H L]
+            Fill(offsetX: 0x48, stepY: 0x10,
+                (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
+                ys: new[] { Reg8.C, Reg8.E, Reg8.L },
+                xs: bcdehl);
+
+            // LD [C E L A], (HL)
+            Instr[0x4E] = ldadr(Reg8.C, Reg16.HL).get();
+            Instr[0x5E] = ldadr(Reg8.E, Reg16.HL).get();
+            Instr[0x6E] = ldadr(Reg8.L, Reg16.HL).get();
+            Instr[0x7E] = ldadr(Reg8.A, Reg16.HL).get();
+
+            // LD [C E L A], A
+            Instr[0x4F] = ldreg(Reg8.C, Reg8.A).get();
+            Instr[0x5F] = ldreg(Reg8.E, Reg8.A).get();
+            Instr[0x6F] = ldreg(Reg8.L, Reg8.A).get();
+            Instr[0x7F] = ldreg(Reg8.A, Reg8.A).get();
+
+            // LD (HL), [B C D E H L]
             Fill(offsetX: 0x70, stepY: 0,
-                (Reg16 dst, Reg8 src) => ldreg(dst, src).get(),
+                (Reg16 dst, Reg8 src) => ldadr(dst, src).get(),
                 ys: new[] { Reg16.HL },
-                xs: new[] { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L });
+                xs: bcdehl);
 
-            //Instr[0x76] = new Builder(halt);
-            // LD (HL), A
-            Instr[0x77] = ldreg(Reg16.HL, Reg8.A).get();
+            // LD [B D H], (HL)
+            Instr[0x46] = ldadr(Reg8.B, Reg16.HL).get();
+            Instr[0x56] = ldadr(Reg8.D, Reg16.HL).get();
+            Instr[0x76] = ldadr(Reg8.H, Reg16.HL).get();
 
-            // LD r, (HL)
-            Instr[0x46] = ldreg(Reg8.B, Reg16.HL).get();
-            Instr[0x56] = ldreg(Reg8.D, Reg16.HL).get();
-            Instr[0x76] = ldreg(Reg8.H, Reg16.HL).get();
+            // LD (HL), A ( the one right after HALT)
+            Instr[0x77] = ldadr(Reg16.HL, Reg8.A).get();
 
+            // LD A, [B C D E H L]
+            Fill(offsetX: 0x78,
+                (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
+                y: Reg8.A,
+                xs: bcdehl);
         }
     }
 

@@ -2,12 +2,25 @@
 {
     public enum Reg8 : int
     {
-        A, F, B, C, D, E, H, L
+        A = 0, F, B, C, D, E, H, L, Max
     }
 
     public enum Reg16 : int
     {
-       AF, BC,DE, HL, PC, SP
+       AF = Reg8.Max, BC,DE, HL, PC, SP
+    }
+
+    public enum RegX 
+    {
+        A = 0, F, B, C, D, E, H, L,
+        AF, BC, DE, HL, PC, SP
+    }
+
+    static class RegExtensions
+    {
+        public static bool Is8(this Reg16 reg) => (int)reg < (int)Reg8.Max;
+        public static Reg8 To8(this Reg16 reg) => (Reg8)reg;
+        public static Reg16 To16(this Reg8 reg) => (Reg16)reg;
     }
 
     public class Reg
