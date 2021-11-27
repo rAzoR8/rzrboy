@@ -10,7 +10,13 @@ namespace emu
 
         private class ExtInstruction : IInstruction // this is just a proxy to extension ISA
         {
-            private IInstruction cur = null;
+            private IInstruction? cur = null;
+
+            public IEnumerable<string> Disassemble(ushort pc, Mem mem)
+            {
+                byte opcode = mem.rom[pc]; // fetch
+                return ExtInstr[opcode].Build().Disassemble(++pc, mem);
+            }
 
             public bool Eval(Reg reg, Mem mem)
             {
@@ -41,6 +47,9 @@ namespace emu
             (Reg reg, Mem mem) => { reg[target] = mem.rom[reg.PC++]; return true; },
             (Reg reg, Mem mem) => { reg[target] |= (ushort)(mem.rom[reg.PC++] << 8); return true; }
         };
+
+        public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
+        public static dis[] operand(Reg8 dst, Reg8 src) => new dis[] { operand(dst), operand(src) };
 
         // reg to reg
         public static op ldreg(Reg8 dst, Reg8 src) => (reg, mem) => { reg[dst] = reg[src]; return true; };
@@ -147,7 +156,5 @@ namespace emu
     static class LoopExtensions
     {
         public static IEnumerable<(T item, int index)> Indexed<T>(this IEnumerable<T> self) =>  self.Select((item, index) => (item, index));
-        public static Builder get(this op op) => new Builder(op);
-        public static Builder Add(this op op, op other) { var b = new Builder(op); b.Add(other); return b; }
     }
 }

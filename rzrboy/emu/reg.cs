@@ -13,7 +13,9 @@
     public enum RegX 
     {
         A = 0, F, B, C, D, E, H, L,
-        AF, BC, DE, HL, PC, SP
+        AF, BC, DE, HL, PC, SP,
+        HLplus, HLminus,
+        PCplus, PCminus
     }
 
     static class RegExtensions
