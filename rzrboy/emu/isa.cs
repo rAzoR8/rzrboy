@@ -2,7 +2,7 @@
 
 namespace emu
 {
-    public  class Isa
+    public partial class Isa
     {
         private static readonly IBuilder[] m_instructions = new IBuilder[256];
         private static readonly IBuilder[] m_extInstructions = new IBuilder[256];
@@ -37,29 +37,7 @@ namespace emu
         private class ExtBuilder : IBuilder
         {
             public IInstruction Build() { return new ExtInstruction(); }
-        }
-
-        public readonly static op nop = (Reg reg, Mem mem) => true;
-
-        // read next byte from mem[pc++]
-        public static op ldrom(Reg8 target) => (Reg reg, Mem mem) => { reg[target] = mem.rom[reg.PC++]; return true; };
-        public static op[] ldrom(Reg8 t1, Reg8 t2) => new op[] { ldrom(t1), ldrom(t2) };
-        public static op[] ldrom(Reg16 target) => new op[] {
-            (Reg reg, Mem mem) => { reg[target] = mem.rom[reg.PC++]; return true; },
-            (Reg reg, Mem mem) => { reg[target] |= (ushort)(mem.rom[reg.PC++] << 8); return true; }
-        };
-
-        public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
-        public static dis[] operand(Reg8 dst, Reg8 src) => new dis[] { operand(dst), operand(src) };
-
-        // reg to reg
-        public static op ldreg(Reg8 dst, Reg8 src) => (reg, mem) => { reg[dst] = reg[src]; return true; };
-        public static op ldreg(Reg16 dst, Reg16 src) => (reg, mem) => { reg[dst] = reg[src]; return true; };
-
-        // reg to address
-        public static op ldadr(Reg8 dst, Reg16 src_addr) => (reg, mem) => { reg[dst] = mem[reg[src_addr]]; return true; };
-        // address to reg
-        public static op ldadr(Reg16 dst_addr, Reg8 src) => (reg, mem) => { mem[reg[dst_addr]] = reg[src]; return true; };
+        }       
 
         private delegate IBuilder Build<Y, X>(Y y, X x);
 
@@ -92,63 +70,63 @@ namespace emu
 
             this[0xCB] = new ExtBuilder();
 
-            this[0x00] = nop.get();
+            this[0x00] = nop;
 
             // single byte reg moves
             // LD B, B | LD B, C ...
             // LD [B D H], [B C D E H L]
             Fill(offsetX: 0x40, stepY: 0x10,
-                (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
+                (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 ys: new[] { Reg8.B, Reg8.D, Reg8.H },
                 xs: bcdehl);
 
             // LD [B D H], (HL)
-            this[0x46] = ldadr(Reg8.B, Reg16.HL).get();
-            this[0x56] = ldadr(Reg8.D, Reg16.HL).get();
-            this[0x66] = ldadr(Reg8.H, Reg16.HL).get();
-            //this[0x76] = halt.get();
+            this[0x46] = ldadr(Reg8.B, Reg16.HL);
+            this[0x56] = ldadr(Reg8.D, Reg16.HL);
+            this[0x66] = ldadr(Reg8.H, Reg16.HL);
+            //this[0x76] = halt;
 
             // LD [B D H], A
-            this[0x47] = ldreg(Reg8.B, Reg8.A).get();
-            this[0x57] = ldreg(Reg8.D, Reg8.A).get();
-            this[0x67] = ldreg(Reg8.H, Reg8.A).get();
-            this[0x77] = ldadr(Reg16.HL, Reg8.A).get();
+            this[0x47] = ldreg(Reg8.B, Reg8.A);
+            this[0x57] = ldreg(Reg8.D, Reg8.A);
+            this[0x67] = ldreg(Reg8.H, Reg8.A);
+            this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD [C E L], [B C D E H L]
             Fill(offsetX: 0x48, stepY: 0x10,
-                (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
+                (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 ys: new[] { Reg8.C, Reg8.E, Reg8.L },
                 xs: bcdehl);
 
             // LD [C E L A], (HL)
-            this[0x4E] = ldadr(Reg8.C, Reg16.HL).get();
-            this[0x5E] = ldadr(Reg8.E, Reg16.HL).get();
-            this[0x6E] = ldadr(Reg8.L, Reg16.HL).get();
-            this[0x7E] = ldadr(Reg8.A, Reg16.HL).get();
+            this[0x4E] = ldadr(Reg8.C, Reg16.HL);
+            this[0x5E] = ldadr(Reg8.E, Reg16.HL);
+            this[0x6E] = ldadr(Reg8.L, Reg16.HL);
+            this[0x7E] = ldadr(Reg8.A, Reg16.HL);
 
             // LD [C E L A], A
-            this[0x4F] = ldreg(Reg8.C, Reg8.A).get();
-            this[0x5F] = ldreg(Reg8.E, Reg8.A).get();
-            this[0x6F] = ldreg(Reg8.L, Reg8.A).get();
-            this[0x7F] = ldreg(Reg8.A, Reg8.A).get();
+            this[0x4F] = ldreg(Reg8.C, Reg8.A);
+            this[0x5F] = ldreg(Reg8.E, Reg8.A);
+            this[0x6F] = ldreg(Reg8.L, Reg8.A);
+            this[0x7F] = ldreg(Reg8.A, Reg8.A);
 
             // LD (HL), [B C D E H L]
             Fill(offsetX: 0x70, stepY: 0,
-                (Reg16 dst, Reg8 src) => ldadr(dst, src).get(),
+                (Reg16 dst, Reg8 src) => ldadr(dst, src),
                 ys: new[] { Reg16.HL },
                 xs: bcdehl);
 
             // LD [B D H], (HL)
-            this[0x46] = ldadr(Reg8.B, Reg16.HL).get();
-            this[0x56] = ldadr(Reg8.D, Reg16.HL).get();
-            this[0x76] = ldadr(Reg8.H, Reg16.HL).get();
+            this[0x46] = ldadr(Reg8.B, Reg16.HL);
+            this[0x56] = ldadr(Reg8.D, Reg16.HL);
+            this[0x76] = ldadr(Reg8.H, Reg16.HL);
 
             // LD (HL), A ( the one right after HALT)
-            this[0x77] = ldadr(Reg16.HL, Reg8.A).get();
+            this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD A, [B C D E H L]
             Fill(offsetX: 0x78,
-                (Reg8 dst, Reg8 src) => ldreg(dst, src).get(),
+                (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 y: Reg8.A,
                 xs: bcdehl);
         }

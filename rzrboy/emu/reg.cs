@@ -10,19 +10,22 @@
        AF = Reg8.Max, BC,DE, HL, PC, SP
     }
 
-    public enum RegX 
+    public enum RegX : int
     {
         A = 0, F, B, C, D, E, H, L,
         AF, BC, DE, HL, PC, SP,
-        HLplus, HLminus,
-        PCplus, PCminus
     }
 
     static class RegExtensions
     {
         public static bool Is8(this Reg16 reg) => (int)reg < (int)Reg8.Max;
+        public static bool Is8(this RegX reg) => (int)reg < (int)Reg8.Max;
+        public static bool Is16(this RegX reg) => (int)reg >= (int)Reg8.Max;
+
         public static Reg8 To8(this Reg16 reg) => (Reg8)reg;
         public static Reg16 To16(this Reg8 reg) => (Reg16)reg;
+        public static RegX ToX(this Reg16 reg) => (RegX)reg;
+        public static RegX ToX(this Reg8 reg) => (RegX)reg;
     }
 
     public class Reg

@@ -81,15 +81,25 @@
             }
         }
 
+        public Builder(op op, string mnemonic)
+            : this(op, Isa.Ops.mnemonic(mnemonic))
+        {
+        }
+
         public static Builder operator +(Builder b, op op) { b.m_ops.Add(op); return b; }
+        public static Builder operator +(Builder b, IEnumerable<op> ops) { b.m_ops.AddRange(ops); return b; }
         public static Builder operator +(Builder b, dis op) { b.m_dis.Add(op); return b; }
+        public static Builder operator +(Builder b, IEnumerable<dis> dis) { b.m_dis.AddRange(dis); return b; }
+        public static Builder operator +(Builder b, string str) { b.m_dis.Add(Isa.Ops.mnemonic(str)); return b; }
+        public static Builder operator +(Builder b, IEnumerable<string> str) { b.m_dis.AddRange(str.Select(s => Isa.Ops.mnemonic(s))); return b; }
 
         public IInstruction Build() { return new Instruction(m_ops, m_dis); }
     }
 
     public static class BuilderExtensions
     {
-        public static Builder get(this op op, dis? dis = null) => new Builder(op, dis);
+        public static Builder Get(this op op, string mnemonic) => new Builder(op, mnemonic);
+        public static Builder Get(this op op, dis? dis = null) => new Builder(op, dis);
         public static Builder Add(this op op, op other) { return new Builder(op) + other; }
         public static Builder Add(this op op, dis other) { return new Builder(op) + other; }
     }
