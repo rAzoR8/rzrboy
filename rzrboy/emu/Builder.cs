@@ -81,8 +81,22 @@
             }
         }
 
+        public Builder(IEnumerable<op> ops, dis? dis = null)
+        {
+            m_ops.AddRange(ops);
+            if (dis != null)
+            {
+                m_dis.Add(dis);
+            }
+        }
+
         public Builder(op op, string mnemonic)
             : this(op, Isa.Ops.mnemonic(mnemonic))
+        {
+        }
+
+        public Builder(IEnumerable<op> ops, string mnemonic)
+            : this(ops, Isa.Ops.mnemonic(mnemonic))
         {
         }
 
@@ -102,5 +116,10 @@
         public static Builder Get(this op op, dis? dis = null) => new Builder(op, dis);
         public static Builder Add(this op op, op other) { return new Builder(op) + other; }
         public static Builder Add(this op op, dis other) { return new Builder(op) + other; }
+
+        public static Builder Get(this op[] op, string mnemonic) => new Builder(op, mnemonic);
+        public static Builder Get(this op[] op, dis? dis = null) => new Builder(op, dis);
+        public static Builder Add(this op[] op, op other) { return new Builder(op) + other; }
+        public static Builder Add(this op[] op, dis other) { return new Builder(op) + other; }
     }
 }

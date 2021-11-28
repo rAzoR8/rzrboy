@@ -72,6 +72,30 @@ namespace emu
 
             this[0x00] = nop;
 
+            // 16bit loads
+            // LD (BC), .DB16
+            this[0x01] = ldimm(Reg16.BC);
+            this[0x11] = ldimm(Reg16.DE);
+            this[0x21] = ldimm(Reg16.HL);
+            this[0x31] = ldimm(Reg16.SP);
+
+            // 8bit loads
+            // LD (BC DE), A
+            this[0x02] = ldadr(Reg16.BC, Reg8.A);
+            this[0x12] = ldadr(Reg16.DE, Reg8.A);
+            this[0x22] = Ops.ldhlplus(Reg8.A).Get("LD") + $"(HL+)" + "A";
+            this[0x32] = Ops.ldhlminus(Reg8.A).Get("LD") + $"(HL-)" + "A";
+
+            // LD [B D H], .DB8
+            this[0x06] = ldimm(Reg8.B);
+            this[0x16] = ldimm(Reg8.D);
+            this[0x26] = ldimm(Reg8.H);
+            // LD HL, .DB16
+            this[0x36] = ldimm(Reg16.HL);
+
+            // LD (.DB16), SP
+            this[0x8] = ldimm16_sp();
+
             // single byte reg moves
             // LD B, B | LD B, C ...
             // LD [B D H], [B C D E H L]
@@ -129,6 +153,7 @@ namespace emu
                 (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 y: Reg8.A,
                 xs: bcdehl);
+
         }
     }
 
