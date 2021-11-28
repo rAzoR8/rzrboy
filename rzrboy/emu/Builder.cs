@@ -24,14 +24,28 @@
 
     public class Instruction : IInstruction
     {
+        private IEnumerable<op> ops;
+        private IEnumerable<dis> dis;
+
         private IEnumerator<op> cur_op;
         private IEnumerator<dis> cur_dis;
 
-        public Instruction(IEnumerator<op> ops, IEnumerator<dis> dis) { this.cur_op = ops; this.cur_dis = dis; }
+        public Instruction(IEnumerable<op> ops, IEnumerable<dis> dis)
+        {
+            this.ops = ops;
+            this.dis = dis;
+            this.cur_op = ops.GetEnumerator();
+            this.cur_dis = dis.GetEnumerator();
+        }
 
         public bool Eval(Reg reg, Mem mem)
         {
-            bool cont = cur_op.Current(reg, mem) && cur_op.MoveNext();
+            bool cont = cur_op.Current(reg, mem);
+            if (cur_op.MoveNext() == false) 
+            {
+                cur_op = ops.GetEnumerator();
+                cont = false;
+            }
             return cont;
         }
 
@@ -41,6 +55,7 @@
             {
                 yield return cur_dis.Current(pc, mem);
             } while (cur_dis.MoveNext());
+            cur_dis = dis.GetEnumerator();
         }
     }
 
@@ -69,7 +84,7 @@
         public static Builder operator +(Builder b, op op) { b.m_ops.Add(op); return b; }
         public static Builder operator +(Builder b, dis op) { b.m_dis.Add(op); return b; }
 
-        public IInstruction Build() { return new Instruction(m_ops.GetEnumerator(), m_dis.GetEnumerator()); }
+        public IInstruction Build() { return new Instruction(m_ops, m_dis); }
     }
 
     public static class BuilderExtensions

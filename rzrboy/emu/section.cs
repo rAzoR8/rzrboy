@@ -26,7 +26,7 @@
     public class ProxySection : ISection
     {
         public ISection Source { get; set; }
-        public ProxySection(ISection src = null) { Source = src; }
+        public ProxySection(ISection src) { Source = src; }
 
         public string Name => $"({Source.Name})*";
         public ushort Start => Source.Start;
@@ -43,7 +43,7 @@
         public ISection Low { get; set; }
         public ISection High { get; set; }
 
-        public CombiSection(ISection low = null, ISection high = null) { Low = low; High = high; }
+        public CombiSection(ISection low, ISection high) { Low = low; High = high; }
 
         public string Name => $"({Low.Name})({High.Name})";
         public ushort Start => Low.Start;
