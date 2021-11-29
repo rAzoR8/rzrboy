@@ -1,4 +1,6 @@
-﻿namespace emu
+﻿using System.Text;
+
+namespace emu
 {
     /// <summary>
     /// Each op takes one m-cycle.
@@ -27,36 +29,33 @@
         private IEnumerable<dis> dis;
 
         private IEnumerator<op> cur_op;
-        private IEnumerator<dis> cur_dis;
 
         public Instruction(IEnumerable<op> ops, IEnumerable<dis> dis)
         {
             this.ops = ops;
             this.dis = dis;
             this.cur_op = ops.GetEnumerator();
-            this.cur_dis = dis.GetEnumerator();
         }
 
         public bool Eval(Reg reg, Mem mem)
         {
-            cur_op.Current(reg, mem);
-
-            if (cur_op.MoveNext() == false) 
+            if (cur_op.MoveNext() == false)
             {
                 cur_op = ops.GetEnumerator();
                 return false;
             }
 
+            cur_op.Current(reg, mem);
             return true;
         }
 
         public IEnumerable<string> Disassemble(ushort pc, Mem mem)
         {
-            do
+            var cur = dis.GetEnumerator();
+            while (cur.MoveNext())
             {
-                yield return cur_dis.Current(pc, mem);
-            } while (cur_dis.MoveNext());
-            cur_dis = dis.GetEnumerator();
+                yield return cur.Current(pc, mem);
+            }
         }
     }
 
@@ -122,5 +121,27 @@
         public static Builder Get(this op[] op, dis? dis = null) => new Builder(op, dis);
         public static Builder Add(this op[] op, op other) { return new Builder(op) + other; }
         public static Builder Add(this op[] op, dis other) { return new Builder(op) + other; }
+    }
+
+    public static class InstructionExtensions
+    {
+        public static string ToString(this IInstruction instr, Reg reg, Mem mem)
+        {
+            StringBuilder sb = new();
+            string[] seps = { " ", ", " };
+            int i = 0;
+
+            var elems = instr.Disassemble(reg.PC, mem);
+            foreach (string str in elems)
+            {
+                sb.Append(str);
+                if(i + 1 < elems.Count())
+                {
+                    sb.Append(seps[i++]);                
+                }
+            }
+
+            return sb.ToString();
+        }
     }
 }

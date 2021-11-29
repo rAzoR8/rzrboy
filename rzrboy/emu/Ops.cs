@@ -2,7 +2,7 @@
 {
     public partial class Isa
     {
-        private readonly static Builder nop = new Builder((Reg reg, Mem mem) => { });
+        private readonly static Builder nop = new Builder((Reg reg, Mem mem) => { }, "NOP");
 
         public static class Ops
         {
@@ -10,8 +10,9 @@
             public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
             public static dis operand(Reg16 reg) => (pc, mem) => reg.ToString();
 
-            public static dis operandDB8() => (pc, mem) => $"0x{mem[pc]:X1}";
-            public static dis operandDB16() => (pc, mem) => $"0x{mem[pc]:X1}{mem[(ushort)(pc+1)]:X1}";
+            public static dis operandDB8() => (pc, mem) => $"0x{mem[pc]:X2}";
+            public static dis operandDB16() => (pc, mem) => $"0x{mem[pc]:X2}{mem[(ushort)(pc+1)]:X2}";
+            public static dis addrDB16() => (pc, mem) => $"(0x{mem[pc]:X2}{mem[(ushort)(pc + 1)]:X2})";
 
             public static dis[] operand(Reg8 dst, Reg8 src) => new dis[] { operand(dst), operand(src) };
             public static dis[] operand(Reg16 dst, Reg16 src) => new dis[] { operand(dst), operand(src) };
@@ -94,8 +95,8 @@
             }
         };
 
-        private static Builder ldimm(Reg8 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + ".DB8";
-        private static Builder ldimm(Reg16 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + ".DB8";
+        private static Builder ldimm(Reg8 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + Ops.operandDB8();
+        private static Builder ldimm(Reg16 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + Ops.operandDB16();
 
         private static Builder ldreg(Reg8 dst, Reg8 src) => Ops.ldreg(dst, src).Get("LD") + Ops.operand(dst, src);
         private static Builder ldreg(Reg16 dst, Reg16 src) => Ops.ldreg(dst, src).Get("LD") + Ops.operand(dst, src);
@@ -103,7 +104,7 @@
         private static Builder ldadr(Reg8 dst, Reg16 src_addr) => Ops.ldadr(dst, src_addr).Get("LD") + Ops.operand(dst) + $"({src_addr})";
         private static Builder ldadr(Reg16 dst_addr, Reg8 src) => Ops.ldadr(dst_addr, src).Get("LD") + $"({dst_addr})" + Ops.operand(src);
 
-        private static Builder ldimm16_sp() => new Builder(Ops.ldimm16_sp(), "LD") + "(.DB16)" + "SP";
+        private static Builder ldimm16_sp() => new Builder(Ops.ldimm16_sp(), "LD") + Ops.addrDB16() + "SP";
 
         private static Builder jpimm16() => new Builder(Ops.jpimm16(), "JP") + Ops.operandDB16();
     }

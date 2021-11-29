@@ -154,6 +154,48 @@ namespace emu
                 y: Reg8.A,
                 xs: bcdehl);
 
+            DebugReport();
+        }
+
+        private void DebugReport() 
+        {
+            Mem mem = new();
+            Reg reg = new();
+
+            int count = 0;
+
+            void Print(byte i, byte ext)
+            {
+                IBuilder builder = this[i];
+                Debug.Write($"OP 0x{i:X2}:0x{ext:X2} ");
+                if (builder != null) 
+                {
+                    Debug.WriteLine(builder.Build().ToString(reg, mem));
+                    count++;
+                }
+                else
+                {
+                    Debug.WriteLine($"not implemented");
+                }
+            }
+
+            for (ushort i = 0; i <= 255; i++)
+            {
+                mem[reg.PC] = (byte)i;
+                if(i != 0xCB)
+                {
+                    Print((byte)i, 0);
+                }
+            }
+
+            //mem[reg.PC] = 0xCB;
+            //for (ushort j = 0; j <= 255; j++)
+            //{
+            //    mem[(ushort)(reg.PC + 1)] = (byte)j;
+            //    Print(0xCB, (byte)j);
+            //}
+
+            Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/511.0f}%");
         }
     }
 
