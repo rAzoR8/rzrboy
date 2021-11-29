@@ -5,8 +5,7 @@
     /// </summary>
     /// <param name="reg"></param>
     /// <param name="mem"></param>
-    /// <returns>return true if there are more operands, false to skip</returns>
-    public delegate bool op(Reg reg, Mem mem);
+    public delegate void op(Reg reg, Mem mem);
 
     /// <summary>
     /// Mnemonic and operand name for this op
@@ -40,13 +39,15 @@
 
         public bool Eval(Reg reg, Mem mem)
         {
-            bool cont = cur_op.Current(reg, mem);
+            cur_op.Current(reg, mem);
+
             if (cur_op.MoveNext() == false) 
             {
                 cur_op = ops.GetEnumerator();
-                cont = false;
+                return false;
             }
-            return cont;
+
+            return true;
         }
 
         public IEnumerable<string> Disassemble(ushort pc, Mem mem)
