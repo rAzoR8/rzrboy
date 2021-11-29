@@ -154,6 +154,17 @@ namespace emu
                 y: Reg8.A,
                 xs: bcdehl);
 
+            // JP NZ, a16
+            this[0xC2] = jpimm16cc(Ops.NZ, "NZ");
+            this[0xD2] = jpimm16cc(Ops.NC, "NC");
+
+            // JP a16
+            this[0xC3] = jpimm16();
+
+            // JP Z, a16
+            this[0xCA] = jpimm16cc(Ops.Z, "Z");
+            this[0xDA] = jpimm16cc(Ops.C, "C");
+
             DebugReport();
         }
 
