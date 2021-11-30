@@ -1,12 +1,12 @@
 ﻿namespace emu
 {
-    public class gb
+    public class Gb
     {
-        private Mem mem;
-        private ppu ppu;
-        private Cpu cpu;
-        private apu apu;
-        private Cartridge cart;
+        public Mem mem { get; private set; }
+        public ppu ppu{ get; private set; }
+        public Cpu cpu{ get; private set; }
+        public apu apu { get; private set; }
+        public Cartridge cart { get; private set; }
 
         private ulong cycle = 0u;
         private bool run = true;
@@ -14,12 +14,12 @@
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public gb(byte[] cart)
+        public Gb(byte[] cart)
         {
             Reset( cart );
         }
 
-        public gb( string cartPath )
+        public Gb( string cartPath )
         {
             Reset( File.ReadAllBytes(cartPath) );
         }
@@ -45,16 +45,35 @@
         {
             while (run)
             {
-                // TODO: handle interupts
-
-                cpu.Tick();
-                ppu.Tick();
-                apu.Tick();
+                Tick();
 
                 yield return cycle;
 
                 ++cycle;
             }
+        }
+
+        public bool Tick() 
+        {
+            // TODO: handle interupts
+
+            bool cont = cpu.Tick();
+            ppu.Tick();
+            apu.Tick();
+
+            return cont;
+        }
+
+        /// <summary>
+        /// execute one complete instruction
+        /// </summary>
+        /// <returns>number of M-cycles the current instruction took</returns>
+        public int Step()
+        {
+            int cycles = 0;
+            // execute all ops
+            while ( Tick() ) { ++cycles; }
+            return cycles;
         }
     }
 }

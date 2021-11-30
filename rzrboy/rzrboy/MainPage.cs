@@ -11,9 +11,12 @@ namespace rzrboy
     {
         int count = 0;
         Label CounterLabel = new Label() { Text = "0" };
+        emu.Gb m_gb;
 
-        public MainPage()
+        public MainPage( emu.Gb gb )
         {
+            m_gb = gb;
+
             Content = new Grid
             {
                 RowSpacing = 25,
@@ -38,34 +41,34 @@ namespace rzrboy
                         .CenterHorizontal().TextCenter(),
 
                     new Label { Text = "Welcome to .NET MAUI Markup Community Toolkit Sample" }
-            .Row(Row.Welcome).Font(size: 18)
-            .CenterHorizontal().TextCenter(),
+                        .Row(Row.Welcome).Font(size: 18)
+                        .CenterHorizontal().TextCenter(),
 
                     new HorizontalStackLayout
                     {
-                        new Label { Text = "Current Count: " }
-                .Font(bold: true)
-                .FillHorizontal().TextEnd()
-                .Assign(out CounterLabel),
+                        new Label { Text = "PC: " }
+                            .Font(bold: true)
+                            .FillHorizontal().TextEnd()
+                            .Assign(out CounterLabel),
 
                         new Label()
-                .Font(bold: true)
-                .FillHorizontal().TextStart()
-                /*.Assign(out CounterLabel)*/,
+                            .Font(bold: true)
+                            .FillHorizontal().TextStart()
+                            /*.Assign(out CounterLabel)*/,
 
                     }.Row(Row.Count).CenterHorizontal(),
 
-                    new Button { Text = "Click Me" }
-            .Row(Row.ClickMeButton)
-            .Font(bold: true)
-            .CenterHorizontal()
-            .Invoke(button => button.Clicked += OnCounterClicked)
-            //.BindCommand(nameof(ViewModel.ClickMeButtonCommand))
-            ,
+                    new Button { Text = "Step" }
+                        .Row(Row.ClickMeButton)
+                        .Font(bold: true)
+                        .CenterHorizontal()
+                        .Invoke(button => button.Clicked += OnStepClicked)
+                        //.BindCommand(nameof(ViewModel.ClickMeButtonCommand))
+                    ,
 
                     new Image { Source = "dotnet_bot.png", WidthRequest = 250, HeightRequest = 310 }
-            .Row(Row.Image)
-            .CenterHorizontal()
+                        .Row(Row.Image)
+                        .CenterHorizontal()
                 }
             };
 
@@ -75,10 +78,12 @@ namespace rzrboy
         enum Row { HelloWorld, Welcome, Count, ClickMeButton, Image }
 
 
-        private void OnCounterClicked(object sender, EventArgs e)
+        private void OnStepClicked(object sender, EventArgs e)
         {
-            count++;
-            CounterLabel.Text = $"{count}";
+            m_gb.Step();
+            count = m_gb.cpu.reg.PC;
+
+            CounterLabel.Text = $"PC:{count}";
 
             SemanticScreenReader.Announce(CounterLabel.Text);
         }

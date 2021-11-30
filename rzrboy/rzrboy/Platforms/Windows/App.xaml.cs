@@ -22,9 +22,6 @@ namespace rzrboy.WinUI
             this.InitializeComponent();
         }
 
-        //private emu.gb gb = new emu.gb( new byte[0x8000] /*"game.rom"*/);
-        private emu.gb gb = new emu.gb("C:\\Users\\razor\\Desktop\\roms\\game.gb");
-
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
         protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -32,8 +29,6 @@ namespace rzrboy.WinUI
             base.OnLaunched(args);
 
             Microsoft.Maui.Essentials.Platform.OnLaunched(args);
-
-            gb.Run();
         }
     }
 }

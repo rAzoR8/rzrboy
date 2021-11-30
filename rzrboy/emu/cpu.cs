@@ -2,30 +2,48 @@
 
 namespace emu
 {
-    public class Cpu : IProcessingUnit
+    public class Cpu
     {
-        private Isa isa = new();
-        private Reg reg = new();
-        private Mem mem;
+        public Isa isa { get; } = new();
+        public Reg reg { get; } = new();
+        private Mem mem { get; }
 
-        byte cur_opcode;
-        private IInstruction cur_instr;
+        private byte cur_opcode = 0;
+        private IInstruction? cur_instr = null;
 
         public Cpu( Mem memory ) 
         {
             mem = memory;
-
-            cur_opcode = mem.rom[reg.PC++]; // first cycle
-            cur_instr = isa[cur_opcode].Build();
         }
 
-        public void Tick()
+        /// <summary>
+        /// execute one M-cycle
+        /// </summary>
+        /// <returns>true if executing the same instruction, falseafter a new one is fetched</returns>
+        public bool Tick()
         {
-            if (cur_instr.Eval(reg, mem) == false) // fetch and exec are interleaved
+            if ( cur_instr == null || cur_instr.Eval( reg, mem ) == false ) // fetch and exec are interleaved
             {
-                cur_opcode = mem.rom[reg.PC++]; // fetch
-                cur_instr = isa[cur_opcode].Build();
+                cur_opcode = mem.rom[reg.PC]; // fetch
+                IBuilder builder = isa[cur_opcode];
+
+                Debug.Write( $"[0x{reg.PC:X4}:0x{cur_opcode}] " );
+
+                // TODO: remove once all instructions are implemented
+                if ( builder == null )
+                {
+                    Debug.WriteLine( "not implemented :(" );
+                    return false;
+                }
+
+                cur_instr = builder.Build();
+
+                Debug.WriteLine( cur_instr.ToString( reg, mem ) );
+
+                reg.PC++;
+                return false;
             }
+            return true;
         }
     }
 }
