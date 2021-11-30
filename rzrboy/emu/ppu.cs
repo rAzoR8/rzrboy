@@ -1,9 +1,9 @@
 ﻿namespace emu
 {
-    public class ppu : IProcessingUnit
+    public class Ppu
     {
         private Mem mem;
-        public ppu(Mem memory)
+        public Ppu( Mem memory )
         {
             mem = memory;
         }

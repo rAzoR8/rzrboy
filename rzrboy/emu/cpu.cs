@@ -38,9 +38,9 @@ namespace emu
 
                 cur_instr = builder.Build();
 
-                Debug.WriteLine( cur_instr.ToString( reg, mem ) );
-
+                Debug.WriteLine( cur_instr.ToString( reg.PC, mem ) );
                 reg.PC++;
+
                 return false;
             }
             return true;

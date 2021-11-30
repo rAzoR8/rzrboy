@@ -192,7 +192,7 @@ namespace emu
                 Debug.Write($"OP 0x{i:X2}:0x{ext:X2} ");
                 if (builder != null) 
                 {
-                    Debug.WriteLine(builder.Build().ToString(reg, mem));
+                    Debug.WriteLine(builder.Build().ToString(reg.PC, mem));
                     count++;
                 }
                 else

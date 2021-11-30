@@ -3,9 +3,9 @@
     public class Gb
     {
         public Mem mem { get; private set; }
-        public ppu ppu{ get; private set; }
+        public Ppu ppu{ get; private set; }
         public Cpu cpu{ get; private set; }
-        public apu apu { get; private set; }
+        public Apu apu { get; private set; }
         public Cartridge cart { get; private set; }
 
         private ulong cycle = 0u;
@@ -33,8 +33,8 @@
             mem = new();
 
             cpu = new Cpu( mem );
-            ppu = new ppu( mem );
-            apu = new apu( mem );
+            ppu = new Ppu( mem );
+            apu = new Apu( mem );
 
             cart = new( mem.rom, mem.eram, mem.io, cartData );
 

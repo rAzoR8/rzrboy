@@ -15,12 +15,12 @@ namespace emu
     /// <param name="pc"></param>
     /// <param name="mem"></param>
     /// <returns></returns>
-    public delegate string dis(ushort pc, Mem mem);
+    public delegate string dis( ushort pc, Mem mem);
 
     public interface IInstruction
     {
         bool Eval(Reg reg, Mem mem);
-        IEnumerable<string> Disassemble(ushort pc, Mem mem);
+        IEnumerable<string> Disassemble( ushort pc, Mem mem);
     }
 
     public class Instruction : IInstruction
@@ -49,12 +49,12 @@ namespace emu
             return true;
         }
 
-        public IEnumerable<string> Disassemble(ushort pc, Mem mem)
+        public IEnumerable<string> Disassemble( ushort pc, Mem mem)
         {
             var cur = dis.GetEnumerator();
             while (cur.MoveNext())
             {
-                yield return cur.Current(pc, mem);
+                yield return cur.Current( (ushort)(pc+1), mem);
             }
         }
     }
@@ -125,13 +125,13 @@ namespace emu
 
     public static class InstructionExtensions
     {
-        public static string ToString(this IInstruction instr, Reg reg, Mem mem)
+        public static string ToString(this IInstruction instr, ushort pc, Mem mem)
         {
             StringBuilder sb = new();
             string[] seps = { " ", ", " };
             int i = 0;
 
-            var elems = instr.Disassemble(reg.PC, mem);
+            var elems = instr.Disassemble( pc, mem );
             foreach (string str in elems)
             {
                 sb.Append(str);
