@@ -58,6 +58,80 @@
         }
     }
 
+    public delegate byte ReadFunc( ushort address );
+    public delegate void WriteFunc( ushort address, byte value );
+
+    public class RWInterceptSection : ISection
+    {
+        public ReadFunc Read { get; set; }
+        public WriteFunc Write { get; set; }
+
+        public RWInterceptSection( ReadFunc read, WriteFunc write, string name, ushort start, ushort length )
+        {
+            Read = read;
+            Write = write;
+            Name = name;
+            Start = start;
+            Length = length;
+        }
+
+        public string Name { get; }
+        public ushort Start { get; }
+        public ushort Length { get; }
+        public byte this[ushort address]
+        {
+            get => Read(address);
+            set => Write(address,value);
+        }
+    }
+
+    public class RInterceptSection : ISection
+    {
+        public ReadFunc Read { get; set; }
+
+        public RInterceptSection( ReadFunc read, string name, ushort start, ushort length )
+        {
+            Read = read;
+            Name = name;
+            Start = start;
+            Length = length;
+        }
+
+        public string Name { get; }
+        public ushort Start { get; }
+        public ushort Length { get; }
+        public byte this[ushort address]
+        {
+            get => Read( address );
+            set { }
+        }
+    }
+
+    public class WInterceptSection : ISection
+    {
+        public WriteFunc Write { get; set; }
+
+        public byte DefaultReadValue { get; set; } = 0xFF;
+
+        public WInterceptSection( WriteFunc write, byte defaultReadValue, string name, ushort start, ushort length )
+        {
+            Write = write;
+            Name = name;
+            Start = start;
+            Length = length;
+            DefaultReadValue = defaultReadValue;
+        }
+
+        public string Name { get; }
+        public ushort Start { get; }
+        public ushort Length { get; }
+        public byte this[ushort address]
+        {
+            get => DefaultReadValue;
+            set => Write( address, value );
+        }
+    }
+
     public class RemapSection : ISection
     {
         public delegate ushort MapFunc(ushort address);
@@ -197,14 +271,12 @@
 
         public string Name { get; }
         public ushort Start { get; }
-
         public ushort Length { get; }
 
-        public void write(byte[] src, ushort address, ushort len = 0)
+        public void write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {
-            address -= Start;
-            len = len != 0 ? Math.Min(len, (ushort)src.Length) : (ushort)src.Length;
-            Array.Copy(src, 0, mem, address, len);
+            len = len != 0 ? Math.Min( len, (ushort)src.Length ) : (ushort)src.Length;
+            Array.Copy( src, src_offset, mem, dst_offset, len );
         }
     }
 

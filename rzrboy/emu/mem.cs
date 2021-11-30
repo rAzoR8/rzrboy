@@ -20,12 +20,11 @@ namespace emu
         public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
         
-        public RSection rom0 { get; } = new (0, 0x4000, "rom0"); // nonswitchable        
-        public ProxySection romx { get; } = new(new RSection(0x4000, 0x4000, "romx")); // switchable        
+        public ProxySection rom { get; } = new(new RSection(0, RomBankSize * 2, "rom") ); // nonswitchable        
         public ProxySection vram { get; } = new(new RWSection(0x8000, 0x2000, "vram")); // In CGB mode, switchable bank 0/1        
-        public ProxySection eram { get; } = new (new RWSection(0xA000, 0x2000, "eram")); // From cartridge, switchable bank if any
+        public ProxySection eram { get; } = new(new RWSection(0xA000, 0x2000, "eram")); // From cartridge, switchable bank if any
         public RWSection wram0 { get; } = new (0xC000, 0x1000, "wram0");        
-        public ProxySection wramx { get; } = new (new RWSection(0xD000, 0x1000, "wramx")); //In CGB mode, switchable bank 1-7
+        public ProxySection wramx { get; } = new(new RWSection(0xD000, 0x1000, "wramx")); //In CGB mode, switchable bank 1-7
         public RemapSection echo { get; } = new((ushort address) => (ushort)(address - 0x2000), 0xE000, EchoRamSize);
         public RWSection oam { get; } = new(0xFE00, OAMSize, "oam");
         public RSection unused { get; } = new(0xFEA0, UnusedSize, "unused");
@@ -34,13 +33,11 @@ namespace emu
         public ByteSection IE { get; } = new(0xFFFF, val: 0, name: "IE");
 
         // helper sections:
-        public CombiSection rom { get; }
         public CombiSection wram { get; }
 
         public Mem()
         {
-            Add(rom0);   // 0000-3FFF 16KiB
-            Add(romx);   // 4000-7FFF 16KiB
+            Add(rom);   // 0000-7FFF 32KiB switchable
             Add(vram);   // 8000-9FFF 8KiB
             Add(eram);   // A000-BFFF 8KiB
             Add(wram0);  // C000-CFFF 4KiB
@@ -54,7 +51,6 @@ namespace emu
             Debug.Assert(Length == 0xFFFF);
             Add(IE);     // FFFF      1B
 
-            rom = new(rom0, romx);
             wram = new(wram0, wramx);
 
             echo.Source = wram;

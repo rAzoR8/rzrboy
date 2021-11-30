@@ -13,12 +13,28 @@
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public gb()
+        public gb(byte[] cart)
         {
+            Reset( cart );
+        }
+
+        public gb( string cartPath )
+        {
+            Reset( File.ReadAllBytes(cartPath) );
+        }
+
+        public void Reset( byte[] cart )
+        {
+            run = false;
+
+            cycle = 0;
+
             mem = new();
-            cpu = new Cpu(mem);
-            ppu = new ppu(mem);
-            apu = new apu(mem);
+            cpu = new Cpu( mem, cart );
+            ppu = new ppu( mem );
+            apu = new apu( mem );
+
+            run = true;
         }
 
         public IEnumerable<ulong> Run() 
