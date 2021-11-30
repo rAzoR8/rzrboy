@@ -22,7 +22,8 @@ namespace rzrboy.WinUI
             this.InitializeComponent();
         }
 
-        private emu.gb gb = new emu.gb( new byte[0x8000] /*"game.rom"*/);
+        //private emu.gb gb = new emu.gb( new byte[0x8000] /*"game.rom"*/);
+        private emu.gb gb = new emu.gb("C:\\Users\\razor\\Desktop\\roms\\game.gb");
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 

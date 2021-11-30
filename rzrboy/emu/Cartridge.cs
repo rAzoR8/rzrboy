@@ -163,6 +163,8 @@ namespace emu
                 return false;
             }
 
+            Debug.WriteLine( $"Loaded cartridge {Title} [{cart.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
+
             return true;
         }
 

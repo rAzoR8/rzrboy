@@ -165,6 +165,17 @@ namespace emu
             this[0xCA] = jpimm16cc(Ops.Z, "Z");
             this[0xDA] = jpimm16cc(Ops.C, "C");
 
+            // JR NZ, e8
+            this[0x20] = jrimmcc( Ops.NZ, "NZ" );
+            this[0x30] = jrimmcc( Ops.NC, "NC" );
+
+            // JR e8
+            this[0x18] = jrimm();
+
+            // JR Z, e8
+            this[0x28] = jrimmcc( Ops.Z, "Z" );
+            this[0x38] = jrimmcc( Ops.C, "C" );
+
             DebugReport();
         }
 

@@ -10,6 +10,7 @@
             public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
             public static dis operand(Reg16 reg) => (pc, mem) => reg.ToString();
 
+            public static dis operandE8() => ( pc, mem ) => $"0x{(sbyte)mem[pc]}";
             public static dis operandDB8() => (pc, mem) => $"0x{mem[pc]:X2}";
             public static dis operandDB16() => (pc, mem) => $"0x{mem[pc]:X2}{mem[(ushort)(pc+1)]:X2}";
             public static dis addrDB16() => (pc, mem) => $"(0x{mem[pc]:X2}{mem[(ushort)(pc + 1)]:X2})";
@@ -60,7 +61,8 @@
                 yield return (Reg reg, Mem mem) => { mem[++nn] = binutil.msb(reg.SP); };
             }
 
-            private static op jp(ushort addr) => (reg, mem) => { reg.PC = addr; };
+            private static op jp( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
+
             // JP HL
             public static op jphl() => (reg, mem) => { reg.PC = reg.HL; };
 
@@ -93,6 +95,25 @@
                 ushort nn = binutil.Combine(nhigh, nlow);
                 yield return jp(nn);
             }
+
+            private static op jr( sbyte offset ) => ( reg, mem ) => { reg.PC = (ushort)( reg.PC + offset ); };
+
+            public static IEnumerable<op> jrimm()
+            {
+                byte offset = 0;
+                yield return ldimm( offset );
+                yield return jr( (sbyte)offset );
+            }
+
+            public static IEnumerable<op> jrccimm( cond cc )
+            {
+                byte offset = 0; bool takeBranch = false;
+                yield return ( Reg reg, Mem mem ) => { offset = mem[reg.PC++]; takeBranch = cc( reg ); };
+                if ( takeBranch )
+                {                
+                    yield return jr( (sbyte)offset );
+                }
+            }
         };
 
         private static Builder ldimm(Reg8 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + Ops.operandDB8();
@@ -107,9 +128,16 @@
         // LD (a16), SP
         private static Builder ldimm16_sp() => new Builder(Ops.ldimm16_sp(), "LD") + Ops.addrDB16() + "SP";
 
-        // LD a16
+        // JP a16
         private static Builder jpimm16() => new Builder(Ops.jpimm16(), "JP") + Ops.operandDB16();
 
+        // JP cc, a16
         private static Builder jpimm16cc(Ops.cond cc, string flag) => new Builder(Ops.jpccimm16(cc), "JP") + flag + Ops.addrDB16();
+
+        // JR e8
+        private static Builder jrimm() => new Builder( Ops.jrimm(), "JR" ) + Ops.operandE8();
+
+        // JR cc, e8
+        private static Builder jrimmcc( Ops.cond cc, string flag ) => new Builder( Ops.jpccimm16( cc ), "JR" ) + flag + Ops.operandE8();
     }
 }

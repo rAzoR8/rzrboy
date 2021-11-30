@@ -6,6 +6,7 @@
         private ppu ppu;
         private Cpu cpu;
         private apu apu;
+        private Cartridge cart;
 
         private ulong cycle = 0u;
         private bool run = true;
@@ -23,16 +24,19 @@
             Reset( File.ReadAllBytes(cartPath) );
         }
 
-        public void Reset( byte[] cart )
+        public void Reset( byte[] cartData )
         {
             run = false;
 
             cycle = 0;
 
             mem = new();
-            cpu = new Cpu( mem, cart );
+
+            cpu = new Cpu( mem );
             ppu = new ppu( mem );
             apu = new apu( mem );
+
+            cart = new( mem.rom, mem.eram, mem.io, cartData );
 
             run = true;
         }
