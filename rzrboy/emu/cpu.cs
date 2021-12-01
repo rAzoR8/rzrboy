@@ -27,7 +27,7 @@ namespace emu
                 cur_opcode = mem.rom[reg.PC]; // fetch
                 IBuilder builder = isa[cur_opcode];
 
-                Debug.Write( $"[0x{reg.PC:X4}:0x{cur_opcode}] " );
+                Debug.Write( $"[0x{reg.PC:X4}:0x{cur_opcode:X2}] " );
 
                 // TODO: remove once all instructions are implemented
                 if ( builder == null )

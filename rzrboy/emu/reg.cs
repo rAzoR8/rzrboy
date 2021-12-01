@@ -46,9 +46,17 @@
         public ushort HL { get { return binutil.Combine(H, L); } set { binutil.Split(value, out H, out L); } }
 
         public bool Zero { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 7, F); } }
-        public bool Sub { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 6, F); } }
-        public bool HalfCarry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
-        public bool Carry { get => binutil.IsSet(F, ZFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
+        public bool Sub { get => binutil.IsSet(F, NFlagMask8); set { F = binutil.SetBit(value, 6, F); } }
+        public bool HalfCarry { get => binutil.IsSet(F, HFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
+        public bool Carry { get => binutil.IsSet(F, CFlagMask8); set { F = binutil.SetBit(value, 5, F); } }
+
+        public void SetFlags( bool Z, bool N, bool H, bool C )
+        {
+            Zero = Z;
+            Sub = N;
+            HalfCarry = H;
+            Carry = C;
+        }
 
         public byte this[Reg8 type]
         {

@@ -10,7 +10,7 @@
             public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
             public static dis operand(Reg16 reg) => (pc, mem) => reg.ToString();
 
-            public static dis operandE8() => ( pc, mem ) => $"0x{(sbyte)mem[pc]}";
+            public static dis operandE8() => ( pc, mem ) => $"{(sbyte)mem[pc]}";
             public static dis operandDB8() => (pc, mem) => $"0x{mem[pc]:X2}";
             public static dis operandDB16() => (pc, mem) => $"0x{mem[(ushort)(pc+1)]:X2}{mem[(pc)]:X2}";
             public static dis addrDB16() => (pc, mem) => $"(0x{operandDB16()(pc, mem)})";
@@ -24,11 +24,6 @@
             public static op ldimm(Reg8 target) => (Reg reg, ISection mem ) => { reg[target] = mem[reg.PC++];};
 
             public static op ldimm(byte? val) => (Reg reg, ISection mem ) => { val = mem[reg.PC++]; };
-
-            //public static op[] ldimm(ushort? val) => new op[] {
-            //    (Reg reg, Mem mem) => { val = mem[reg.PC++]; },
-            //    (Reg reg, Mem mem) => { val |= (ushort)(mem[reg.PC++] << 8); }
-            //};
 
             // read two bytes from instruction stream, 3 m-cycles
             public static op[] ldimm(Reg16 target) => new op[] {
@@ -114,9 +109,22 @@
                     yield return jr( (sbyte)offset );
                 }
             }
+
+            // XOR A, src
+            public static op xor( Reg8 src ) => ( reg, mem ) => { reg.A ^= reg[src]; reg.SetFlags( reg.A == 0, false, false, false ); };
+            // XOR A, (HL)
+            public static op xorhl( ) => ( reg, mem ) => { reg.A ^= mem[reg.HL]; reg.SetFlags( reg.A == 0, false, false, false ); };
+
         };
 
+        // XOR A, src
+        private static Builder xor( Reg8 target ) => Ops.xor( target ).Get( "XOR" ) + "A" + Ops.operand(target);
+        // XOR A, (HL)
+        private static Builder xorhl( ) => Ops.xorhl( ).Get( "XOR" ) + "A" + "(HL)";
+
+        // LD r8, db8
         private static Builder ldimm(Reg8 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + Ops.operandDB8();
+        // LD r16, db16
         private static Builder ldimm(Reg16 target) => Ops.ldimm(target).Get("LD") + Ops.operand(target) + Ops.operandDB16();
 
         private static Builder ldreg(Reg8 dst, Reg8 src) => Ops.ldreg(dst, src).Get("LD") + Ops.operand(dst, src);

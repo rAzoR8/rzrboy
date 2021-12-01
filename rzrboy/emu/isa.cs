@@ -57,7 +57,7 @@ namespace emu
         private delegate IBuilder Build<Y, X>(Y y, X x);
 
         // returns next opcode for validation
-        private static int Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+        private static void Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
@@ -68,15 +68,14 @@ namespace emu
                 }
                 offsetX += stepY;
             }
-            return offsetX - stepY + xs.Count();
         }
-        private static int Fill<Y, X>(byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
+        private static void Fill<Y, X>(byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
         {
-            return Fill(offsetX, 1, builder, new[] { y }, xs);
+            Fill(offsetX, stepY: 0, builder, new[] { y }, xs);
         }
-        private static int Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
         {
-            return Fill(offsetX, stepY, builder, ys, new[] { x });
+            Fill(offsetX, stepY, builder, ys, new[] { x });
         }
 
         public Isa() 
@@ -190,6 +189,17 @@ namespace emu
             // JR Z, e8
             this[0x28] = jrimmcc( Ops.Z, "Z" );
             this[0x38] = jrimmcc( Ops.C, "C" );
+
+            // XOR A, r
+            Fill( offsetX: 0xA8,
+                ( Reg8 dst, Reg8 src ) => xor( src ),
+                y: Reg8.A,
+                xs: bcdehl );
+
+            // XOR A, (HL)
+            this[0xAE] = xorhl();
+
+            this[0XAF] = xor( Reg8.A );
 
             DebugReport();
         }
