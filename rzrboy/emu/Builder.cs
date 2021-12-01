@@ -7,7 +7,7 @@ namespace emu
     /// </summary>
     /// <param name="reg"></param>
     /// <param name="mem"></param>
-    public delegate void op(Reg reg, Mem mem);
+    public delegate void op(Reg reg, ISection mem );
 
     /// <summary>
     /// Mnemonic and operand name for this op
@@ -15,12 +15,18 @@ namespace emu
     /// <param name="pc"></param>
     /// <param name="mem"></param>
     /// <returns></returns>
-    public delegate string dis( ushort pc, Mem mem);
+    public delegate string dis( ushort pc, ISection mem);
 
     public interface IInstruction
     {
-        bool Eval(Reg reg, Mem mem);
-        IEnumerable<string> Disassemble( ushort pc, Mem mem);
+        /// <summary>
+        /// Returns true while there are more 1 M-cycle ops
+        /// </summary>
+        /// <param name="reg"></param>
+        /// <param name="mem"></param>
+        /// <returns></returns>
+        bool Eval( Reg reg, ISection mem );
+        IEnumerable<string> Disassemble( ushort pc, ISection mem );
     }
 
     public class Instruction : IInstruction
@@ -37,7 +43,7 @@ namespace emu
             this.cur_op = ops.GetEnumerator();
         }
 
-        public bool Eval(Reg reg, Mem mem)
+        public bool Eval(Reg reg, ISection mem )
         {
             if (cur_op.MoveNext() == false)
             {
@@ -49,7 +55,7 @@ namespace emu
             return true;
         }
 
-        public IEnumerable<string> Disassemble( ushort pc, Mem mem)
+        public IEnumerable<string> Disassemble( ushort pc, ISection mem )
         {
             var cur = dis.GetEnumerator();
             while (cur.MoveNext())

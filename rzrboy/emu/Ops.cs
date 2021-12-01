@@ -2,7 +2,7 @@
 {
     public partial class Isa
     {
-        private readonly static Builder nop = new Builder((Reg reg, Mem mem) => { }, "NOP");
+        private readonly static Builder nop = new Builder((Reg reg, ISection mem ) => { }, "NOP");
 
         public static class Ops
         {
@@ -21,9 +21,9 @@
             //private readonly static op pcinc = (Reg reg, Mem mem) => { reg.PC++; };
 
             // read next byte from mem[pc++], 2 m-cycles
-            public static op ldimm(Reg8 target) => (Reg reg, Mem mem) => { reg[target] = mem[reg.PC++];};
+            public static op ldimm(Reg8 target) => (Reg reg, ISection mem ) => { reg[target] = mem[reg.PC++];};
 
-            public static op ldimm(byte? val) => (Reg reg, Mem mem) => { val = mem[reg.PC++]; };
+            public static op ldimm(byte? val) => (Reg reg, ISection mem ) => { val = mem[reg.PC++]; };
 
             //public static op[] ldimm(ushort? val) => new op[] {
             //    (Reg reg, Mem mem) => { val = mem[reg.PC++]; },
@@ -32,8 +32,8 @@
 
             // read two bytes from instruction stream, 3 m-cycles
             public static op[] ldimm(Reg16 target) => new op[] {
-                (Reg reg, Mem mem) => { reg[target] = mem[reg.PC++]; },
-                (Reg reg, Mem mem) => { reg[target] |= (ushort)(mem[reg.PC++] << 8); }
+                (Reg reg, ISection mem) => { reg[target] = mem[reg.PC++]; },
+                (Reg reg, ISection mem) => { reg[target] |= (ushort)(mem[reg.PC++] << 8); }
             };
 
             // reg to reg, 1 m-cycle
@@ -57,8 +57,8 @@
                 yield return ldimm(nlow);
                 yield return ldimm(nhigh);
                 ushort nn = binutil.Combine(nhigh, nlow);
-                yield return (Reg reg, Mem mem) => { mem[nn] = binutil.lsb(reg.SP); };
-                yield return (Reg reg, Mem mem) => { mem[++nn] = binutil.msb(reg.SP); };
+                yield return (Reg reg, ISection mem) => { mem[nn] = binutil.lsb(reg.SP); };
+                yield return (Reg reg, ISection mem ) => { mem[++nn] = binutil.msb(reg.SP); };
             }
 
             private static op jp( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
@@ -78,7 +78,7 @@
                 byte nlow = 0, nhigh = 0;
                 bool takeBranch = false;
                 yield return ldimm(nlow);
-                yield return (Reg reg, Mem mem) => { nhigh = mem[reg.PC++]; takeBranch = cc(reg); };
+                yield return (Reg reg, ISection mem ) => { nhigh = mem[reg.PC++]; takeBranch = cc(reg); };
                 if (takeBranch)
                 {
                     ushort nn = binutil.Combine(nhigh, nlow);
@@ -108,7 +108,7 @@
             public static IEnumerable<op> jrccimm( cond cc )
             {
                 byte offset = 0; bool takeBranch = false;
-                yield return ( Reg reg, Mem mem ) => { offset = mem[reg.PC++]; takeBranch = cc( reg ); };
+                yield return ( Reg reg, ISection mem ) => { offset = mem[reg.PC++]; takeBranch = cc( reg ); };
                 if ( takeBranch )
                 {                
                     yield return jr( (sbyte)offset );

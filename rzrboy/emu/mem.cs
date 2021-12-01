@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace emu
 {
@@ -8,7 +7,7 @@ namespace emu
         public AddressNotMappedException(ushort address) : base($"0x{address.ToString("X4")} not mapped to any memory section") { }
     }
 
-    public class Mem : ListSection, IEnumerable<byte>
+    public class Mem : ListSection
     {
         public const ushort RomBankSize = 0x4000; // 16KIB
         public const ushort VRamSize = 0x2000; // 8KiB
@@ -54,16 +53,6 @@ namespace emu
             wram = new(wram0, wramx);
 
             echo.Source = wram;
-        }
-
-        public IEnumerator<byte> GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            throw new NotImplementedException();
         }
 
         public void write(byte[] src, ushort address, ushort len = 0) 

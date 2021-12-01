@@ -13,23 +13,38 @@ namespace emu
         {
             private IInstruction? cur = null;
 
-            public IEnumerable<string> Disassemble(ushort pc, Mem mem)
+            public IEnumerable<string> Disassemble( ushort pc, ISection mem )
             {
-                byte opcode = mem.rom[pc]; // fetch
-                return m_extInstructions[opcode].Build().Disassemble(++pc, mem);
+                byte opcode = mem[++pc]; // fetch
+                IBuilder builder = m_extInstructions[opcode];
+                if ( builder != null )
+                {
+                    return builder.Build().Disassemble( pc, mem );
+                }
+
+                Debug.WriteLine( $" EXT 0x{opcode:X2} not implemented :(" );
+                return Enumerable.Empty<string>();
             }
 
-            public bool Eval(Reg reg, Mem mem)
+            public bool Eval( Reg reg, ISection mem )
             {
-                if (cur == null)
+                if ( cur == null )
                 {
-                    byte opcode = mem.rom[reg.PC++]; // fetch, 1 M-cycle
-                    cur = m_extInstructions[opcode].Build();
-                    return true;
+                    byte opcode = mem[reg.PC++]; // fetch, 1 M-cycle
+                    IBuilder builder = m_extInstructions[opcode];
+
+                    if ( builder != null )
+                    {
+                        cur = builder.Build();
+                        return true;
+                    }
+
+                    Debug.WriteLine( $" EXT 0x{opcode:X2} not implemented :(" );
+                    return false;
                 }
                 else
                 {
-                    return cur.Eval(reg, mem);
+                    return cur.Eval( reg, mem );
                 }
             }
         }
