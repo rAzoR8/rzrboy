@@ -131,7 +131,7 @@ namespace emu
 
     public static class InstructionExtensions
     {
-        public static string ToString(this IInstruction instr, ushort pc, Mem mem)
+        public static string ToString(this IInstruction instr, ushort pc, ISection mem)
         {
             StringBuilder sb = new();
             string[] seps = { " ", ", " };

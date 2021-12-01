@@ -15,18 +15,30 @@ namespace rzrboy
     public static class Extensions 
     {
         public delegate void OnUpateLabel( Label label );
+        public delegate void OnUpdateGrid( Grid label );
+
         public static Label Update( this Label label, Callbacks callbacks, OnUpateLabel func )
         {
             callbacks.Add(() => func( label ) );
             return label;
         }
+
+        public static Grid Update( this Grid grid, Callbacks callbacks, OnUpdateGrid func )
+        {
+            callbacks.Add( () => func( grid ) );
+            return grid;
+        }
     }
 
     public class MainPage : ContentPage
     {
-        emu.Gb m_gb;
+        private emu.Gb m_gb;
+        private Reg reg => m_gb.cpu.reg;
+        private Mem mem => m_gb.mem;
 
-        List<Callback> m_onStep = new();
+        List<Callback> m_beforeStep = new();
+
+        List<Callback> m_afterStep = new();
 
         private enum RegRows 
         {
@@ -38,8 +50,8 @@ namespace rzrboy
             return new HorizontalStackLayout
             {
                 new Label{ Text = $"{l}  0x" },
-                new Label{ }.Update( m_onStep, lbl => {lbl.Text = $"{m_gb.cpu.reg[l]:X2}"; }),
-                new Label{ }.Update( m_onStep, lbl => {lbl.Text = $"{m_gb.cpu.reg[r]:X2}"; }),
+                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[l]:X2}"; }),
+                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[r]:X2}"; }),
                 new Label{ Text = $" {r}" }
             };
         }
@@ -49,7 +61,7 @@ namespace rzrboy
             return new HorizontalStackLayout
             {
                 new Label{ Text = $"{reg} 0x" },
-                new Label{ }.Update( m_onStep, lbl => {lbl.Text = $"{m_gb.cpu.reg[reg]:X4}"; }),
+                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{this.reg[reg]:X4}"; }),
             };
         }
 
@@ -57,7 +69,7 @@ namespace rzrboy
         {
             return new Grid
             {
-                RowSpacing = 25,
+                RowSpacing = 2,
 
                 Padding = Device.RuntimePlatform switch
                 {
@@ -71,8 +83,8 @@ namespace rzrboy
                     (RegRows.DE, Auto),
                     (RegRows.HL, Auto),
                     (RegRows.SP, Auto),
-                    (RegRows.PC, Auto)
-                    //(RegRows.Flags, Auto)
+                    (RegRows.PC, Auto),
+                    (RegRows.Flags, Auto)
                     ),
 
                 Children =
@@ -83,8 +95,34 @@ namespace rzrboy
                     MakeRow(Reg8.H, Reg8.L).Row(RegRows.HL),
                     MakeRow(Reg16.SP).Row(RegRows.SP),
                     MakeRow(Reg16.PC).Row(RegRows.PC),
+                    new Label{ }.Update(m_afterStep, lbl => lbl.Text = $"Z {reg.Zero} N {reg.Sub} H {reg.HalfCarry} C {reg.Carry}").Row(RegRows.Flags)
                 }
             };
+        }
+
+        private Grid Disassembly(int instructions)
+        {
+            var grid = new Grid { 
+                RowSpacing = 1,                
+            };
+
+            for ( int i = 0; i < instructions; i++ )
+            {
+                grid.RowDefinitions.Add( new RowDefinition { Height = Auto } );
+            }
+
+            grid.Update( m_beforeStep, grid =>
+            {
+                grid.Children.Clear();
+
+                foreach ( string instr in m_gb.cpu.Disassemble(reg.PC, (ushort) (reg.PC + instructions*3), mem) )
+                {
+                    if(grid.Children.Count < instructions)
+                        grid.Children.Add( new Label { Text = instr } );
+                }
+            } );
+
+            return grid;
         }
 
         public MainPage( emu.Gb gb )
@@ -97,11 +135,13 @@ namespace rzrboy
 
                 RowDefinitions = Rows.Define(
                     (Row.Registers, Auto),
+                    (Row.Disassembly, Auto),
                     (Row.Step, Auto) ),
 
                 Children =
                 {
                     Registers().Row(Row.Registers),
+                    Disassembly(10).Row(Row.Disassembly),
 
                     new Button { Text = "Step" }
                         .Row(Row.Step)
@@ -151,13 +191,19 @@ namespace rzrboy
         //        }
 
 
-        enum Row { Registers, Step }
+        enum Row { Registers, Disassembly, Step }
 
 
         private void OnStepClicked(object sender, EventArgs e)
         {
+            foreach ( Callback step in m_beforeStep )
+            {
+                step();
+            }
+
             m_gb.Step();
-            foreach ( Callback step in m_onStep )
+
+            foreach ( Callback step in m_afterStep )
             {
                 step();
             }

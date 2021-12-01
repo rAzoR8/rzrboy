@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace emu
 {
@@ -16,6 +17,38 @@ namespace emu
             mem = memory;
         }
 
+        public string Disassemble( ref ushort pc, ISection bin )
+        {
+            byte opcode = mem[reg.PC]; // fetch
+            IBuilder builder = isa[opcode];
+
+            StringBuilder sb = new();
+
+            sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
+
+            if ( builder != null )
+            {
+                sb.Append( builder.Build().ToString( ++pc, bin ) );
+            }
+            else
+            {
+                sb.Append( "not implemented :(" );
+            }
+
+            return sb.ToString();
+        }
+
+        public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection bin ) 
+        {
+            while ( from_pc < to_pc )
+            {
+                ushort prev = from_pc;
+                yield return Disassemble( ref from_pc, bin );
+                if ( prev == from_pc ) 
+                    yield break;
+            }
+        }
+
         /// <summary>
         /// execute one M-cycle
         /// </summary>
@@ -24,7 +57,7 @@ namespace emu
         {
             if ( cur_instr == null || cur_instr.Eval( reg, mem ) == false ) // fetch and exec are interleaved
             {
-                cur_opcode = mem.rom[reg.PC]; // fetch
+                cur_opcode = mem[reg.PC]; // fetch
                 IBuilder builder = isa[cur_opcode];
 
                 Debug.Write( $"[0x{reg.PC:X4}:0x{cur_opcode:X2}] " );
