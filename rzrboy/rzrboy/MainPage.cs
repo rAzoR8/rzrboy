@@ -102,23 +102,33 @@ namespace rzrboy
 
         private Grid Disassembly(int instructions)
         {
-            var grid = new Grid { 
-                RowSpacing = 1,                
+            var grid = new Grid {
+                RowSpacing = 2,
+
+                Padding = Device.RuntimePlatform switch
+                {
+                    Device.iOS => new Thickness( 30, 60, 30, 30 ),
+                    _ => new Thickness( 30 )
+                },
             };
 
-            for ( int i = 0; i < instructions; i++ )
-            {
-                grid.RowDefinitions.Add( new RowDefinition { Height = Auto } );
-            }
+            //for ( int i = 0; i < instructions; i++ )
+            //{
+            //    grid.RowDefinitions.Add( new RowDefinition { Height = 20 } );
+            //}
 
             grid.Update( m_beforeStep, grid =>
             {
                 grid.Children.Clear();
-
+                grid.RowDefinitions.Clear();
                 foreach ( string instr in m_gb.cpu.Disassemble(reg.PC, (ushort) (reg.PC + instructions*3), mem) )
                 {
-                    if(grid.Children.Count < instructions)
+                    if ( grid.Children.Count < instructions ) 
+                    {
+                        grid.RowDefinitions.Add( new RowDefinition { Height = Auto } );
+
                         grid.Children.Add( new Label { Text = instr } );
+                    }
                 }
             } );
 
@@ -134,20 +144,21 @@ namespace rzrboy
                 RowSpacing = 10,
 
                 RowDefinitions = Rows.Define(
+                    (Row.Step, Auto),
                     (Row.Registers, Auto),
-                    (Row.Disassembly, Auto),
-                    (Row.Step, Auto) ),
+                    (Row.Disassembly, Auto)
+                    ),
 
                 Children =
                 {
-                    Registers().Row(Row.Registers),
-                    Disassembly(10).Row(Row.Disassembly),
-
                     new Button { Text = "Step" }
                         .Row(Row.Step)
                         .Font(bold: true)
-                        .CenterHorizontal()
+                        //.CenterHorizontal()
                         .Invoke(button => button.Clicked += OnStepClicked),
+
+                    Registers().Row(Row.Registers),
+                    Disassembly(10).Row(Row.Disassembly)
                 }
             };
 
@@ -191,7 +202,7 @@ namespace rzrboy
         //        }
 
 
-        enum Row { Registers, Disassembly, Step }
+        enum Row { Step, Registers, Disassembly }
 
 
         private void OnStepClicked(object sender, EventArgs e)
