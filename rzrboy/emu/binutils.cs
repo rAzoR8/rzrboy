@@ -8,7 +8,7 @@
         public static byte lsb(ushort val) => (byte)(val & 0xff);
         public static byte msb(ushort val) => (byte)((val & 0xff00) >> 8);
 
-        public static bool IsSet(byte value, byte flag) { return (value & flag) == flag; }
+        public static bool IsBitSet( byte value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
         public static byte SetBit(bool value, byte index, byte target)
         {
             if (value)

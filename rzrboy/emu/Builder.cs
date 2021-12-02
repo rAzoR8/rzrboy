@@ -148,6 +148,11 @@ namespace emu
         public static Builder Get(this op[] op, dis? dis = null) => new Builder(op, dis);
         public static Builder Add(this op[] op, op other) { return new Builder(op) + other; }
         public static Builder Add(this op[] op, dis other) { return new Builder(op) + other; }
+
+        public static Builder Get( this IEnumerable<op> op, string mnemonic ) => new Builder( op, mnemonic );
+        public static Builder Get( this IEnumerable<op> op, dis? dis = null ) => new Builder( op, dis );
+        public static Builder Add( this IEnumerable<op> op, op other ) { return new Builder( op ) + other; }
+        public static Builder Add( this IEnumerable<op> op, dis other ) { return new Builder( op ) + other; }
     }
 
     public static class InstructionExtensions

@@ -16,10 +16,11 @@ namespace emu
 
             public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
             {
-                byte opcode = mem[++pc.Value]; // fetch
+                byte opcode = mem[pc.Value]; // fetch
                 IBuilder builder = m_extInstructions[opcode];
                 if ( builder != null )
                 {
+                    pc.Value++;
                     return builder.Build().Disassemble( pc, mem );
                 }
 
@@ -56,25 +57,25 @@ namespace emu
         private delegate IBuilder Build<Y, X>(Y y, X x);
 
         // returns next opcode for validation
-        private static void Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+        private static void Fill<Y, X>(IBuilder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
                 foreach ((X x, int i) in xs.Indexed())
                 {
-                    Debug.Assert(m_instructions[offsetX + i] == null);
-                    m_instructions[offsetX + i] = builder(y, x);
+                    Debug.Assert( target[offsetX + i] == null);
+                    target[offsetX + i] = builder(y, x);
                 }
                 offsetX += stepY;
             }
         }
-        private static void Fill<Y, X>(byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
+        private static void Fill<Y, X>( IBuilder[] target, byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
         {
-            Fill(offsetX, stepY: 0, builder, new[] { y }, xs);
+            Fill(target, offsetX, stepY: 0, builder, new[] { y }, xs);
         }
-        private static void Fill<Y, X>(byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>( IBuilder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
         {
-            Fill(offsetX, stepY, builder, ys, new[] { x });
+            Fill(target, offsetX, stepY, builder, ys, new[] { x });
         }
 
         public Isa() 
@@ -112,10 +113,10 @@ namespace emu
             // single byte reg moves
             // LD B, B | LD B, C ...
             // LD [B D H], [B C D E H L]
-            Fill(offsetX: 0x40, stepY: 0x10,
-                (Reg8 dst, Reg8 src) => ldreg(dst, src),
+            Fill( m_instructions, offsetX: 0x40, stepY: 0x10,
+                ( Reg8 dst, Reg8 src ) => ldreg( dst, src ),
                 ys: new[] { Reg8.B, Reg8.D, Reg8.H },
-                xs: bcdehl);
+                xs: bcdehl );
 
             // LD [B D H], (HL)
             this[0x46] = ldadr(Reg8.B, Reg16.HL);
@@ -130,7 +131,7 @@ namespace emu
             this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD [C E L], [B C D E H L]
-            Fill(offsetX: 0x48, stepY: 0x10,
+            Fill( m_instructions, offsetX: 0x48, stepY: 0x10,
                 (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 ys: new[] { Reg8.C, Reg8.E, Reg8.L },
                 xs: bcdehl);
@@ -148,7 +149,7 @@ namespace emu
             this[0x7F] = ldreg(Reg8.A, Reg8.A);
 
             // LD (HL), [B C D E H L]
-            Fill(offsetX: 0x70, stepY: 0,
+            Fill( m_instructions, offsetX: 0x70, stepY: 0,
                 (Reg16 dst, Reg8 src) => ldadr(dst, src),
                 ys: new[] { Reg16.HL },
                 xs: bcdehl);
@@ -162,10 +163,13 @@ namespace emu
             this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD A, [B C D E H L]
-            Fill(offsetX: 0x78,
+            Fill( m_instructions, offsetX: 0x78,
                 (Reg8 dst, Reg8 src) => ldreg(dst, src),
                 y: Reg8.A,
                 xs: bcdehl);
+
+            // LD SP, HL
+            this[0xF9] = ldreg( Reg16.SP, Reg16.HL );
 
             // JP NZ, a16
             this[0xC2] = jpimm16cc(Ops.NZ, "NZ");
@@ -190,7 +194,7 @@ namespace emu
             this[0x38] = jrimmcc( Ops.C, "C" );
 
             // XOR A, r
-            Fill( offsetX: 0xA8,
+            Fill( m_instructions, offsetX: 0xA8,
                 ( Reg8 dst, Reg8 src ) => xor( src ),
                 y: Reg8.A,
                 xs: bcdehl );
@@ -199,6 +203,32 @@ namespace emu
             this[0xAE] = xorhl();
 
             this[0XAF] = xor( Reg8.A );
+
+            // BIT [0 2 4 6], [B C D E H L]
+            Fill( m_extInstructions, offsetX: 0x40, stepY: 0x10, bit,
+                  new byte[]{ 0, 2, 4, 6 }, bcdehl );
+
+            // BIT [0 2 4 6], (HL)
+            Fill( m_extInstructions, offsetX: 0x46, stepY: 0x10,
+                ( byte bit, Reg16 hl ) => bithl( bit ),
+                new byte[] { 0, 2, 4, 6 }, Reg16.HL );
+
+            // BIT [0 2 4 6], A
+            Fill( m_extInstructions, offsetX: 0x47, stepY: 0x10, bit,
+                  new byte[] { 0, 2, 4, 6 }, Reg8.A );
+
+            // BIT [1 3 5 7], [B C D E H L]
+            Fill( m_extInstructions, offsetX: 0x48, stepY: 0x10, bit,
+                  new byte[] { 1, 3, 5, 7 }, bcdehl );
+
+            // BIT [1 3 5 7], (HL)
+            Fill( m_extInstructions, offsetX: 0x4E, stepY: 0x10,
+                ( byte bit, Reg16 hl ) => bithl( bit ),
+                new byte[] { 1, 3, 5, 7 }, Reg16.HL );
+
+            // BIT [1 3 5 7], A
+            Fill( m_extInstructions, offsetX: 0x4F, stepY: 0x10, bit,
+                  new byte[] { 1, 3, 5, 7 }, Reg8.A );
 
             DebugReport();
         }

@@ -69,6 +69,8 @@ namespace rzrboy
 
         private Grid Registers()
         {
+            int byt( bool b ) => b ? 1 : 0;
+
             return new Grid
             {
                 RowSpacing = 2,
@@ -97,46 +99,10 @@ namespace rzrboy
                     MakeRow(Reg8.H, Reg8.L).Row(RegRows.HL),
                     MakeRow(Reg16.SP).Row(RegRows.SP),
                     MakeRow(Reg16.PC).Row(RegRows.PC),
-                    new Label{ }.Update(m_afterStep, lbl => lbl.Text = $"Z {reg.Zero} N {reg.Sub} H {reg.HalfCarry} C {reg.Carry}").Row(RegRows.Flags)
+                    new Label{ }.Update(m_afterStep, lbl => lbl.Text = $"Z {byt(reg.Zero)} N {byt(reg.Sub)} H {byt(reg.HalfCarry)} C {byt(reg.Carry)}").Row(RegRows.Flags)
                 }
             };
         }
-
-        private Grid Disassembly1(int instructions)
-        {
-            var grid = new Grid {
-                RowSpacing = 2,
-
-                Padding = Device.RuntimePlatform switch
-                {
-                    Device.iOS => new Thickness( 30, 60, 30, 30 ),
-                    _ => new Thickness( 30 )
-                },
-            };
-
-            //for ( int i = 0; i < instructions; i++ )
-            //{
-            //    grid.RowDefinitions.Add( new RowDefinition { Height = 20 } );
-            //}
-
-            grid.Update( m_beforeStep, grid =>
-            {
-                grid.Children.Clear();
-                grid.RowDefinitions.Clear();
-                foreach ( string instr in Cpu.isa.Disassemble(reg.PC, (ushort) (reg.PC + instructions*3), mem) )
-                {
-                    if ( grid.Children.Count < instructions ) 
-                    {
-                        grid.RowDefinitions.Add( new RowDefinition { Height = Auto } );
-
-                        grid.Children.Add( new Label { Text = instr } );
-                    }
-                }
-            } );
-
-            return grid;
-        }
-
 
         private Label Disassembly( int instructions )
         {
