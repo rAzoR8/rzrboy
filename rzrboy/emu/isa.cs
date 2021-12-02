@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace emu
 {
@@ -13,17 +14,16 @@ namespace emu
         {
             private IInstruction? cur = null;
 
-            public IEnumerable<string> Disassemble( ushort pc, ISection mem )
+            public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
             {
-                byte opcode = mem[++pc]; // fetch
+                byte opcode = mem[++pc.Value]; // fetch
                 IBuilder builder = m_extInstructions[opcode];
                 if ( builder != null )
                 {
                     return builder.Build().Disassemble( pc, mem );
                 }
 
-                Debug.WriteLine( $" EXT 0x{opcode:X2} not implemented :(" );
-                return Enumerable.Empty<string>();
+                return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
             }
 
             public bool Eval( Reg reg, ISection mem )
@@ -36,10 +36,9 @@ namespace emu
                     if ( builder != null )
                     {
                         cur = builder.Build();
-                        return true;
+                        return true; // continue, there is more :)
                     }
 
-                    Debug.WriteLine( $" EXT 0x{opcode:X2} not implemented :(" );
                     return false;
                 }
                 else
@@ -204,20 +203,50 @@ namespace emu
             DebugReport();
         }
 
+        public string Disassemble( ref ushort pc, ISection bin )
+        {
+            byte opcode = bin[pc]; // fetch
+            IBuilder builder = this[opcode];
+
+            StringBuilder sb = new();
+            sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
+
+            if ( builder != null )
+            {
+                ++pc;
+                sb.Append( builder.Build().ToString( ref pc, bin ) );
+            }
+            else
+            {
+                sb.Append( "NOT IMPLEMENTED" );
+            }
+
+            return sb.ToString();
+        }
+
+        public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection bin )
+        {
+            ushort prev = (ushort)( from_pc - 1 );
+            while ( from_pc < to_pc && prev != from_pc )
+            {
+                prev = from_pc;
+                yield return Disassemble( ref from_pc, bin );
+            }
+        }
+
         private void DebugReport() 
         {
             Mem mem = new();
-            Reg reg = new();
 
             int count = 0;
 
-            void Print(byte i, byte ext)
+            void Print(ushort pc, byte ext)
             {
-                IBuilder builder = this[i];
-                Debug.Write($"OP 0x{i:X2}:0x{ext:X2} ");
+                IBuilder builder = this[(byte)pc];
+                Debug.Write($"OP 0x{pc:X2}:0x{ext:X2} ");
                 if (builder != null) 
                 {
-                    Debug.WriteLine(builder.Build().ToString(reg.PC, mem));
+                    Debug.WriteLine(builder.Build().ToString( ref pc, mem));
                     count++;
                 }
                 else
@@ -226,12 +255,11 @@ namespace emu
                 }
             }
 
-            for (ushort i = 0; i <= 255; i++)
-            {
-                mem[reg.PC] = (byte)i;
-                if(i != 0xCB)
+            for (ushort pc = 0; pc <= 255; pc++)
+            {  
+                if(pc != 0xCB)
                 {
-                    Print((byte)i, 0);
+                    Print(pc, 0);
                 }
             }
 

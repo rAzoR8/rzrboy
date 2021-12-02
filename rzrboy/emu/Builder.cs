@@ -2,6 +2,22 @@
 
 namespace emu
 {
+    public class Ref<T> where T: struct
+    {
+        public Ref( T val )
+        {
+            Value = val;
+        }
+
+        public T Value = default;
+        public static implicit operator T( Ref<T> val ) { return val.Value; }
+
+        public override string ToString()
+        {
+            return $"{Value}";
+        }
+    }
+
     /// <summary>
     /// Each op takes one m-cycle.
     /// </summary>
@@ -15,7 +31,7 @@ namespace emu
     /// <param name="pc"></param>
     /// <param name="mem"></param>
     /// <returns></returns>
-    public delegate string dis( ushort pc, ISection mem);
+    public delegate string dis( ref ushort pc, ISection mem);
 
     public interface IInstruction
     {
@@ -26,7 +42,7 @@ namespace emu
         /// <param name="mem"></param>
         /// <returns></returns>
         bool Eval( Reg reg, ISection mem );
-        IEnumerable<string> Disassemble( ushort pc, ISection mem );
+        IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem );
     }
 
     public class Instruction : IInstruction
@@ -35,12 +51,15 @@ namespace emu
         private IEnumerable<dis> dis;
 
         private IEnumerator<op> cur_op;
+        private IEnumerator<dis> cur_dis;
+
 
         public Instruction(IEnumerable<op> ops, IEnumerable<dis> dis)
         {
             this.ops = ops;
             this.dis = dis;
             this.cur_op = ops.GetEnumerator();
+            this.cur_dis = dis.GetEnumerator();
         }
 
         public bool Eval(Reg reg, ISection mem )
@@ -55,13 +74,15 @@ namespace emu
             return true;
         }
 
-        public IEnumerable<string> Disassemble( ushort pc, ISection mem )
+        public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
         {
-            var cur = dis.GetEnumerator();
-            while (cur.MoveNext())
+            while ( cur_dis.MoveNext() )
             {
-                yield return cur.Current( (ushort)(pc+1), mem);
+                yield return cur_dis.Current( ref pc.Value, mem );
             }
+
+            //cur_dis = dis.GetEnumerator();
+            //yield break;
         }
     }
 
@@ -131,21 +152,24 @@ namespace emu
 
     public static class InstructionExtensions
     {
-        public static string ToString(this IInstruction instr, ushort pc, ISection mem)
+        public static string ToString(this IInstruction instr, ref ushort pc, ISection mem)
         {
+            Ref<ushort> ref_pc = new(pc);
+            string[] seps = { " ", ", ", "" };
+            string[] ops = instr.Disassemble( ref_pc, mem ).ToArray();
+          
             StringBuilder sb = new();
-            string[] seps = { " ", ", " };
-            int i = 0;
 
-            var elems = instr.Disassemble( pc, mem );
-            foreach (string str in elems)
+            int i = 0;
+            foreach ( string op in ops )
             {
-                sb.Append(str);
-                if(i + 1 < elems.Count())
+                sb.Append( op );
+                if(i + 1 < ops .Length)
                 {
                     sb.Append(seps[i++]);                
                 }
             }
+            pc = ref_pc;
 
             return sb.ToString();
         }

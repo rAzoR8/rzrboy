@@ -6,14 +6,19 @@
 
         public static class Ops
         {
-            public static dis mnemonic(string str) => (pc, mem) => str;
-            public static dis operand(Reg8 reg) => (pc, mem) => reg.ToString();
-            public static dis operand(Reg16 reg) => (pc, mem) => reg.ToString();
+            public static dis mnemonic(string str) => (ref ushort pc, ISection mem) => str;
+            public static dis operand(Reg8 reg) => ( ref ushort pc, ISection mem ) => reg.ToString();
+            public static dis operand(Reg16 reg) => ( ref ushort pc, ISection mem ) => reg.ToString();
 
-            public static dis operandE8() => ( pc, mem ) => $"{(sbyte)mem[pc]}";
-            public static dis operandDB8() => (pc, mem) => $"0x{mem[pc]:X2}";
-            public static dis operandDB16() => (pc, mem) => $"0x{mem[(ushort)(pc+1)]:X2}{mem[(pc)]:X2}";
-            public static dis addrDB16() => (pc, mem) => $"(0x{operandDB16()(pc, mem)})";
+            public static dis operandE8() => ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+            public static dis operandDB8() => ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
+            public static dis operandDB16() => ( ref ushort pc, ISection mem ) =>
+            {
+                string str = $"0x{mem[(ushort)( pc + 1 )]:X2}{mem[pc]:X2}";
+                pc += 2;
+                return str;
+            };
+            public static dis addrDB16() => ( ref ushort pc, ISection mem ) => $"({operandDB16()(ref pc, mem)})";
 
             public static dis[] operand(Reg8 dst, Reg8 src) => new dis[] { operand(dst), operand(src) };
             public static dis[] operand(Reg16 dst, Reg16 src) => new dis[] { operand(dst), operand(src) };

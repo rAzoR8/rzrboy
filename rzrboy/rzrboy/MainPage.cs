@@ -6,6 +6,7 @@ using static CommunityToolkit.Maui.Markup.GridRowsColumns;
 using Microsoft.Maui;
 using emu;
 using System.Collections.Generic;
+using System.Text;
 
 namespace rzrboy
 {
@@ -51,6 +52,7 @@ namespace rzrboy
             {
                 new Label{ Text = $"{l}  0x" },
                 new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[l]:X2}"; }),
+                //new Label{ }.Bind(Label.TextProperty, nameof(emu.Cpu.reg.PC)),
                 new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[r]:X2}"; }),
                 new Label{ Text = $" {r}" }
             };
@@ -70,7 +72,7 @@ namespace rzrboy
             return new Grid
             {
                 RowSpacing = 2,
-
+                
                 Padding = Device.RuntimePlatform switch
                 {
                     Device.iOS => new Thickness( 30, 60, 30, 30 ),
@@ -100,7 +102,7 @@ namespace rzrboy
             };
         }
 
-        private Grid Disassembly(int instructions)
+        private Grid Disassembly1(int instructions)
         {
             var grid = new Grid {
                 RowSpacing = 2,
@@ -121,7 +123,7 @@ namespace rzrboy
             {
                 grid.Children.Clear();
                 grid.RowDefinitions.Clear();
-                foreach ( string instr in m_gb.cpu.Disassemble(reg.PC, (ushort) (reg.PC + instructions*3), mem) )
+                foreach ( string instr in Cpu.isa.Disassemble(reg.PC, (ushort) (reg.PC + instructions*3), mem) )
                 {
                     if ( grid.Children.Count < instructions ) 
                     {
@@ -133,6 +135,27 @@ namespace rzrboy
             } );
 
             return grid;
+        }
+
+
+        private Label Disassembly( int instructions )
+        {
+            return new Label { }.Update( m_afterStep, lbl =>
+            {
+                int i = 0;
+                StringBuilder sb = new();
+                foreach ( string instr in Cpu.isa.Disassemble( reg.PC, (ushort)( reg.PC + instructions * 3 ), mem ) )
+                {
+                    if ( i++ > instructions )                    
+                    {
+                        break;
+                    }
+
+                    sb.AppendLine( instr );
+                }
+
+                lbl.Text = sb.ToString();
+            } );
         }
 
         public MainPage( emu.Gb gb )
@@ -162,6 +185,16 @@ namespace rzrboy
                 }
             };
 
+            // init
+            foreach ( Callback step in m_beforeStep )
+            {
+                step();
+            }
+
+            foreach ( Callback step in m_afterStep )
+            {
+                step();
+            }
         }
 
         //Children =
