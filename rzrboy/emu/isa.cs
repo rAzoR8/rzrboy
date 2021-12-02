@@ -270,35 +270,27 @@ namespace emu
 
             int count = 0;
 
-            void Print(ushort pc, byte ext)
+            void Print( byte pc, byte ext )
             {
-                IBuilder builder = this[(byte)pc];
-                Debug.Write($"OP 0x{pc:X2}:0x{ext:X2} ");
-                if (builder != null) 
-                {
-                    Debug.WriteLine(builder.Build().ToString( ref pc, mem));
-                    count++;
-                }
-                else
-                {
-                    Debug.WriteLine($"not implemented");
-                }
+                mem[pc] = pc;
+                mem[(ushort)( pc + 1 )] = ext;
+                ushort dis_pc = pc;
+                Debug.WriteLine( Disassemble( ref dis_pc, mem ) );
+                if ( pc != dis_pc ) count++;
             }
 
             for (ushort pc = 0; pc <= 255; pc++)
             {  
                 if(pc != 0xCB)
                 {
-                    Print(pc, 0);
+                    Print((byte)pc, 0);
                 }
             }
 
-            //mem[reg.PC] = 0xCB;
-            //for (ushort j = 0; j <= 255; j++)
-            //{
-            //    mem[(ushort)(reg.PC + 1)] = (byte)j;
-            //    Print(0xCB, (byte)j);
-            //}
+            for ( ushort j = 0; j <= 255; j++ )
+            {
+                Print( 0xCB, (byte)j );
+            }
 
             Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/511.0f}%");
         }
