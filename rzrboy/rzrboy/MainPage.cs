@@ -34,6 +34,8 @@ namespace rzrboy
     public class MainPage : ContentPage
     {
         private emu.Gb m_gb;
+
+        private Cpu cpu => m_gb.cpu;
         private Reg reg => m_gb.cpu.reg;
         private Mem mem => m_gb.mem;
 
@@ -110,7 +112,7 @@ namespace rzrboy
             {
                 int i = 0;
                 StringBuilder sb = new();
-                foreach ( string instr in Cpu.isa.Disassemble( reg.PC, (ushort)( reg.PC + instructions * 3 ), mem ) )
+                foreach ( string instr in Cpu.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
                 {
                     if ( i++ > instructions )                    
                     {

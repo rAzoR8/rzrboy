@@ -1,4 +1,6 @@
-﻿namespace emu
+﻿using System.Diagnostics;
+
+namespace emu
 {
     public class Gb
     {
@@ -71,8 +73,10 @@
         public int Step()
         {
             int cycles = 0;
+            ushort pc = cpu.curInstrPC;
             // execute all ops
             while ( Tick() ) { ++cycles; }
+            Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )}: {cycles} cycles" );
             return cycles;
         }
     }

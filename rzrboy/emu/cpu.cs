@@ -8,7 +8,9 @@ namespace emu
         public Reg reg { get; } = new();
         private Mem mem { get; }
 
-        private byte cur_opcode = 0;
+        public byte curOpCode { get; private set; } = 0;
+        public ushort curInstrPC { get; private set; } = 0;
+
         private IInstruction? cur_instr = null;
 
         public Cpu( Mem memory ) 
@@ -24,13 +26,10 @@ namespace emu
         {
             if ( cur_instr == null || cur_instr.Eval( reg, mem ) == false ) // fetch and exec are interleaved
             {
-                cur_opcode = mem[reg.PC]; // fetch
-                IBuilder builder = isa[cur_opcode];
+                curInstrPC = reg.PC;
+                curOpCode = mem[reg.PC++]; // fetch
+                IBuilder builder = isa[curOpCode];
                
-                ushort dis_pc = reg.PC++;
-
-                Debug.WriteLine( isa.Disassemble( ref dis_pc, mem ) );
-
                 bool firstTick = cur_instr == null;
 
                 // TODO: remove once all instructions are implemented

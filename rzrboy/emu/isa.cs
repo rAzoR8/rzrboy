@@ -236,6 +236,18 @@ namespace emu
             Fill( m_extInstructions, offsetX: 0x4F, stepY: 0x10, bit,
                   new byte[] { 1, 3, 5, 7 }, Reg8.A );
 
+            // LD (0xFF00+db8), A
+            this[0XE0] = ldhimma;
+
+            // LD A, (0xFF00+db8)
+            this[0XF0] = ldhaimm;
+
+            // LD (0xFF00+C), A
+            this[0xE2] = ldhca;
+
+            // LD A, (0xFF00+C)
+            this[0xF2] = ldhac;
+
             DebugReport();
         }
 
