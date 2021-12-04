@@ -93,6 +93,13 @@ namespace emu
             this[0x21] = ldimm(Reg16.HL);
             this[0x31] = ldimm(Reg16.SP);
 
+            // LD [B D H], .DB8
+            this[0x06] = ldimm(Reg8.B);
+            this[0x16] = ldimm(Reg8.D);
+            this[0x26] = ldimm(Reg8.H);
+            // LD HL, .DB16
+            this[0x36] = ldimm(Reg16.HL);
+
             // 8bit loads
             // LD (BC DE), A
             this[0x02] = ldadr(Reg16.BC, Reg8.A);
@@ -100,12 +107,11 @@ namespace emu
             this[0x22] = Ops.ldhlplus(Reg8.A).Get("LD") + $"(HL+)" + "A";
             this[0x32] = Ops.ldhlminus(Reg8.A).Get("LD") + $"(HL-)" + "A";
 
-            // LD [B D H], .DB8
-            this[0x06] = ldimm(Reg8.B);
-            this[0x16] = ldimm(Reg8.D);
-            this[0x26] = ldimm(Reg8.H);
-            // LD HL, .DB16
-            this[0x36] = ldimm(Reg16.HL);
+            // LD [C E L A], .DB8
+            this[0x0E] = ldimm( Reg8.C );
+            this[0x1E] = ldimm( Reg8.E );
+            this[0x2E] = ldimm( Reg8.L );
+            this[0x3E] = ldimm( Reg8.A );
 
             // LD (.DB16), SP
             this[0x8] = ldimm16_sp();
@@ -233,6 +239,12 @@ namespace emu
             DebugReport();
         }
 
+        /// <summary>
+        /// only advances PC if the instructions is implemented
+        /// </summary>
+        /// <param name="pc"></param>
+        /// <param name="bin"></param>
+        /// <returns></returns>
         public string Disassemble( ref ushort pc, ISection bin )
         {
             byte opcode = bin[pc]; // fetch
@@ -276,7 +288,12 @@ namespace emu
                 mem[(ushort)( pc + 1 )] = ext;
                 ushort dis_pc = pc;
                 Debug.WriteLine( Disassemble( ref dis_pc, mem ) );
-                if ( pc != dis_pc ) count++;
+
+                if ( ( pc != 0xCB && m_instructions[pc] != null ) ||
+                    ( pc == 0xCB && m_extInstructions[ext] != null ) )
+                {
+                    count++;
+                }
             }
 
             for (ushort pc = 0; pc <= 255; pc++)
@@ -292,7 +309,7 @@ namespace emu
                 Print( 0xCB, (byte)j );
             }
 
-            Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/511.0f}%");
+            Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/500.0f}%");
         }
     }
 

@@ -32,20 +32,37 @@
 
             // read two bytes from instruction stream, 3 m-cycles
             public static op[] ldimm( Reg16 target ) => new op[] {
-                (Reg reg, ISection mem) => { reg[target] = mem[reg.PC++]; },
+                (Reg reg, ISection mem) => { reg[target] = (ushort)mem[reg.PC++]; },
                 (Reg reg, ISection mem) => { reg[target] |= (ushort)(mem[reg.PC++] << 8); }
             };
 
             // reg to reg, 1 m-cycle
             public static op ldreg( Reg8 dst, Reg8 src ) => ( reg, mem ) => { reg[dst] = reg[src]; };
-            public static op ldreg( Reg16 dst, Reg16 src ) => ( reg, mem ) => { reg[dst] = reg[src]; };
+            // reg to reg, 2 m-cycles
+            public static op[] ldreg( Reg16 dst, Reg16 src ) => new op[] { // simulate 16 bit register being written in two cycles
+                (Reg reg, ISection mem) => { reg[dst] = (ushort)((reg[dst] << 8) | (reg[src] & 0xFF)); },
+                (Reg reg, ISection mem) => { reg[dst] = reg[src]; }
+            };
+
+            // address to byte ref / helper
+            private static op ldadr_helper( byte? dst, Reg16 src_addr ) => ( reg, mem ) => { dst = mem[reg[src_addr]]; };
+
+            // LD r, 1byte helper
+            private static op ldreg_helper( Reg8 dst, byte val ) => ( reg, mem ) => { reg[dst] = val; };
+
+            public static IEnumerable<op> ldadr_then( OpMaker8 fun, Reg16 src_addr )
+            {
+                byte val = 0;
+                yield return ldadr_helper( val, src_addr );
+                yield return fun( val );
+            }
 
             // address to reg
-            public static op ldadr( Reg8 dst, Reg16 src_addr ) => ( reg, mem ) => { reg[dst] = mem[reg[src_addr]]; };
-            // address to byte ref / helper
-            private static op ldadr( byte? dst, Reg16 src_addr ) => ( reg, mem ) => { dst = mem[reg[src_addr]]; };
+            public static IEnumerable<op> ldadr( Reg8 dst, Reg16 src_addr ) => ldadr_then( val => ldreg_helper( dst, val ), src_addr );
 
-            // reg to address
+            // TODO: all address loads are at least 2 cycles!
+
+            // reg to address, fix this to 2 cycles!!
             public static op ldadr( Reg16 dst_addr, Reg8 src ) => ( reg, mem ) => { mem[reg[dst_addr]] = reg[src]; };
 
             public static op ldhlplus( Reg8 src ) => ( reg, mem ) => { mem[reg.HL++] = reg[src]; };
@@ -120,14 +137,6 @@
             public static op xor( Reg8 src ) => ( reg, mem ) => xor( reg[src] );
 
             public delegate op OpMaker8( byte val );
-
-            // XOR A, (HL) etc
-            public static IEnumerable<op> ldadr_then( OpMaker8 fun, Reg16 src_addr )
-            {
-                byte val = 0;
-                yield return ldadr( val, src_addr );
-                yield return fun( val );
-            }
 
             // BIT i, b8
             public static op bit( byte bit, byte val ) => ( reg, mem ) => 

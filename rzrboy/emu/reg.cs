@@ -7,7 +7,7 @@
 
     public enum Reg16 : int
     {
-       AF = Reg8.Max, BC,DE, HL, PC, SP
+       AF = Reg8.Max, BC, DE, HL, PC, SP
     }
 
     public enum RegX : int
