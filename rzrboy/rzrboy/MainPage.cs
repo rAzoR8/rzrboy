@@ -106,6 +106,45 @@ namespace rzrboy
             };
         }
 
+        private Grid Memory(ISection section, int columns, int rows, int offset )
+        {
+            GridLength height = 10;
+            var grid = new Grid
+            {
+                RowSpacing = 1,                
+            };            
+
+            for ( int r = 0; r < rows; r++ )
+            {
+                grid.AddRowDefinition( new RowDefinition { Height = height } );
+            }
+
+            for ( int r = 0; r < rows; r++ )
+            {
+                var row = new HorizontalStackLayout();
+                row.Add( new Label { Text = $"0x{offset + r * columns}:X4" } );
+
+                for ( int c = 0; c < columns; c++ )
+                {
+                    void OnEdit( object sender, EventArgs e )
+                    {
+                        var editor = sender as Editor;
+                        if ( byte.TryParse( editor.Text, out var val ) )
+                        {
+                            ushort addr = (ushort)( offset + r * columns + c );
+                            section[addr] = val;
+                        }
+                    }
+
+                    row.Add( new Editor { AutoSize = EditorAutoSizeOption.Disabled }.Invoke( edit => edit.Completed += OnEdit ) );
+                }
+
+                grid.Add( row );
+            }            
+
+            return grid;
+        }
+
         private Label Disassembly( int instructions )
         {
             return new Label { }.Update( m_afterStep, lbl =>
@@ -136,7 +175,7 @@ namespace rzrboy
 
                 RowDefinitions = Rows.Define(
                     (Row.Step, Auto),
-                    (Row.Registers, Auto),
+                    (Row.RegAndMem, Auto),
                     (Row.Disassembly, Auto)
                     ),
 
@@ -148,7 +187,7 @@ namespace rzrboy
                         //.CenterHorizontal()
                         .Invoke(button => button.Clicked += OnStepClicked),
 
-                    Registers().Row(Row.Registers),
+                    new HorizontalStackLayout{ Registers(), Memory(mem, 8, 16, 0) }.Row(Row.RegAndMem),
                     Disassembly(10).Row(Row.Disassembly)
                 }
             };
@@ -203,7 +242,7 @@ namespace rzrboy
         //        }
 
 
-        enum Row { Step, Registers, Disassembly }
+        enum Row { Step, RegAndMem, Disassembly }
 
 
         private void OnStepClicked(object sender, EventArgs e)
