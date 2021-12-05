@@ -223,10 +223,36 @@
             throw new AddressNotMappedException(address);
         }
 
+        public delegate void OnRead(ISection section, ushort address);
+        public delegate void OnWrite(ISection section, ushort address, byte value);
+
+        public List<OnRead> ReadCallbacks { get; } = new();
+        public List<OnWrite> WriteCallbacks { get; } = new();
+
+        private byte Read(ushort address ) 
+        {
+            ISection section = Find(address);
+            foreach ( OnRead onRead in ReadCallbacks )
+            {
+                onRead( section, address );
+            }
+            return section[address];
+        }
+
+        private void Write( ushort address, byte val )
+        {
+            ISection section = Find( address );
+            section[address] = val;
+            foreach ( OnWrite onWrite in WriteCallbacks )
+            {
+                onWrite( section, address, val );
+            }
+        }
+
         public byte this[ushort address]
         {
-            get => Find(address)[address];
-            set => Find(address)[address] = value;
+            get => Read( address );
+            set => Write( address, value );
         }
     }
 

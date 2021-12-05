@@ -69,14 +69,14 @@ namespace emu
         /// <summary>
         /// execute one complete instruction
         /// </summary>
-        /// <returns>number of M-cycles the current instruction took</returns>
+        /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
         public int Step()
         {
             int cycles = 0;
             ushort pc = cpu.curInstrPC;
             // execute all ops
             while ( Tick() ) { ++cycles; }
-            Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )}: {cycles} cycles" );
+            Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} fetch|cycles" );
             return cycles;
         }
     }

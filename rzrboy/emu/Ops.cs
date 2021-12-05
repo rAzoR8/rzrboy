@@ -67,24 +67,37 @@
             public static op ldhlminus( Reg8 src ) => ( reg, mem ) => { mem[reg.HL--] = reg[src]; };
 
             // LD A, (0xFF00+C)
-            public readonly static op ldhac = ( reg, mem ) => { reg.A = mem[binutil.Combine( 0xff, reg.C )]; };
+            public static IEnumerable<op> ldhac() 
+            {
+                ushort address = 0xFF00;
+                yield return ( reg, mem ) => { address += reg.C; };
+                yield return ( reg, mem ) => { reg.A = mem[address]; };
+            }
+
             // LD (0xFF00+C), A
-            public readonly static op ldhca = ( reg, mem ) => { mem[binutil.Combine( 0xff, reg.C )] = reg.A; };
+            public static IEnumerable<op> ldhca()
+            {
+                ushort address = 0xFF00;
+                yield return ( reg, mem ) => { address += reg.C; };
+                yield return ( reg, mem ) => { mem[address] = reg.A; };
+            }
 
             // LD A, (0xFF00+db8)
             public static IEnumerable<op> ldhaimm() 
             {
-                byte lsb = 0;
+                byte lsb = 0; ushort address = 0xFF00;
                 yield return ldimm( lsb );
-                yield return ( reg, mem ) => reg.A = mem[binutil.Combine( 0xff, lsb )];
+                yield return ( reg, mem ) => { address += lsb; };
+                yield return ( reg, mem ) => { reg.A = mem[address]; };
             }
 
             // LD (0xFF00+db8), A
             public static IEnumerable<op> ldhimma()
             {
-                byte lsb = 0;
-                yield return ldimm( lsb );
-                yield return ( reg, mem ) => mem[binutil.Combine( 0xff, lsb )] = reg.A;
+                byte lsb = 0; ushort address = 0xFF00;
+                yield return ldimm( lsb );                
+                yield return ( reg, mem ) => { address += lsb; };
+                yield return ( reg, mem ) => { mem[address] = reg.A; };
             }
 
             // LD (a16), SP
@@ -193,10 +206,10 @@
         private static Builder ldadr(Reg16 dst_addr, Reg8 src) => Ops.ldadr(dst_addr, src).Get("LD") + $"({dst_addr})" + Ops.operand(src);
 
         // LD A, (0xFF00+C)
-        private static readonly Builder ldhac = new Builder( Ops.ldhac, "LD" ) + "A" + "(0xFF00+C)";
+        private static readonly Builder ldhac = new Builder( Ops.ldhac(), "LD" ) + "A" + "(0xFF00+C)";
 
         // LD (0xFF00+C), A
-        private static readonly Builder ldhca = new Builder( Ops.ldhca, "LD" ) + "(0xFF00+C)" + "A";
+        private static readonly Builder ldhca = new Builder( Ops.ldhca(), "LD" ) + "(0xFF00+C)" + "A";
 
         // LD A, (0xFF00+db8)
         private static readonly Builder ldhaimm = new Builder( Ops.ldhaimm(), "LD" ) + "A" + Ops.operandDB8x( "0xFF" );
