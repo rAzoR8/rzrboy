@@ -121,22 +121,25 @@ namespace rzrboy
 
             for ( int r = 0; r < rows; r++ )
             {
+                
                 var row = new HorizontalStackLayout();
                 row.Add( new Label { Text = $"0x{offset + r * columns}:X4" } );
 
                 for ( int c = 0; c < columns; c++ )
                 {
+                    ushort addr = (ushort)( offset + r * columns + c );
+
                     void OnEdit( object sender, EventArgs e )
                     {
                         var editor = sender as Editor;
                         if ( byte.TryParse( editor.Text, out var val ) )
                         {
-                            ushort addr = (ushort)( offset + r * columns + c );
                             section[addr] = val;
                         }
                     }
 
-                    row.Add( new Editor { AutoSize = EditorAutoSizeOption.Disabled }.Invoke( edit => edit.Completed += OnEdit ) );
+                    byte initVal = section[addr];
+                    row.Add( new Editor { Text = $"{initVal:X2}", AutoSize = EditorAutoSizeOption.Disabled }.Invoke( edit => edit.Completed += OnEdit ) );
                 }
 
                 grid.Add( row );

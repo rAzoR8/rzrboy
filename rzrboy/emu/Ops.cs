@@ -2,8 +2,6 @@
 {
     public partial class Isa
     {
-        private readonly static Builder nop = new Builder((Reg reg, ISection mem ) => { }, "NOP");
-
         public static class Ops
         {
             public static dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
@@ -24,6 +22,8 @@
 
             public static dis[] operand( Reg8 dst, Reg8 src ) => new dis[] { operand( dst ), operand( src ) };
             public static dis[] operand( Reg16 dst, Reg16 src ) => new dis[] { operand( dst ), operand( src ) };
+
+            public static op nop = ( reg, mem ) => { };
 
             // read next byte from mem[pc++], 2 m-cycles
             public static op ldimm( Reg8 target ) => ( Reg reg, ISection mem ) => { reg[target] = mem[reg.PC++]; };
@@ -181,7 +181,44 @@
 
             // BIT i, r
             public static op bit( byte _bit, Reg8 src ) => ( reg, mem ) => bit( _bit, reg[src] );
+
+            public static IEnumerable<op> inc( Reg16 dst )
+            {
+                yield return nop;
+                yield return ( reg, mem ) => { reg[dst] += 1; };
+            }
+
+            public static op inc( Reg8 dst ) => ( reg, mem ) =>
+            {
+                byte res = reg[dst]++;
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = (res & 0b10000) == 0b10000;
+            };
+
+            public static IEnumerable<op> inchl( )
+            {
+                byte val = 0;
+                yield return ldadr_helper( val, Reg16.HL );
+                yield return ( reg, mem ) =>
+                {
+                    byte res = val++;
+                    reg.Zero = res == 0;
+                    reg.Sub = false;
+                    reg.HalfCarry = ( res & 0b10000 ) == 0b10000;
+                };
+                yield return ( reg, mem ) => { mem[reg.HL] = val; };
+            }
         };
+
+        private readonly static Builder nop = new Builder( Ops.nop, "NOP" );
+
+        // INC r8
+        private static Builder inc( Reg8 dst ) => Ops.inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        // INC r16
+        private static Builder inc( Reg16 dst ) => Ops.inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        // INC (HL)
+        private readonly static Builder inchl = new Builder( Ops.inchl(), "INC" ) + "(HL)";
 
         private static Builder bit( byte bit, Reg8 target ) => Ops.bit( bit, target ).Get( "BIT" ) + $"{bit}" + Ops.operand( target );
         private static Builder bithl( byte bit ) => Ops.ldadr_then( ( byte val ) => Ops.bit( bit, val ), Reg16.HL ).Get( "BIT" ) + $"{bit}" + "(HL)";
@@ -212,10 +249,10 @@
         private static readonly Builder ldhca = new Builder( Ops.ldhca(), "LD" ) + "(0xFF00+C)" + "A";
 
         // LD A, (0xFF00+db8)
-        private static readonly Builder ldhaimm = new Builder( Ops.ldhaimm(), "LD" ) + "A" + Ops.operandDB8x( "0xFF" );
+        private static readonly Builder ldhaimm = new Builder( Ops.ldhaimm(), "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
 
         // LD (0xFF00+db8), A
-        private static readonly Builder ldhimma = new Builder( Ops.ldhimma(), "LD" ) +  Ops.operandDB8x( "0xFF" ) + "A";
+        private static readonly Builder ldhimma = new Builder( Ops.ldhimma(), "LD" ) +  Ops.operandDB8x( "0xFF00+" ) + "A";
 
         // LD (a16), SP
         private static Builder ldimm16_sp() => new Builder(Ops.ldimm16_sp(), "LD") + Ops.addrDB16 + "SP";

@@ -177,6 +177,18 @@ namespace emu
             // LD SP, HL
             this[0xF9] = ldreg( Reg16.SP, Reg16.HL );
 
+            // LD (0xFF00+db8), A
+            this[0XE0] = ldhimma;
+
+            // LD A, (0xFF00+db8)
+            this[0XF0] = ldhaimm;
+
+            // LD (0xFF00+C), A
+            this[0xE2] = ldhca;
+
+            // LD A, (0xFF00+C)
+            this[0xF2] = ldhac;
+
             // JP NZ, a16
             this[0xC2] = jpimm16cc(Ops.NZ, "NZ");
             this[0xD2] = jpimm16cc(Ops.NC, "NC");
@@ -236,17 +248,20 @@ namespace emu
             Fill( m_extInstructions, offsetX: 0x4F, stepY: 0x10, bit,
                   new byte[] { 1, 3, 5, 7 }, Reg8.A );
 
-            // LD (0xFF00+db8), A
-            this[0XE0] = ldhimma;
+            this[0x03] = inc( Reg16.BC );
+            this[0x13] = inc( Reg16.DE );
+            this[0x23] = inc( Reg16.HL );
+            this[0x33] = inc( Reg16.SP );
 
-            // LD A, (0xFF00+db8)
-            this[0XF0] = ldhaimm;
+            this[0x04] = inc( Reg8.B );
+            this[0x14] = inc( Reg8.D );
+            this[0x24] = inc( Reg8.H );
+            this[0x34] = inchl;
 
-            // LD (0xFF00+C), A
-            this[0xE2] = ldhca;
-
-            // LD A, (0xFF00+C)
-            this[0xF2] = ldhac;
+            this[0x0C] = inc( Reg8.C );
+            this[0x1C] = inc( Reg8.E );
+            this[0x2C] = inc( Reg8.L );
+            this[0x3C] = inc( Reg8.A );
 
             DebugReport();
         }
