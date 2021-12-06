@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace emu
+namespace rzr
 {
     public class Ref<T> where T: struct
     {

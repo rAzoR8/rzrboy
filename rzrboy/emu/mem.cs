@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace emu
+namespace rzr
 {
     public class AddressNotMappedException : System.AccessViolationException 
     {

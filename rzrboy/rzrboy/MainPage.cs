@@ -4,7 +4,7 @@ using Microsoft.Maui.Essentials;
 using CommunityToolkit.Maui.Markup;
 using static CommunityToolkit.Maui.Markup.GridRowsColumns;
 using Microsoft.Maui;
-using emu;
+using rzr;
 using System.Collections.Generic;
 using System.Text;
 
@@ -33,7 +33,7 @@ namespace rzrboy
 
     public class MainPage : ContentPage
     {
-        private emu.Gb m_gb;
+        private rzr.Gb m_gb;
 
         private Cpu cpu => m_gb.cpu;
         private Reg reg => m_gb.cpu.reg;
@@ -168,7 +168,7 @@ namespace rzrboy
             } );
         }
 
-        public MainPage( emu.Gb gb )
+        public MainPage( rzr.Gb gb )
         {
             m_gb = gb;
 

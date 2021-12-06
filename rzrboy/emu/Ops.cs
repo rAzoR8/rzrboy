@@ -1,4 +1,4 @@
-﻿namespace emu
+﻿namespace rzr
 {
     public partial class Isa
     {

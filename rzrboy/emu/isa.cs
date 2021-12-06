@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 
-namespace emu
+namespace rzr
 {
     public partial class Isa
     {

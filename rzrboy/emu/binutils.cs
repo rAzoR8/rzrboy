@@ -1,4 +1,4 @@
-﻿namespace emu
+﻿namespace rzr
 {
     public static class binutil
     {
