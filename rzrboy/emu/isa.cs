@@ -118,11 +118,11 @@ namespace rzr
             this[0x32] = LdHlMinusA;
 
             // LD A, (BC DE)
-            this[0x0F] = LdAddr( Reg8.A, Reg16.BC );
-            this[0x1F] = LdAddr( Reg8.A, Reg16.DE );
+            this[0x0A] = LdAddr( Reg8.A, Reg16.BC );
+            this[0x1A] = LdAddr( Reg8.A, Reg16.DE );
             // LD A, (HL+-)
-            this[0x2F] = LdAHlPlus;
-            this[0x3F] = LdAHlMinus;
+            this[0x2A] = LdAHlPlus;
+            this[0x3A] = LdAHlMinus;
 
             // LD [C E L A], .DB8
             this[0x0E] = LdImm8( Reg8.C );
@@ -275,6 +275,15 @@ namespace rzr
             this[0x1C] = Inc( Reg8.E );
             this[0x2C] = Inc( Reg8.L );
             this[0x3C] = Inc( Reg8.A );
+
+            // CALL cc, nn
+            this[0xC5] = CallCc( Ops.NZ, "NZ" );
+            this[0xD5] = CallCc( Ops.NC, "NC" );
+            this[0xCC] = CallCc( Ops.Z, "Z" );
+            this[0xDC] = CallCc( Ops.C, "C" );
+
+            // CALL nn
+            this[0xCD] = Call;
 
             DebugReport();
         }

@@ -33,6 +33,8 @@ namespace rzr
     /// <returns></returns>
     public delegate string dis( ref ushort pc, ISection mem);
 
+    public delegate IEnumerable<op> InstrOps();
+
     public interface IInstruction
     {
         /// <summary>
@@ -47,18 +49,18 @@ namespace rzr
 
     public class Instruction : IInstruction
     {
-        private IEnumerable<op> ops;
+        private InstrOps ops;
         private IEnumerable<dis> dis;
 
         private IEnumerator<op> cur_op;
         private IEnumerator<dis> cur_dis;
 
 
-        public Instruction(IEnumerable<op> ops, IEnumerable<dis> dis)
+        public Instruction( InstrOps ops, IEnumerable<dis> dis)
         {
             this.ops = ops;
             this.dis = dis;
-            this.cur_op = ops.GetEnumerator();
+            this.cur_op = ops().GetEnumerator();
             this.cur_dis = dis.GetEnumerator();
         }
 
@@ -66,7 +68,7 @@ namespace rzr
         {
             if (cur_op.MoveNext() == false)
             {
-                cur_op = ops.GetEnumerator();
+                cur_op = ops().GetEnumerator();
                 return false;
             }
 
@@ -96,43 +98,40 @@ namespace rzr
     /// </summary>
     public class Builder : IBuilder
     {
-        private List<op> m_ops = new();
+        private InstrOps m_ops;
         private List<dis> m_dis = new();
 
-        public Builder(op op, dis? dis = null)
+        public Builder( op op, dis? dis = null )
         {
-            m_ops.Add(op);
-            if (dis != null)
+            m_ops = () => Enumerable.Repeat( op, 1 );
+            if ( dis != null )
             {
-                m_dis.Add(dis);
+                m_dis.Add( dis );
             }
         }
 
-        public Builder(IEnumerable<op> ops, dis? dis = null)
+        public Builder( InstrOps ops, dis? dis = null )
         {
-            m_ops.AddRange(ops);
-            if (dis != null)
+            m_ops = ops;
+            if ( dis != null )
             {
-                m_dis.Add(dis);
+                m_dis.Add( dis );
             }
         }
 
-        public Builder(op op, string mnemonic)
-            : this(op, Isa.Ops.mnemonic(mnemonic))
+        public Builder( op op, string mnemonic )
+            : this( op, Isa.Ops.mnemonic( mnemonic ) )
         {
         }
 
-        public Builder(IEnumerable<op> ops, string mnemonic)
-            : this(ops, Isa.Ops.mnemonic(mnemonic))
+        public Builder( InstrOps ops, string mnemonic )
+            : this( ops, Isa.Ops.mnemonic( mnemonic ) )
         {
         }
 
-        public static Builder operator +(Builder b, op op) { b.m_ops.Add(op); return b; }
-        public static Builder operator +(Builder b, IEnumerable<op> ops) { b.m_ops.AddRange(ops); return b; }
         public static Builder operator +(Builder b, dis op) { b.m_dis.Add(op); return b; }
         public static Builder operator +(Builder b, IEnumerable<dis> dis) { b.m_dis.AddRange(dis); return b; }
         public static Builder operator +(Builder b, string str) { b.m_dis.Add(Isa.Ops.mnemonic(str)); return b; }
-        public static Builder operator +(Builder b, IEnumerable<string> str) { b.m_dis.AddRange(str.Select(s => Isa.Ops.mnemonic(s))); return b; }
 
         public IInstruction Build() { return new Instruction(m_ops, m_dis); }
     }
@@ -141,18 +140,12 @@ namespace rzr
     {
         public static Builder Get(this op op, string mnemonic) => new Builder(op, mnemonic);
         public static Builder Get(this op op, dis? dis = null) => new Builder(op, dis);
-        public static Builder Add(this op op, op other) { return new Builder(op) + other; }
-        public static Builder Add(this op op, dis other) { return new Builder(op) + other; }
 
-        public static Builder Get(this op[] op, string mnemonic) => new Builder(op, mnemonic);
-        public static Builder Get(this op[] op, dis? dis = null) => new Builder(op, dis);
-        public static Builder Add(this op[] op, op other) { return new Builder(op) + other; }
-        public static Builder Add(this op[] op, dis other) { return new Builder(op) + other; }
-
-        public static Builder Get( this IEnumerable<op> op, string mnemonic ) => new Builder( op, mnemonic );
-        public static Builder Get( this IEnumerable<op> op, dis? dis = null ) => new Builder( op, dis );
-        public static Builder Add( this IEnumerable<op> op, op other ) { return new Builder( op ) + other; }
-        public static Builder Add( this IEnumerable<op> op, dis other ) { return new Builder( op ) + other; }
+        // Debug name
+        public static string ToString( this InstrOps ops )
+        {
+            return ops.Method.Name;
+        }
     }
 
     public static class InstructionExtensions

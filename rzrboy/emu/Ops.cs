@@ -160,19 +160,18 @@
             // JP HL
             public static op JpHl() => ( reg, mem ) => { reg.PC = reg.HL; };
 
-            public delegate bool cond( Reg reg );
-            public readonly static cond NZ = ( Reg reg ) => !reg.Zero;
-            public readonly static cond Z = ( Reg reg ) => reg.Zero;
-            public readonly static cond NC = ( Reg reg ) => !reg.Carry;
-            public readonly static cond C = ( Reg reg ) => reg.Carry;
+            public delegate bool Cond( Reg reg );
+            public readonly static Cond NZ = ( Reg reg ) => !reg.Zero;
+            public readonly static Cond Z = ( Reg reg ) => reg.Zero;
+            public readonly static Cond NC = ( Reg reg ) => !reg.Carry;
+            public readonly static Cond C = ( Reg reg ) => reg.Carry;
 
             // JP cc, a16
-            public static IEnumerable<op> JpCcImm16( cond cc )
+            public static IEnumerable<op> JpImm16( Cond? cc = null )
             {
-                byte nlow = 0, nhigh = 0;
-                bool takeBranch = false;
+                byte nlow = 0, nhigh = 0; bool takeBranch = true;
                 yield return LdImm8Helper( nlow );
-                yield return ( Reg reg, ISection mem ) => { nhigh = mem[reg.PC++]; takeBranch = cc( reg ); };
+                yield return ( reg, mem ) => { nhigh = mem[reg.PC++]; if(cc != null) takeBranch = cc( reg ); };
                 if ( takeBranch )
                 {
                     ushort nn = nhigh.Combine( nlow );
@@ -180,29 +179,12 @@
                 }
             }
 
-            // JP a16
-            public static IEnumerable<op> JpImm16()
-            {
-                byte nlow = 0, nhigh = 0;
-                yield return LdImm8Helper( nlow );
-                yield return LdImm8Helper( nhigh );
-                ushort nn = nhigh.Combine( nlow );
-                yield return JpHelper( nn );
-            }
-
             private static op JrHelper( sbyte offset ) => ( reg, mem ) => { reg.PC = (ushort)( reg.PC + offset ); };
 
-            public static IEnumerable<op> JrImm()
+            public static IEnumerable<op> JrImm( Cond? cc = null )
             {
-                byte offset = 0;
-                yield return LdImm8Helper( offset );
-                yield return JrHelper( (sbyte)offset );
-            }
-
-            public static IEnumerable<op> JrCcImm( cond cc )
-            {
-                byte offset = 0; bool takeBranch = false;
-                yield return ( Reg reg, ISection mem ) => { offset = mem[reg.PC++]; takeBranch = cc( reg ); };
+                byte offset = 0; bool takeBranch = true;
+                yield return ( Reg reg, ISection mem ) => { offset = mem[reg.PC++]; if ( cc != null ) takeBranch = cc( reg ); };
                 if ( takeBranch )
                 {
                     yield return JrHelper( (sbyte)offset );
@@ -269,6 +251,22 @@
                 };
                 yield return ( reg, mem ) => { mem[reg.HL] = val; };
             }
+
+            // CALL cc, nn
+            public static IEnumerable<op> Call( Cond? cc = null ) 
+            {
+                byte nlow = 0, nhigh = 0; bool takeBranch = true;
+                yield return LdImm8Helper( nlow );
+                yield return ( reg, mem ) => { nhigh = mem[reg.PC++]; takeBranch = cc != null && cc( reg ); };
+                ushort nn = nhigh.Combine( nlow );
+                if ( takeBranch )
+                {
+                    yield return ( reg, mem ) => mem[reg.SP--] = reg.PC.GetMsb();
+                    yield return ( reg, mem ) => mem[reg.SP] = reg.PC.GetLsb();
+                    yield return ( reg, mem ) => reg.PC = nn;
+                }
+            }
+
         };
 
         private readonly static Builder Nop = Ops.Nop.Get( "NOP" );
@@ -276,70 +274,76 @@
         // INC r8
         private static Builder Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
         // INC r16
-        private static Builder Inc( Reg16 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        private static Builder Inc( Reg16 dst ) => new Builder (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
         // INC (HL)
-        private readonly static Builder IncHl = Ops.IncHl().Get( "INC" ) + "(HL)";
+        private readonly static Builder IncHl = new Builder( Ops.IncHl, "INC" ) + "(HL)";
 
         // BIT i, r8
         private static Builder Bit( byte bit, Reg8 target ) => Ops.Bit( bit, target ).Get( "BIT" ) + $"{bit}" + Ops.operand( target );
         // BIT i, (HL)
-        private static Builder BitHl( byte bit ) => Ops.BitHl( bit ).Get( "BIT" ) + $"{bit}" + "(HL)";
+        private static Builder BitHl( byte bit ) => new Builder( () => Ops.BitHl( bit ), "BIT" ) + $"{bit}" + "(HL)";
 
         // XOR A, src
         private static Builder Xor( Reg8 target ) => Ops.Xor( target ).Get( "XOR" ) + "A" + Ops.operand( target );
         // XOR A, (HL)
-        private static readonly Builder XorHl = Ops.XorHl().Get( "XOR" ) + "A" + "(HL)";
+        private static readonly Builder XorHl = new Builder( Ops.XorHl, "XOR" ) + "A" + "(HL)";
 
         // LD r8, db8
-        private static Builder LdImm8( Reg8 target ) => Ops.LdImm8( target ).Get( "LD" ) + Ops.operand( target ) + Ops.operandDB8;
+        private static Builder LdImm8( Reg8 target ) => new Builder( () => Ops.LdImm8( target ), "LD" ) + Ops.operand( target ) + Ops.operandDB8;
         // LD r16, db16
-        private static Builder LdImm16( Reg16 target ) => Ops.LdImm16( target ).Get( "LD" ) + Ops.operand( target ) + Ops.operandDB16;
+        private static Builder LdImm16( Reg16 target ) => new Builder( () => Ops.LdImm16( target ), "LD" ) + Ops.operand( target ) + Ops.operandDB16;
 
         // LD r8, r8'
         private static Builder LdReg8( Reg8 dst, Reg8 src ) => Ops.LdReg8( dst, src ).Get( "LD" ) + Ops.operand( dst, src );
         // LD r16, r16'
-        private static Builder LdReg16( Reg16 dst, Reg16 src ) => Ops.LdReg16( dst, src ).Get( "LD" ) + Ops.operand( dst, src );
+        private static Builder LdReg16( Reg16 dst, Reg16 src ) => new Builder( () => Ops.LdReg16( dst, src ), "LD" ) + Ops.operand( dst, src );
 
         // LD r, (r16)
-        private static Builder LdAddr( Reg8 dst, Reg16 src_addr ) => Ops.LdAddr( dst, src_addr ).Get( "LD" ) + Ops.operand( dst ) + $"({src_addr})";
+        private static Builder LdAddr( Reg8 dst, Reg16 src_addr ) => new Builder( () => Ops.LdAddr( dst, src_addr ), "LD" ) + Ops.operand( dst ) + $"({src_addr})";
         // LD (r16), r
-        private static Builder LdAddr( Reg16 dst_addr, Reg8 src ) => Ops.LdAddr( dst_addr, src ).Get( "LD" ) + $"({dst_addr})" + Ops.operand( src );
+        private static Builder LdAddr( Reg16 dst_addr, Reg8 src ) => new Builder( () => Ops.LdAddr( dst_addr, src ), "LD" ) + $"({dst_addr})" + Ops.operand( src );
 
         // LD (HL+), A
-        private static readonly Builder LdHlPlusA = Ops.LdHlPlusA().Get( "LD" ) + $"(HL+)" + "A";
+        private static readonly Builder LdHlPlusA = new Builder( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
         // LD (HL-), A
-        private static readonly Builder LdHlMinusA = Ops.LdHlMinusA().Get( "LD" ) + $"(HL-)" + "A";
+        private static readonly Builder LdHlMinusA = new Builder( Ops.LdHlMinusA, "LD" ) + $"(HL-)" + "A";
 
         // LD A, (HL+)
-        private static readonly Builder LdAHlPlus = Ops.LdAHlPlus().Get( "LD" ) + "A" + $"(HL+)";
+        private static readonly Builder LdAHlPlus = new Builder( Ops.LdAHlPlus, "LD" ) + "A" + $"(HL+)";
         // LD A, (HL-)
-        private static readonly Builder LdAHlMinus = Ops.LdAHlMinus().Get( "LD" ) + "A" + $"(HL-)";
+        private static readonly Builder LdAHlMinus = new Builder( Ops.LdAHlMinus, "LD" ) + "A" + $"(HL-)";
 
         // LD A, (0xFF00+C)
-        private static readonly Builder LdhAc = Ops.LdhAc().Get( "LD" ) + "A" + "(0xFF00+C)";
+        private static readonly Builder LdhAc = new Builder( Ops.LdhAc, "LD" ) + "A" + "(0xFF00+C)";
 
         // LD (0xFF00+C), A
-        private static readonly Builder LdhCa = Ops.LdhCa().Get( "LD" ) + "(0xFF00+C)" + "A";
+        private static readonly Builder LdhCa = new Builder( Ops.LdhCa, "LD" ) + "(0xFF00+C)" + "A";
 
         // LD A, (0xFF00+db8)
-        private static readonly Builder LdhAImm = Ops.LdhAImm().Get( "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
+        private static readonly Builder LdhAImm = new Builder( Ops.LdhAImm, "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
 
         // LD (0xFF00+db8), A
-        private static readonly Builder LdhImmA = Ops.LdhImmA().Get( "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
+        private static readonly Builder LdhImmA = new Builder(  Ops.LdhImmA, "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
 
         // LD (a16), SP
-        private static readonly Builder LdImm16Sp = Ops.LdImm16Sp().Get( "LD" ) + Ops.addrDB16 + "SP";
+        private static readonly Builder LdImm16Sp = new Builder( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
 
         // JP a16
-        private static readonly Builder JpImm16 = Ops.JpImm16().Get( "JP" ) + Ops.operandDB16;
+        private static readonly Builder JpImm16 = new Builder( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
 
         // JP cc, a16
-        private static Builder JpCcImm16( Ops.cond cc, string flag ) => Ops.JpCcImm16( cc ).Get( "JP" ) + flag + Ops.addrDB16;
+        private static Builder JpCcImm16( Ops.Cond cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.addrDB16;
 
         // JR e8
-        private static readonly Builder JrImm = Ops.JrImm().Get( "JR" ) + Ops.operandE8;
+        private static readonly Builder JrImm = new Builder( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
 
         // JR cc, e8
-        private static Builder JrCcImm( Ops.cond cc, string flag ) => Ops.JrCcImm( cc ).Get( "JR" ) + flag + Ops.operandE8;
+        private static Builder JrCcImm( Ops.Cond cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
+
+        // Call nn
+        private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.addrDB16;
+
+        // Call nn
+        private static Builder CallCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.addrDB16;
     }
 }
