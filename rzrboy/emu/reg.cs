@@ -40,15 +40,15 @@
         public ushort SP;
         public ushort PC;
 
-        public ushort AF { get { return binutil.Combine(A, F); } set { binutil.Split((ushort)(value & FlagMask16), out A, out _flags); } }
-        public ushort BC { get { return binutil.Combine(B, C); } set { binutil.Split(value, out B, out C); } }
-        public ushort DE { get { return binutil.Combine(D, E); } set { binutil.Split(value, out D, out E); } }
-        public ushort HL { get { return binutil.Combine(H, L); } set { binutil.Split(value, out H, out L); } }
+        public ushort AF { get { return A.Combine( F ); } set { binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
+        public ushort BC { get { return B.Combine( C ); } set { binutil.Split( value, out B, out C ); } }
+        public ushort DE { get { return D.Combine( E ); } set { binutil.Split( value, out D, out E ); } }
+        public ushort HL { get { return H.Combine( L ); } set { binutil.Split( value, out H, out L ); } }
 
-        public bool Zero { get => binutil.IsBitSet(F, 7); set { F = binutil.SetBit(value, 7, F); } }
-        public bool Sub { get => binutil.IsBitSet( F, 6); set { F = binutil.SetBit(value, 6, F); } }
-        public bool HalfCarry { get => binutil.IsBitSet( F, 5); set { F = binutil.SetBit(value, 5, F); } }
-        public bool Carry { get => binutil.IsBitSet( F, 4); set { F = binutil.SetBit(value, 4, F); } }
+        public bool Zero { get => F.IsBitSet(7); set { F.SetBit( 7, value ); } }
+        public bool Sub { get => F.IsBitSet( 6 ); set { F.SetBit( 6, value ); } }
+        public bool HalfCarry { get => F.IsBitSet( 5 ); set { F.SetBit(5, value); } }
+        public bool Carry { get => F.IsBitSet( 4 ); set { F.SetBit(4, value); } }
 
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {

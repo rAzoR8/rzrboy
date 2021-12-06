@@ -8,7 +8,15 @@ namespace emu
         private static readonly IBuilder[] m_instructions = new IBuilder[256];
         private static readonly IBuilder[] m_extInstructions = new IBuilder[256];
 
-        public IBuilder this[byte opcode] { get => m_instructions[opcode]; private set => m_instructions[opcode] = value;  }
+        public IBuilder this[byte opcode]
+        { 
+            get => m_instructions[opcode];
+            private set
+            {
+                Debug.Assert( m_instructions[opcode] == null );
+                m_instructions[opcode] = value;
+            }
+        }
 
         private class ExtInstruction : IInstruction // this is just a proxy to extension ISA
         {
@@ -128,12 +136,15 @@ namespace emu
             this[0x46] = ldadr(Reg8.B, Reg16.HL);
             this[0x56] = ldadr(Reg8.D, Reg16.HL);
             this[0x66] = ldadr(Reg8.H, Reg16.HL);
-            //this[0x76] = halt;
 
             // LD [B D H], A
             this[0x47] = ldreg(Reg8.B, Reg8.A);
             this[0x57] = ldreg(Reg8.D, Reg8.A);
             this[0x67] = ldreg(Reg8.H, Reg8.A);
+
+            //this[0x76] = halt;
+
+            // LD (HL), A ( the one right after HALT)
             this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD [C E L], [B C D E H L]
@@ -159,14 +170,6 @@ namespace emu
                 (Reg16 dst, Reg8 src) => ldadr(dst, src),
                 ys: new[] { Reg16.HL },
                 xs: bcdehl);
-
-            // LD [B D H], (HL)
-            this[0x46] = ldadr(Reg8.B, Reg16.HL);
-            this[0x56] = ldadr(Reg8.D, Reg16.HL);
-            this[0x76] = ldadr(Reg8.H, Reg16.HL);
-
-            // LD (HL), A ( the one right after HALT)
-            this[0x77] = ldadr(Reg16.HL, Reg8.A);
 
             // LD A, [B C D E H L]
             Fill( m_instructions, offsetX: 0x78,
