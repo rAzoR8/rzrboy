@@ -11,10 +11,14 @@ namespace rzr
         public Cartridge cart { get; private set; }
 
         private ulong cycle = 0u;
-        private bool run = true;
+        public bool Running { get; set; } = true;
 
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
+
+        public delegate bool Callback( Reg reg, Mem mem );
+
+        public List<Callback> StepCallbacks { get; } = new();
 
         public Boy(byte[] cart)
         {
@@ -28,7 +32,7 @@ namespace rzr
 
         public void Reset( byte[] cartData )
         {
-            run = false;
+            Running = false;
 
             cycle = 0;
 
@@ -40,12 +44,12 @@ namespace rzr
 
             cart = new( mem.rom, mem.eram, mem.io, cartData );
 
-            run = true;
+            Running = true;
         }
 
-        public IEnumerable<ulong> Run() 
+        public IEnumerable<ulong> Execute() 
         {
-            while (run)
+            while (Running)
             {
                 Tick();
 
@@ -70,13 +74,24 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public int Step()
+        public int Step( bool debugPrint )
         {
             int cycles = 0;
             ushort pc = cpu.curInstrPC;
+
             // execute all ops
             while ( Tick() ) { ++cycles; }
-            Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} fetch|cycles" );
+
+            if ( debugPrint )
+            {
+                Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} fetch|cycles" );
+            }
+
+            foreach ( Callback fun in StepCallbacks )
+            {
+                fun( cpu.reg, mem );
+            }
+
             return cycles;
         }
     }

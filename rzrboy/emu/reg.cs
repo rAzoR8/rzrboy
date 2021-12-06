@@ -45,10 +45,10 @@
         public ushort DE { get { return D.Combine( E ); } set { binutil.Split( value, out D, out E ); } }
         public ushort HL { get { return H.Combine( L ); } set { binutil.Split( value, out H, out L ); } }
 
-        public bool Zero { get => F.IsBitSet(7); set { F.SetBit( 7, value ); } }
-        public bool Sub { get => F.IsBitSet( 6 ); set { F.SetBit( 6, value ); } }
-        public bool HalfCarry { get => F.IsBitSet( 5 ); set { F.SetBit(5, value); } }
-        public bool Carry { get => F.IsBitSet( 4 ); set { F.SetBit(4, value); } }
+        public bool Zero { get => _flags.IsBitSet(7); set { binutil.SetBit( ref _flags, 7, value ); } }
+        public bool Sub { get => _flags.IsBitSet( 6 ); set { binutil.SetBit( ref _flags, 6, value ); } }
+        public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { binutil.SetBit( ref _flags, 5, value); } }
+        public bool Carry { get => _flags.IsBitSet( 4 ); set { binutil.SetBit( ref _flags, 4, value); } }
 
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {

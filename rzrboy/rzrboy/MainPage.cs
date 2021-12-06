@@ -7,6 +7,7 @@ using Microsoft.Maui;
 using rzr;
 using System.Collections.Generic;
 using System.Text;
+using System.Diagnostics;
 
 namespace rzrboy
 {
@@ -33,11 +34,11 @@ namespace rzrboy
 
     public class MainPage : ContentPage
     {
-        private rzr.Boy m_gb;
+        private rzr.Boy boy;
 
-        private Cpu cpu => m_gb.cpu;
-        private Reg reg => m_gb.cpu.reg;
-        private Mem mem => m_gb.mem;
+        private Cpu cpu => boy.cpu;
+        private Reg reg => boy.cpu.reg;
+        private Mem mem => boy.mem;
 
         List<Callback> m_beforeStep = new();
 
@@ -170,25 +171,40 @@ namespace rzrboy
 
         public MainPage( rzr.Boy gb )
         {
-            m_gb = gb;
+            boy = gb;
+
+            boy.StepCallbacks.Add( ( reg, mem ) =>
+            {
+                bool stop = reg.PC > 7 && reg.HL == 0;
+                Debug.Assert( !stop );
+
+                return true;
+            } );
 
             Content = new Grid
             {
                 RowSpacing = 10,
 
                 RowDefinitions = Rows.Define(
-                    (Row.Step, Auto),
+                    (Row.ControlButtons, Auto),
                     (Row.RegAndMem, Auto),
                     (Row.Disassembly, Auto)
                     ),
 
                 Children =
                 {
-                    new Button { Text = "Step" }
-                        .Row(Row.Step)
-                        .Font(bold: true)
-                        //.CenterHorizontal()
-                        .Invoke(button => button.Clicked += OnStepClicked),
+                    new HorizontalStackLayout {
+                        new Button { Text = "Step" }
+                            .Font(bold: true)
+                            //.CenterHorizontal()
+                            .Invoke(button => button.Clicked += OnStepClicked),
+
+                        new Button { Text = "Run" }
+                            .Row(Row.ControlButtons)
+                            .Font(bold: true)
+                            //.CenterHorizontal()
+                            .Invoke(button => button.Clicked += OnRunClicked)                            
+                    }.Row(Row.ControlButtons),
 
                     new HorizontalStackLayout{ Registers(), Memory(mem, 8, 16, 0) }.Row(Row.RegAndMem),
                     Disassembly(10).Row(Row.Disassembly)
@@ -207,46 +223,27 @@ namespace rzrboy
             }
         }
 
-        //Children =
-        //        {
-        //            new Label { Text = "Hello World" }
-        //                .Row( Row.HelloWorld).Font( size: 32)
-        //                .CenterHorizontal().TextCenter(),
 
-        //            new Label { Text = "Welcome to .NET MAUI Markup Community Toolkit Sample" }
-        //                .Row( Row.Welcome ).Font( size: 18 )
-        //                .CenterHorizontal().TextCenter(),
+        enum Row { ControlButtons, RegAndMem, Disassembly }
 
-        //            new HorizontalStackLayout
-        //            {
-        //                new Label { Text = "PC: " }
-        //                    .Font(bold: true)
-        //                    .FillHorizontal().TextEnd()
-        //                    .Assign(out CounterLabel),
+        private IEnumerable<ulong> m_ticks => boy.Execute();
+        private void OnRunClicked( object sender, EventArgs e ) 
+        {
+            foreach ( Callback step in m_beforeStep )
+            {
+                step();
+            }
 
-        //                new Label()
-        //                    .Font(bold: true)
-        //                    .FillHorizontal().TextStart()
-        //                    /*.Assign(out CounterLabel)*/,
+            for ( int i = 0; i < 4000; i++ )
+            {
+                boy.Step(debugPrint: false);
+            }
 
-        //            }.Row( Row.Count ).CenterHorizontal(),
-
-        //            new Button { Text = "Step" }
-        //                .Row( Row.ClickMeButton )
-        //                .Font( bold: true )
-        //                .CenterHorizontal()
-        //                .Invoke( button => button.Clicked += OnStepClicked )
-        //                //.BindCommand(nameof(ViewModel.ClickMeButtonCommand))
-        //            ,
-
-        //            new Image { Source = "dotnet_bot.png", WidthRequest = 250, HeightRequest = 310 }
-        //                .Row( Row.Image )
-        //                .CenterHorizontal()
-        //        }
-
-
-        enum Row { Step, RegAndMem, Disassembly }
-
+            foreach ( Callback step in m_afterStep )
+            {
+                step();
+            }
+        }
 
         private void OnStepClicked(object sender, EventArgs e)
         {
@@ -255,7 +252,7 @@ namespace rzrboy
                 step();
             }
 
-            m_gb.Step();
+            boy.Step(debugPrint: true);
 
             foreach ( Callback step in m_afterStep )
             {

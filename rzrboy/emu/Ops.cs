@@ -40,8 +40,8 @@
             public static IEnumerable<op> LdImm16( Reg16 target )
             {
                 ushort val = 0;
-                yield return ( reg, mem ) => val.SetLsb( mem[reg.PC++] );
-                yield return ( reg, mem ) => val.SetMsb( mem[reg.PC++] );
+                yield return ( reg, mem ) => binutil.SetLsb( ref val, mem[reg.PC++] );
+                yield return ( reg, mem ) => binutil.SetMsb( ref val, mem[reg.PC++] );
                 yield return ( reg, mem ) => reg[target] = val;
             }
 
@@ -51,8 +51,8 @@
             public static IEnumerable<op> LdReg16( Reg16 dst, Reg16 src )
             {
                 // simulate 16 bit register being written in two cycles
-                yield return ( reg, mem ) => reg[dst].SetLsb( reg[src].GetLsb() );
-                yield return ( reg, mem ) => reg[dst].SetMsb( reg[src].GetMsb() );
+                yield return ( reg, mem ) => reg[dst] = binutil.SetLsb( reg[dst], reg[src].GetLsb() );
+                yield return ( reg, mem ) => reg[dst] = binutil.SetMsb( reg[dst], reg[src].GetMsb() );
             }
 
             // remove:
@@ -179,12 +179,19 @@
                 }
             }
 
-            private static op JrHelper( sbyte offset ) => ( reg, mem ) => { reg.PC = (ushort)( reg.PC + offset ); };
+            private static op JrHelper( sbyte offset ) => ( reg, mem ) =>
+            { 
+                reg.PC = (ushort)( reg.PC + offset );
+            };
 
             public static IEnumerable<op> JrImm( Cond? cc = null )
             {
                 byte offset = 0; bool takeBranch = true;
-                yield return ( Reg reg, ISection mem ) => { offset = mem[reg.PC++]; if ( cc != null ) takeBranch = cc( reg ); };
+                yield return ( Reg reg, ISection mem ) =>
+                { 
+                    offset = mem[reg.PC++];
+                    takeBranch = cc != null && cc( reg );
+                };
                 if ( takeBranch )
                 {
                     yield return JrHelper( (sbyte)offset );
@@ -202,23 +209,25 @@
             // XOR A, src
             public static op Xor( Reg8 src ) => ( reg, mem ) => { reg.A ^= reg[src]; reg.SetFlags( reg.A == 0, false, false, false ); };
 
-            // BIT i, b8
-            private static op BitHelper( byte bit, byte val ) => ( reg, mem ) =>
+            // BIT i, r
+            public static op Bit( byte bit, Reg8 src ) => ( reg, mem ) =>
             {
-                reg.Zero = !val.IsBitSet( bit );
+                reg.Zero = !reg[src].IsBitSet( bit );
                 reg.Sub = false;
                 reg.HalfCarry = true;
             };
-
-            // BIT i, r
-            public static op Bit( byte _bit, Reg8 src ) => ( reg, mem ) => BitHelper( bit: _bit, val: reg[src] );
 
             // BIT i, (HL)
             public static IEnumerable<op> BitHl( byte bit )
             {
                 byte val = 0;
                 yield return LdAddrHelper( val, Reg16.HL );
-                yield return BitHelper( bit, val );
+                yield return ( reg, mem ) =>
+                {
+                    reg.Zero = !val.IsBitSet( bit );
+                    reg.Sub = false;
+                    reg.HalfCarry = true;
+                };
             }
 
             // INC r16: 16bit alu op => 2 cycles
