@@ -2,7 +2,7 @@
 
 namespace rzr
 {
-    public class Gb
+    public class Boy
     {
         public Mem mem { get; private set; }
         public Ppu ppu{ get; private set; }
@@ -16,12 +16,12 @@ namespace rzr
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public Gb(byte[] cart)
+        public Boy(byte[] cart)
         {
             Reset( cart );
         }
 
-        public Gb( string cartPath )
+        public Boy( string cartPath )
         {
             Reset( File.ReadAllBytes(cartPath) );
         }

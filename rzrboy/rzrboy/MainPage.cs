@@ -33,7 +33,7 @@ namespace rzrboy
 
     public class MainPage : ContentPage
     {
-        private rzr.Gb m_gb;
+        private rzr.Boy m_gb;
 
         private Cpu cpu => m_gb.cpu;
         private Reg reg => m_gb.cpu.reg;
@@ -168,7 +168,7 @@ namespace rzrboy
             } );
         }
 
-        public MainPage( rzr.Gb gb )
+        public MainPage( rzr.Boy gb )
         {
             m_gb = gb;
 
