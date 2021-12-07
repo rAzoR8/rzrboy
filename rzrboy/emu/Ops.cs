@@ -237,27 +237,52 @@
                 yield return ( reg, mem ) => { reg[dst] += 1; };
             }
 
-            // INC r8: 1 cycle
-            public static op Inc( Reg8 dst ) => ( reg, mem ) =>
+            private static byte Inc8Helper( byte val, Reg reg )
             {
-                byte res = reg[dst]++;
+                byte res = (byte)(val+1);
                 reg.Zero = res == 0;
                 reg.Sub = false;
-                reg.HalfCarry = ( res & 0b10000 ) == 0b10000;
-            };
+                reg.HalfCarry = ( val & 0b1111 ) == 0b1111;
+                return res;
+            }
+
+            // INC r8: 1 cycle
+            public static op Inc( Reg8 dst ) => ( reg, mem ) => reg[dst] = Inc8Helper( reg[dst], reg );
 
             // INC (HL): 3 cycles
             public static IEnumerable<op> IncHl()
             {
                 byte val = 0;
                 yield return LdAddrHelper( val, Reg16.HL );
-                yield return ( reg, mem ) =>
-                {
-                    byte res = val++;
-                    reg.Zero = res == 0;
-                    reg.Sub = false;
-                    reg.HalfCarry = ( res & 0b10000 ) == 0b10000;
-                };
+                yield return ( reg, mem ) => val = Inc8Helper( val, reg );
+                yield return ( reg, mem ) => { mem[reg.HL] = val; };
+            }
+
+            // DEC r16: 16bit alu op => 2 cycles
+            public static IEnumerable<op> Dec( Reg16 dst )
+            {
+                yield return Nop;
+                yield return ( reg, mem ) => { reg[dst] -= 1; };
+            }
+
+            private static byte Dec8Helper( byte val, Reg reg )
+            {
+                byte res = (byte)( val - 1 );
+                reg.Zero = res == 0;
+                reg.Sub = true;
+                reg.HalfCarry = ( res & 0b1111 ) == 0b0000;
+                return res;
+            }
+
+            // DEC r8: 1 cycle
+            public static op Dec( Reg8 dst ) => ( reg, mem ) => reg[dst] = Dec8Helper( reg[dst], reg );
+
+            // DEC (HL): 3 cycles
+            public static IEnumerable<op> DecHl()
+            {
+                byte val = 0;
+                yield return LdAddrHelper( val, Reg16.HL );
+                yield return ( reg, mem ) => val = Dec8Helper( val, reg );
                 yield return ( reg, mem ) => { mem[reg.HL] = val; };
             }
 
@@ -286,6 +311,14 @@
         private static Builder Inc( Reg16 dst ) => new Builder (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
         // INC (HL)
         private readonly static Builder IncHl = new Builder( Ops.IncHl, "INC" ) + "(HL)";
+
+        // INC r8
+        private static Builder Dec( Reg8 dst ) => Ops.Dec( dst ).Get( "Dec" ) + Ops.operand( dst );
+        // INC r16
+        private static Builder Dec( Reg16 dst ) => new Builder( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
+        // INC (HL)
+        private readonly static Builder DecHl = new Builder( Ops.DecHl, "Dec" ) + "(HL)";
+
 
         // BIT i, r8
         private static Builder Bit( byte bit, Reg8 target ) => Ops.Bit( bit, target ).Get( "BIT" ) + $"{bit}" + Ops.operand( target );

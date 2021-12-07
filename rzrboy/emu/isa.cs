@@ -276,6 +276,21 @@ namespace rzr
             this[0x2C] = Inc( Reg8.L );
             this[0x3C] = Inc( Reg8.A );
 
+            this[0x05] = Dec( Reg8.B );
+            this[0x15] = Dec( Reg8.D );
+            this[0x25] = Dec( Reg8.H );
+            this[0x35] = DecHl;
+
+            this[0x0B] = Dec( Reg16.BC );
+            this[0x1B] = Dec( Reg16.DE );
+            this[0x2B] = Dec( Reg16.HL );
+            this[0x3B] = Dec( Reg16.SP );
+
+            this[0x0D] = Dec( Reg8.C );
+            this[0x1D] = Dec( Reg8.E );
+            this[0x2D] = Dec( Reg8.L );
+            this[0x3D] = Dec( Reg8.A );
+
             // CALL cc, nn
             this[0xC5] = CallCc( Ops.NZ, "NZ" );
             this[0xD5] = CallCc( Ops.NC, "NC" );

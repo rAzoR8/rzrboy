@@ -49,18 +49,17 @@ namespace rzr
 
     public class Instruction : IInstruction
     {
-        private InstrOps ops;
+        private IEnumerable<op> ops;
         private IEnumerable<dis> dis;
 
         private IEnumerator<op> cur_op;
         private IEnumerator<dis> cur_dis;
 
-
-        public Instruction( InstrOps ops, IEnumerable<dis> dis)
+        public Instruction( InstrOps prod, IEnumerable<dis> dis)
         {
-            this.ops = ops;
+            this.ops = prod();
             this.dis = dis;
-            this.cur_op = ops().GetEnumerator();
+            this.cur_op = this.ops.GetEnumerator();
             this.cur_dis = dis.GetEnumerator();
         }
 
@@ -68,7 +67,7 @@ namespace rzr
         {
             if (cur_op.MoveNext() == false)
             {
-                cur_op = ops().GetEnumerator();
+                cur_op = ops.GetEnumerator();
                 return false;
             }
 
@@ -83,8 +82,7 @@ namespace rzr
                 yield return cur_dis.Current( ref pc.Value, mem );
             }
 
-            //cur_dis = dis.GetEnumerator();
-            //yield break;
+            cur_dis = dis.GetEnumerator();
         }
     }
 
