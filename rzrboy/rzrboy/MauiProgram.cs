@@ -15,8 +15,12 @@ namespace rzrboy
 				.UseMauiApp<App>()
 				.ConfigureFonts(fonts =>
 				{
-					fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-				});
+					fonts.AddFont( "iosevka-regular.ttf", Font.Regular );
+					fonts.AddFont( "iosevka-bold.ttf", Font.Bold );
+					fonts.AddFont( "iosevka-light.ttf", Font.Light );
+					fonts.AddFont( "iosevka-medium.ttf", Font.Medium );
+					fonts.AddFont( "iosevka-thin.ttf", Font.Thin );
+				} );
 
 			builder.Services.AddSingleton<App>();
 

@@ -27,7 +27,17 @@ namespace rzr
 
         public Boy( string cartPath )
         {
-            Reset( File.ReadAllBytes(cartPath) );
+            byte[] data;
+            try
+            {
+                data = File.ReadAllBytes( cartPath );
+            }
+            catch ( Exception )
+            {
+                data = new byte[0x8000];
+            }
+
+            Reset( data );
         }
 
         public void Reset( byte[] cartData )

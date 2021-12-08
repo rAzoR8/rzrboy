@@ -41,8 +41,9 @@ namespace rzrboy
         private Mem mem => boy.mem;
 
         List<Callback> m_beforeStep = new();
-
         List<Callback> m_afterStep = new();
+
+        private MemoryEditor m_memEdit;
 
         private enum RegRows 
         {
@@ -53,11 +54,11 @@ namespace rzrboy
         {
             return new HorizontalStackLayout
             {
-                new Label{ Text = $"{l}  0x" },
-                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[l]:X2}"; }),
+                new Label{ FontFamily = Font.Regular, Text = $"{l}  0x" },
+                new Label{ FontFamily = Font.Regular, }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[l]:X2}"; }),
                 //new Label{ }.Bind(Label.TextProperty, nameof(emu.Cpu.reg.PC)),
-                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[r]:X2}"; }),
-                new Label{ Text = $" {r}" }
+                new Label{ FontFamily = Font.Regular, }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[r]:X2}"; }),
+                new Label{ FontFamily = Font.Regular, Text = $" {r}" }
             };
         }
 
@@ -65,8 +66,8 @@ namespace rzrboy
         {
             return new HorizontalStackLayout
             {
-                new Label{ Text = $"{reg} 0x" },
-                new Label{ }.Update( m_afterStep, lbl => {lbl.Text = $"{this.reg[reg]:X4}"; }),
+                new Label{ FontFamily = Font.Regular , Text = $"{reg} 0x" },
+                new Label{ FontFamily = Font.Regular }.Update( m_afterStep, lbl => {lbl.Text = $"{this.reg[reg]:X4}"; }),
             };
         }
 
@@ -102,56 +103,14 @@ namespace rzrboy
                     MakeRow(Reg8.H, Reg8.L).Row(RegRows.HL),
                     MakeRow(Reg16.SP).Row(RegRows.SP),
                     MakeRow(Reg16.PC).Row(RegRows.PC),
-                    new Label{ }.Update(m_afterStep, lbl => lbl.Text = $"Z {byt(reg.Zero)} N {byt(reg.Sub)} H {byt(reg.HalfCarry)} C {byt(reg.Carry)}").Row(RegRows.Flags)
+                    new Label{ FontFamily = Font.Regular }.Update(m_afterStep, lbl => lbl.Text = $"Z {byt(reg.Zero)} N {byt(reg.Sub)} H {byt(reg.HalfCarry)} C {byt(reg.Carry)}").Row(RegRows.Flags)
                 }
             };
         }
 
-        private Grid Memory(ISection section, int columns, int rows, int offset )
-        {
-            GridLength height = 10;
-            var grid = new Grid
-            {
-                RowSpacing = 1,                
-            };            
-
-            for ( int r = 0; r < rows; r++ )
-            {
-                grid.AddRowDefinition( new RowDefinition { Height = height } );
-            }
-
-            for ( int r = 0; r < rows; r++ )
-            {
-                
-                var row = new HorizontalStackLayout();
-                row.Add( new Label { Text = $"0x{offset + r * columns}:X4" } );
-
-                for ( int c = 0; c < columns; c++ )
-                {
-                    ushort addr = (ushort)( offset + r * columns + c );
-
-                    void OnEdit( object sender, EventArgs e )
-                    {
-                        var editor = sender as Editor;
-                        if ( byte.TryParse( editor.Text, out var val ) )
-                        {
-                            section[addr] = val;
-                        }
-                    }
-
-                    byte initVal = section[addr];
-                    row.Add( new Editor { Text = $"{initVal:X2}", AutoSize = EditorAutoSizeOption.Disabled }.Invoke( edit => edit.Completed += OnEdit ) );
-                }
-
-                grid.Add( row );
-            }            
-
-            return grid;
-        }
-
         private Label Disassembly( int instructions )
         {
-            return new Label { }.Update( m_afterStep, lbl =>
+            return new Label { FontFamily = Font.Regular }.Update( m_afterStep, lbl =>
             {
                 int i = 0;
                 StringBuilder sb = new();
@@ -172,6 +131,9 @@ namespace rzrboy
         public MainPage( rzr.Boy gb )
         {
             boy = gb;
+            m_memEdit = new MemoryEditor( mem, 0, 8, 16 );
+
+            mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
 
             boy.StepCallbacks.Add( ( reg, mem ) =>
             {
@@ -195,18 +157,18 @@ namespace rzrboy
                 {
                     new HorizontalStackLayout {
                         new Button { Text = "Step" }
-                            .Font(bold: true)
+                            .Font(bold: true, size: 20)
                             //.CenterHorizontal()
                             .Invoke(button => button.Clicked += OnStepClicked),
 
                         new Button { Text = "Run" }
                             .Row(Row.ControlButtons)
-                            .Font(bold: true)
+                            .Font(bold: true, size: 20)
                             //.CenterHorizontal()
                             .Invoke(button => button.Clicked += OnRunClicked)                            
                     }.Row(Row.ControlButtons),
 
-                    new HorizontalStackLayout{ Registers(), Memory(mem, 8, 16, 0) }.Row(Row.RegAndMem),
+                    new HorizontalStackLayout{ Registers(), m_memEdit }.Row(Row.RegAndMem),
                     Disassembly(10).Row(Row.Disassembly)
                 }
             };

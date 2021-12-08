@@ -73,7 +73,7 @@ namespace rzr
         private ProxySection m_romProxy;
         private ProxySection m_eramProxy;
 
-        private List<RSection> m_romBanks = new();
+        private List<RWSection> m_romBanks = new();
         private List<RWSection> m_ramBanks = new();
 
         public CartridgeType Type => (CartridgeType)m_romBanks[0][(ushort)Header.Type];
