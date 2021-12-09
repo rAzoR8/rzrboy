@@ -202,7 +202,7 @@ namespace rzr
             this[0xF2] = LdhAc;
 
             // JP HL
-            this[0xE0] = JpHl;
+            this[0xE9] = JpHl;
 
             // JP NZ, a16
             this[0xC2] = JpCcImm16( Ops.NZ, "NZ");
