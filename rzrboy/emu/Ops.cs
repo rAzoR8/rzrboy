@@ -34,7 +34,9 @@
                 yield return ( reg, mem ) => reg[target] = mem[address];
             }
 
-            private static op LdImm8Helper( byte? val ) => ( Reg reg, ISection mem ) => { val = mem[reg.PC++]; };
+            private static op LdImm8Helper( byte? val ) => ( Reg reg, ISection mem ) => val = mem[reg.PC++];
+
+            private static op LdStack8Helper( byte? val ) => ( Reg reg, ISection mem ) => val = mem[reg.SP++];
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
             public static IEnumerable<op> LdImm16( Reg16 target )
@@ -157,8 +159,8 @@
 
             private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
 
-            // JP HL
-            public static op JpHl() => ( reg, mem ) => { reg.PC = reg.HL; };
+            // JP HL 1 cycle
+            public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
 
             public delegate bool Cond( Reg reg );
             public readonly static Cond NZ = ( Reg reg ) => !reg.Zero;
@@ -166,12 +168,13 @@
             public readonly static Cond NC = ( Reg reg ) => !reg.Carry;
             public readonly static Cond C = ( Reg reg ) => reg.Carry;
 
-            // JP cc, a16
+            // JP cc, a16 3/4 cycles
             public static IEnumerable<op> JpImm16( Cond? cc = null )
             {
                 byte nlow = 0, nhigh = 0; bool takeBranch = true;
                 yield return LdImm8Helper( nlow );
-                yield return ( reg, mem ) => { nhigh = mem[reg.PC++]; if(cc != null) takeBranch = cc( reg ); };
+                yield return LdImm8Helper( nhigh );
+                if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
                     ushort nn = nhigh.Combine( nlow );
@@ -179,19 +182,14 @@
                 }
             }
 
-            private static op JrHelper( sbyte offset ) => ( reg, mem ) =>
-            { 
-                reg.PC = (ushort)( reg.PC + offset );
-            };
+            private static op JrHelper( sbyte offset ) => ( reg, mem ) => reg.PC = (ushort)( reg.PC + offset );
 
+            // JR cc, e8 2/3 ycles
             public static IEnumerable<op> JrImm( Cond? cc = null )
             {
                 byte offset = 0; bool takeBranch = true;
-                yield return ( Reg reg, ISection mem ) =>
-                { 
-                    offset = mem[reg.PC++];
-                    takeBranch = cc != null && cc( reg );
-                };
+                yield return LdImm8Helper( offset );
+                if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
                     yield return JrHelper( (sbyte)offset );
@@ -286,21 +284,41 @@
                 yield return ( reg, mem ) => { mem[reg.HL] = val; };
             }
 
-            // CALL cc, nn
+            // CALL cc, nn, 3-6 cycles
             public static IEnumerable<op> Call( Cond? cc = null ) 
             {
                 byte nlow = 0, nhigh = 0; bool takeBranch = true;
                 yield return LdImm8Helper( nlow );
-                yield return ( reg, mem ) => { nhigh = mem[reg.PC++]; takeBranch = cc != null && cc( reg ); };
-                ushort nn = nhigh.Combine( nlow );
+                yield return LdImm8Helper( nhigh );
+                yield return (reg, mem) => takeBranch = cc == null || cc( reg );
                 if ( takeBranch )
                 {
-                    yield return ( reg, mem ) => mem[reg.SP--] = reg.PC.GetMsb();
-                    yield return ( reg, mem ) => mem[reg.SP] = reg.PC.GetLsb();
+                    ushort nn = nhigh.Combine( nlow );
+                    yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
+                    yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetLsb();
                     yield return ( reg, mem ) => reg.PC = nn;
                 }
             }
 
+            // Ret, 4 cycles Ret cc 2/5 cycles
+            public static IEnumerable<op> Ret( Cond? cc = null ) 
+            {
+                bool takeBranch = true;
+                yield return (reg, mem) => takeBranch = cc == null || cc( reg );
+                if ( takeBranch == false ) 
+                {
+                    yield return Nop;
+                }
+                else
+                {
+                    byte nlow = 0, nhigh = 0;
+                    yield return LdStack8Helper( nlow );
+                    yield return LdStack8Helper( nhigh );
+                    ushort nn = nhigh.Combine( nlow );
+                    yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, nlow );
+                    yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, nhigh );
+                }
+            }
         };
 
         private readonly static Builder Nop = Ops.Nop.Get( "NOP" );
@@ -370,6 +388,9 @@
         // LD (a16), SP
         private static readonly Builder LdImm16Sp = new Builder( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
 
+        // JP HL
+        private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
+
         // JP a16
         private static readonly Builder JpImm16 = new Builder( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
 
@@ -382,10 +403,16 @@
         // JR cc, e8
         private static Builder JrCcImm( Ops.Cond cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
 
-        // Call nn
+        // CALL nn
         private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.addrDB16;
 
-        // Call nn
+        // CALL cc, nn
         private static Builder CallCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.addrDB16;
+
+        // RET
+        private static readonly Builder Ret = new Builder( () => Ops.Ret(), "RET" );
+
+        // RET cc
+        private static Builder RetCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Ret( cc ), "RET" ) + flag;
     }
 }

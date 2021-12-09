@@ -201,6 +201,9 @@ namespace rzr
             // LD A, (0xFF00+C)
             this[0xF2] = LdhAc;
 
+            // JP HL
+            this[0xE0] = JpHl;
+
             // JP NZ, a16
             this[0xC2] = JpCcImm16( Ops.NZ, "NZ");
             this[0xD2] = JpCcImm16( Ops.NC, "NC");
@@ -299,6 +302,15 @@ namespace rzr
 
             // CALL nn
             this[0xCD] = Call;
+
+            // RET cc
+            this[0xC0] = RetCc( Ops.NZ, "NZ" );
+            this[0xD0] = RetCc( Ops.NC, "NC" );
+            this[0xC8] = RetCc( Ops.Z, "Z" );
+            this[0xD8] = RetCc( Ops.C, "C" );
+
+            // RET
+            this[0xC9] = Ret;
 
             DebugReport();
         }
