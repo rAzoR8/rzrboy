@@ -34,9 +34,14 @@
                 yield return ( reg, mem ) => reg[target] = mem[address];
             }
 
-            private static op LdImm8Helper( byte? val ) => ( Reg reg, ISection mem ) => val = mem[reg.PC++];
+            private static op LdImm8Helper( Ref<byte> val ) => (Reg reg, ISection mem) => val.Value = mem[reg.PC++];
 
-            private static op LdStack8Helper( byte? val ) => ( Reg reg, ISection mem ) => val = mem[reg.SP++];
+            private static op[] LdImm16Helper( Ref<ushort> val ) => new op[] {
+                ( Reg reg, ISection mem ) => val.Value = mem[reg.PC++],
+                ( Reg reg, ISection mem ) => val.Value |= (ushort)(mem[reg.PC++] << 8)
+            };
+
+            private static op LdStack8Helper( Ref<byte> val ) => ( Reg reg, ISection mem ) => val.Value = mem[reg.SP++];
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
             public static IEnumerable<op> LdImm16( Reg16 target )
@@ -131,7 +136,7 @@
             // LD A, (0xFF00+db8)
             public static IEnumerable<op> LdhAImm()
             {
-                byte lsb = 0; ushort address = 0xFF00;
+                Ref<byte> lsb = new( 0 ); ushort address = 0xFF00;
                 yield return LdImm8Helper( lsb );
                 yield return ( reg, mem ) => { address += lsb; };
                 yield return ( reg, mem ) => { reg.A = mem[address]; };
@@ -140,7 +145,7 @@
             // LD (0xFF00+db8), A
             public static IEnumerable<op> LdhImmA()
             {
-                byte lsb = 0; ushort address = 0xFF00;
+                Ref<byte> lsb = new( 0 ); ushort address = 0xFF00;
                 yield return LdImm8Helper( lsb );
                 yield return ( reg, mem ) => { address += lsb; };
                 yield return ( reg, mem ) => { mem[address] = reg.A; };
@@ -149,12 +154,11 @@
             // LD (a16), SP
             public static IEnumerable<op> LdImm16Sp()
             {
-                byte nlow = 0, nhigh = 0;
-                yield return LdImm8Helper( nlow );
-                yield return LdImm8Helper( nhigh );
-                ushort nn = nhigh.Combine( nlow );
+                Ref<ushort> nn = new( 0 ); var ops = LdImm16Helper( nn );
+                yield return ops[0];
+                yield return ops[1];
                 yield return ( reg, mem ) => mem[nn] = reg.SP.GetLsb();
-                yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
+                yield return ( reg, mem ) => mem[++nn.Value] = reg.SP.GetMsb();
             }
 
             private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
@@ -321,12 +325,12 @@
             }
         };
 
-        private readonly static Builder Nop = Ops.Nop.Get( "NOP" );
+        private static Builder Nop = Ops.Nop.Get( "NOP" );
 
         // INC r8
         private static Builder Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
         // INC r16
-        private static Builder Inc( Reg16 dst ) => new Builder (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
+        private static Builder Inc( Reg16 dst ) => new Builder ((ImmRes _) => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
         // INC (HL)
         private readonly static Builder IncHl = new Builder( Ops.IncHl, "INC" ) + "(HL)";
 
@@ -395,7 +399,7 @@
         private static readonly Builder JpImm16 = new Builder( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
 
         // JP cc, a16
-        private static Builder JpCcImm16( Ops.Cond cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.addrDB16;
+        private static Builder JpCcImm16( Ops.Cond cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
 
         // JR e8
         private static readonly Builder JrImm = new Builder( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
@@ -404,10 +408,10 @@
         private static Builder JrCcImm( Ops.Cond cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
 
         // CALL nn
-        private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.addrDB16;
+        private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
 
         // CALL cc, nn
-        private static Builder CallCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.addrDB16;
+        private static Builder CallCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
 
         // RET
         private static readonly Builder Ret = new Builder( () => Ops.Ret(), "RET" );

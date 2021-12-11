@@ -14,7 +14,9 @@ namespace rzr
         public byte prevInstrCycles { get; private set; } = 0; // number of non-fetch cycles spend on the previous instructions
         public byte curInstrCycle { get; private set; } = 0; // number of Non-fetch cycles already spent on executing the current instruction
 
-        private IInstruction? curInstr = null;
+        private ImmRes res = new();
+
+        IEnumerator<op>? curOp = null;
 
         public Cpu( Mem memory ) 
         {
@@ -27,15 +29,30 @@ namespace rzr
         /// <returns>true if executing the same instruction, false after a new one is fetched</returns>
         public bool Tick()
         {
+            bool sameInstr = true; ;
+            if ( curOp == null || curOp.MoveNext() == false)
+            {
+                sameInstr = false;
+            }
+
+            prevInstrCycles = curInstrCycle;
+            curInstrCycle = 0;
+
+            curInstrPC = reg.PC;
+            curOpCode = mem[reg.PC++]; // fetch
+
+            curOp = isa[curOpCode](res).GetEnumerator();
+
+            curOp.Current( reg, mem );
+
+            return sameInstr;
+
+            // fetch
+
             if ( curInstr == null || curInstr.Eval( reg, mem ) == false ) // fetch and exec are interleaved
             {
-                prevInstrCycles = curInstrCycle;
-                curInstrCycle = 0;
 
-                curInstrPC = reg.PC;
-                curOpCode = mem[reg.PC++]; // fetch
-
-                IBuilder builder = isa[curOpCode];
+                IBuilder builder = ;
                
                 bool firstTick = curInstr == null;
 

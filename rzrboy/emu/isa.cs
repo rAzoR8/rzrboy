@@ -5,16 +5,26 @@ namespace rzr
 {
     public partial class Isa
     {
-        private static readonly IBuilder[] m_instructions = new IBuilder[256];
-        private static readonly IBuilder[] m_extInstructions = new IBuilder[256];
+        private static readonly Builder[] m_instructions = new Builder[256];
+        private static readonly Builder[] m_extInstructions = new Builder[256];
 
-        public IBuilder this[byte opcode]
+        public Builder this[byte opcode]
         { 
             get => m_instructions[opcode];
             private set
             {
                 Debug.Assert( m_instructions[opcode] == null );
                 m_instructions[opcode] = value;
+            }
+        }
+
+        private IEnumerable<op> ExtOps( ImmRes res ) 
+        {
+            byte opcode = 0;
+            yield return (reg, mem) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
+            foreach( var op in m_extInstructions[opcode].Instr( res ) )
+            {
+                yield return op;
             }
         }
 
@@ -90,7 +100,7 @@ namespace rzr
         {
             Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
 
-            this[0xCB] = new ExtBuilder();
+            this[0xCB] = ExtOps;
 
             this[0x00] = Nop;
 

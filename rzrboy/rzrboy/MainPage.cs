@@ -131,7 +131,7 @@ namespace rzrboy
         public MainPage( rzr.Boy gb )
         {
             boy = gb;
-            m_memEdit = new MemoryEditor( mem, 0, 8, 16 );
+            m_memEdit = new MemoryEditor( mem, 0, 16, 16 );
 
             mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
 
