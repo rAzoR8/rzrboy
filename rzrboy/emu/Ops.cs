@@ -34,27 +34,21 @@
                 yield return ( reg, mem ) => reg[target] = mem[address];
             }
 
-            private static op LdImm8Helper( Ref<byte> val ) => (Reg reg, ISection mem) => val.Value = mem[reg.PC++];
-
-            private static op[] LdImm16Helper( Ref<ushort> val ) => new op[] {
-                ( Reg reg, ISection mem ) => val.Value = mem[reg.PC++],
-                ( Reg reg, ISection mem ) => val.Value |= (ushort)(mem[reg.PC++] << 8)
-            };
-
             private static op LdStack8Helper( Ref<byte> val ) => ( Reg reg, ISection mem ) => val.Value = mem[reg.SP++];
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
             public static IEnumerable<op> LdImm16( Reg16 target )
             {
                 ushort val = 0;
-                yield return ( reg, mem ) => binutil.SetLsb( ref val, mem[reg.PC++] );
-                yield return ( reg, mem ) => binutil.SetMsb( ref val, mem[reg.PC++] );
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) => val |= (ushort)( mem[reg.PC++] << 8 );
                 yield return ( reg, mem ) => reg[target] = val;
             }
 
-            // reg to reg, 1 m-cycle
+            // LD r8, r8' 1-cycle
             public static op LdReg8( Reg8 dst, Reg8 src ) => ( reg, mem ) => { reg[dst] = reg[src]; };
-            // reg to reg, 2 m-cycles
+
+            // LD r16, r16' 2-cycles
             public static IEnumerable<op> LdReg16( Reg16 dst, Reg16 src )
             {
                 // simulate 16 bit register being written in two cycles
@@ -62,14 +56,7 @@
                 yield return ( reg, mem ) => reg[dst] = binutil.SetMsb( reg[dst], reg[src].GetMsb() );
             }
 
-            // remove:
-            // address to byte ref / helper
-            private static op LdAddrHelper( byte? dst, Reg16 src_addr ) => ( reg, mem ) => { dst = mem[reg[src_addr]]; };
-
-            // LD r, 1byte helper
-            // private static op ldreg_helper( Reg8 dst, byte val ) => ( reg, mem ) => { reg[dst] = val; };
-
-            // address to reg
+            // LD r8, (r16) 2-cycle
             public static IEnumerable<op> LdAddr( Reg8 dst, Reg16 src_addr )
             {
                 ushort address = 0;
@@ -77,7 +64,7 @@
                 yield return ( reg, mem ) => reg[dst] = mem[address];
             }
 
-            // reg to address
+            // LD (r16), r8 2-cycle
             public static IEnumerable<op> LdAddr( Reg16 dst_addr, Reg8 src )
             {
                 ushort address = 0;
@@ -136,17 +123,17 @@
             // LD A, (0xFF00+db8)
             public static IEnumerable<op> LdhAImm()
             {
-                Ref<byte> lsb = new( 0 ); ushort address = 0xFF00;
-                yield return LdImm8Helper( lsb );
-                yield return ( reg, mem ) => { address += lsb; };
-                yield return ( reg, mem ) => { reg.A = mem[address]; };
+                byte lsb = 0; ushort address = 0xFF00;
+                yield return ( reg, mem ) => lsb = mem[reg.PC++];
+                yield return ( reg, mem ) => address += lsb;
+                yield return ( reg, mem ) => reg.A = mem[address];
             }
 
             // LD (0xFF00+db8), A
             public static IEnumerable<op> LdhImmA()
             {
-                Ref<byte> lsb = new( 0 ); ushort address = 0xFF00;
-                yield return LdImm8Helper( lsb );
+                byte lsb = 0; ushort address = 0xFF00;
+                yield return ( reg, mem ) => lsb = mem[reg.PC++];
                 yield return ( reg, mem ) => { address += lsb; };
                 yield return ( reg, mem ) => { mem[address] = reg.A; };
             }
@@ -154,11 +141,11 @@
             // LD (a16), SP
             public static IEnumerable<op> LdImm16Sp()
             {
-                Ref<ushort> nn = new( 0 ); var ops = LdImm16Helper( nn );
-                yield return ops[0];
-                yield return ops[1];
+                ushort nn = 0;
+                yield return ( reg, mem ) => nn = mem[reg.PC++];
+                yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
                 yield return ( reg, mem ) => mem[nn] = reg.SP.GetLsb();
-                yield return ( reg, mem ) => mem[++nn.Value] = reg.SP.GetMsb();
+                yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
             }
 
             private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
@@ -175,13 +162,12 @@
             // JP cc, a16 3/4 cycles
             public static IEnumerable<op> JpImm16( Cond? cc = null )
             {
-                byte nlow = 0, nhigh = 0; bool takeBranch = true;
-                yield return LdImm8Helper( nlow );
-                yield return LdImm8Helper( nhigh );
+                ushort nn = 0; bool takeBranch = true;
+                yield return ( reg, mem ) => nn = mem[reg.PC++];
+                yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
                 if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
-                    ushort nn = nhigh.Combine( nlow );
                     yield return JpHelper( nn );
                 }
             }
@@ -192,7 +178,7 @@
             public static IEnumerable<op> JrImm( Cond? cc = null )
             {
                 byte offset = 0; bool takeBranch = true;
-                yield return LdImm8Helper( offset );
+                yield return ( reg, mem ) => offset = mem[reg.PC++];
                 if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
@@ -204,14 +190,14 @@
             public static IEnumerable<op> XorHl()
             {
                 byte val = 0;
-                yield return LdAddrHelper( val, Reg16.HL );
+                yield return (reg, mem) => val = mem[reg.HL];
                 yield return ( reg, mem ) => { reg.A ^= val; reg.SetFlags( reg.A == 0, false, false, false ); };
             }
 
-            // XOR A, src
+            // XOR A, src 1-cycle
             public static op Xor( Reg8 src ) => ( reg, mem ) => { reg.A ^= reg[src]; reg.SetFlags( reg.A == 0, false, false, false ); };
 
-            // BIT i, r
+            // BIT i, r 1-cycle
             public static op Bit( byte bit, Reg8 src ) => ( reg, mem ) =>
             {
                 reg.Zero = !reg[src].IsBitSet( bit );
@@ -219,11 +205,11 @@
                 reg.HalfCarry = true;
             };
 
-            // BIT i, (HL)
+            // BIT i, (HL) 2-cycle
             public static IEnumerable<op> BitHl( byte bit )
             {
                 byte val = 0;
-                yield return LdAddrHelper( val, Reg16.HL );
+                yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) =>
                 {
                     reg.Zero = !val.IsBitSet( bit );
@@ -255,7 +241,7 @@
             public static IEnumerable<op> IncHl()
             {
                 byte val = 0;
-                yield return LdAddrHelper( val, Reg16.HL );
+                yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) => val = Inc8Helper( val, reg );
                 yield return ( reg, mem ) => { mem[reg.HL] = val; };
             }
@@ -283,7 +269,7 @@
             public static IEnumerable<op> DecHl()
             {
                 byte val = 0;
-                yield return LdAddrHelper( val, Reg16.HL );
+                yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) => val = Dec8Helper( val, reg );
                 yield return ( reg, mem ) => { mem[reg.HL] = val; };
             }
@@ -291,13 +277,12 @@
             // CALL cc, nn, 3-6 cycles
             public static IEnumerable<op> Call( Cond? cc = null ) 
             {
-                byte nlow = 0, nhigh = 0; bool takeBranch = true;
-                yield return LdImm8Helper( nlow );
-                yield return LdImm8Helper( nhigh );
+                ushort nn = 0; bool takeBranch = true;
+                yield return ( reg, mem ) => nn = mem[reg.PC++];
+                yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
                 yield return (reg, mem) => takeBranch = cc == null || cc( reg );
                 if ( takeBranch )
                 {
-                    ushort nn = nhigh.Combine( nlow );
                     yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
                     yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetLsb();
                     yield return ( reg, mem ) => reg.PC = nn;
@@ -315,12 +300,11 @@
                 }
                 else
                 {
-                    byte nlow = 0, nhigh = 0;
-                    yield return LdStack8Helper( nlow );
-                    yield return LdStack8Helper( nhigh );
-                    ushort nn = nhigh.Combine( nlow );
-                    yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, nlow );
-                    yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, nhigh );
+                    byte lsb = 0; byte msb = 0;
+                    yield return ( reg, mem ) => lsb = mem[reg.SP++];
+                    yield return ( reg, mem ) => msb = mem[reg.SP++];
+                    yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, lsb );
+                    yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, msb );
                 }
             }
         };
