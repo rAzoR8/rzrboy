@@ -18,64 +18,33 @@ namespace rzr
             }
         }
 
-        private IEnumerable<op> ExtOps( ImmRes res ) 
+        private static IEnumerable<op> ExtOps( ) 
         {
             byte opcode = 0;
             yield return (reg, mem) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
-            foreach( var op in m_extInstructions[opcode].Instr( res ) )
+            Builder b = m_extInstructions[opcode];
+
+            if ( b == null ) yield break;
+
+            foreach ( var op in m_extInstructions[opcode].Instr( ) )
             {
                 yield return op;
             }
         }
 
-        private class ExtInstruction : IInstruction // this is just a proxy to extension ISA
+        // return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
+
+        public class ExtBuilder : Builder
         {
-            private IInstruction? cur = null;
-
-            public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
+            public ExtBuilder( ) : base( ExtOps )
             {
-                byte opcode = mem[pc.Value]; // fetch
-                IBuilder builder = m_extInstructions[opcode];
-                if ( builder != null )
-                {
-                    pc.Value++;
-                    return builder.Build().Disassemble( pc, mem );
-                }
-
-                return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
-            }
-
-            public bool Eval( Reg reg, ISection mem )
-            {
-                if ( cur == null )
-                {
-                    byte opcode = mem[reg.PC++]; // fetch, 1 M-cycle
-                    IBuilder builder = m_extInstructions[opcode];
-
-                    if ( builder != null )
-                    {
-                        cur = builder.Build();
-                        return true; // continue, there is more :)
-                    }
-
-                    return false;
-                }
-                else
-                {
-                    return cur.Eval( reg, mem );
-                }
             }
         }
 
-        private class ExtBuilder : IBuilder
-        {
-            public IInstruction Build() { return new ExtInstruction(); }
-        }       
-
-        private delegate IBuilder Build<Y, X>(Y y, X x);
+        private delegate Builder Build<Y, X>(Y y, X x);
 
         // returns next opcode for validation
-        private static void Fill<Y, X>(IBuilder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+        private static void Fill<Y, X>(Builder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
@@ -87,11 +56,11 @@ namespace rzr
                 offsetX += stepY;
             }
         }
-        private static void Fill<Y, X>( IBuilder[] target, byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
+        private static void Fill<Y, X>( Builder[] target, byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
         {
             Fill(target, offsetX, stepY: 0, builder, new[] { y }, xs);
         }
-        private static void Fill<Y, X>( IBuilder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>( Builder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
         {
             Fill(target, offsetX, stepY, builder, ys, new[] { x });
         }
@@ -100,7 +69,7 @@ namespace rzr
         {
             Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
 
-            this[0xCB] = ExtOps;
+            this[0xCB] = new ExtBuilder();
 
             this[0x00] = Nop;
 
@@ -334,7 +303,7 @@ namespace rzr
         public string Disassemble( ref ushort pc, ISection bin )
         {
             byte opcode = bin[pc]; // fetch
-            IBuilder builder = this[opcode];
+            Builder builder = this[opcode];
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
@@ -342,7 +311,7 @@ namespace rzr
             if ( builder != null )
             {
                 ++pc;
-                sb.Append( builder.Build().ToString( ref pc, bin ) );
+                sb.Append( builder.ToString( ref pc, bin ) );
             }
             else
             {

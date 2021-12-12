@@ -33,85 +33,19 @@ namespace rzr
     /// <returns></returns>
     public delegate string dis( ref ushort pc, ISection mem);
 
-    // immediate results
-    public class ImmRes
-    {
-        public byte Lsb = 0;
-        public byte Msb = 0;
-
-        public ushort Addr16 => (ushort)( Lsb | ( Msb << 8 ) );
-
-        public bool IME = false;
-    }
-
-    public delegate IEnumerable<op> InstrOps( ImmRes res );
-
-    public interface IInstruction
-    {
-        /// <summary>
-        /// Returns true while there are more 1 M-cycle ops
-        /// </summary>
-        /// <param name="reg"></param>
-        /// <param name="mem"></param>
-        /// <returns></returns>
-        bool Eval( Reg reg, ISection mem );
-        IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem );
-    }
-
-    //public class Instruction : IInstruction
-    //{
-    //    private IEnumerable<op> ops;
-    //    private IEnumerable<dis> dis;
-
-    //    private IEnumerator<op> cur_op;
-    //    private IEnumerator<dis> cur_dis;
-
-    //    public Instruction( InstrOps prod, IEnumerable<dis> dis)
-    //    {
-    //        this.ops = prod();
-    //        this.dis = dis;
-    //        this.cur_op = this.ops.GetEnumerator();
-    //        this.cur_dis = dis.GetEnumerator();
-    //    }
-
-    //    public bool Eval( Reg reg, ISection mem )
-    //    {
-    //        if (cur_op.MoveNext() == false)
-    //        {
-    //            cur_op = ops.GetEnumerator();
-    //            return false;
-    //        }
-
-    //        cur_op.Current(reg, mem);
-    //        return true;
-    //    }
-
-    //    public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
-    //    {
-    //        while ( cur_dis.MoveNext() )
-    //        {
-    //            yield return cur_dis.Current( ref pc.Value, mem );
-    //        }
-
-    //        cur_dis = dis.GetEnumerator();
-    //    }
-    //}
-
-    public interface IBuilder
-    {
-        IInstruction Build();
-    }
+    public delegate IEnumerable<op> ProduceInstruction( );
 
     /// <summary>
     /// Instruction op does not include instruction fetch cycle
     /// </summary>
     public class Builder
     {
-        public InstrOps Instr { get; }
+        public ProduceInstruction Instr { get; }
         private List<dis> m_dis = new();
         private IEnumerator<dis> cur_dis;
+        public bool ExtInstr { get; } = false;
 
-        public Builder( InstrOps ops, dis? dis = null )
+        public Builder( ProduceInstruction ops, dis? dis = null )
         {
             Instr = ops;
             if ( dis != null )
@@ -122,26 +56,19 @@ namespace rzr
             cur_dis = m_dis.GetEnumerator();
         }
 
-        public Builder( OpBuilderNoArg ops, dis? dis = null )
-            : this( ( ImmRes _ ) => ops(), dis )
+        public Builder( op op, dis? dis = null )
+            : this (() => Enumerable.Repeat(op, 1), dis)
         {
         }
 
-        public Builder( OpBuilderNoArg ops, string mnemonic )
-            : this( ( ImmRes _ ) => ops(), Isa.Ops.mnemonic( mnemonic ) )
+        public Builder( ProduceInstruction ops, string mnemonic )
+        : this( ops, Isa.Ops.mnemonic( mnemonic ) )
         {
         }
 
-        public Builder( InstrOps ops, string mnemonic )
-            : this( ops, Isa.Ops.mnemonic( mnemonic ) )
-        {
-        }
+        public static implicit operator Builder( op op ) { return new Builder( op ); }
 
-        public delegate IEnumerable<op> OpBuilderNoArg();
-
-        public static implicit operator Builder( OpBuilderNoArg ops ) { return new Builder( (ImmRes _) => ops() ); }
-
-        public static implicit operator Builder( InstrOps ops ) { return new Builder( ops ); }
+        public static implicit operator Builder( ProduceInstruction ops ) { return new Builder( ops ); }
 
         public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
         {
@@ -182,24 +109,16 @@ namespace rzr
 
     public static class BuilderExtensions
     {
-        public static Builder Get( this InstrOps op ) => new Builder( op );
-        public static Builder Get( this InstrOps op, string mnemonic) => new Builder(op) + mnemonic;
-        public static Builder Get( this InstrOps op, dis dis) => new Builder( op ) + dis;
+        public static Builder Get( this ProduceInstruction op ) => new Builder( op );
+        public static Builder Get( this ProduceInstruction op, string mnemonic) => new Builder(op) + mnemonic;
+        public static Builder Get( this ProduceInstruction op, dis dis) => new Builder( op ) + dis;
 
-        public static Builder Get( this op op, string mnemonic )
-        {
-            IEnumerable<op> ops( ImmRes _ ) { yield return op; }
-            return new Builder( ops, mnemonic );
-        }
-
-        public static Builder Get( this op op, dis dis )
-        {
-            IEnumerable<op> ops( ImmRes _ ) { yield return op; }
-            return new Builder( ops, dis );
-        }
+        public static Builder Get( this op op ) => new Builder( op );
+        public static Builder Get( this op op, string mnemonic ) => new Builder( op ) + mnemonic;
+        public static Builder Get( this op op, dis dis ) => new Builder( op ) + dis;
 
         // Debug name
-        public static string ToString( this InstrOps ops )
+        public static string ToString( this ProduceInstruction ops )
         {
             return ops.Method.Name;
         }

@@ -314,7 +314,7 @@
         // INC r8
         private static Builder Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
         // INC r16
-        private static Builder Inc( Reg16 dst ) => new Builder ((ImmRes _) => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
+        private static Builder Inc( Reg16 dst ) => new Builder (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
         // INC (HL)
         private readonly static Builder IncHl = new Builder( Ops.IncHl, "INC" ) + "(HL)";
 
