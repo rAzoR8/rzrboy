@@ -14,8 +14,6 @@ namespace rzr
         public byte prevInstrCycles { get; private set; } = 0; // number of non-fetch cycles spend on the previous instructions
         public byte curInstrCycle { get; private set; } = 0; // number of Non-fetch cycles already spent on executing the current instruction
 
-        private ImmRes res = new();
-
         IEnumerator<op>? curOp = null;
 
         public Cpu( Mem memory ) 
@@ -29,44 +27,26 @@ namespace rzr
         /// <returns>true if executing the same instruction, false after a new one is fetched</returns>
         public bool Tick()
         {
-            bool sameInstr = true; ;
-            if ( curOp == null || curOp.MoveNext() == false)
+            bool fetch = curOp == null || curOp.MoveNext() == false;
+
+            if( curOp != null && !fetch )
             {
-                sameInstr = false;
+                curOp.Current( reg, mem );
+                ++curInstrCycle;
             }
 
-            prevInstrCycles = curInstrCycle;
-            curInstrCycle = 0;
-
-            curInstrPC = reg.PC;
-            curOpCode = mem[reg.PC++]; // fetch
-
-            curOp = isa[curOpCode](res).GetEnumerator();
-
-            curOp.Current( reg, mem );
-
-            return sameInstr;
-
-            // fetch
-
-            if ( curInstr == null || curInstr.Eval( reg, mem ) == false ) // fetch and exec are interleaved
+            if(fetch)
             {
+                prevInstrCycles = curInstrCycle;
+                curInstrCycle = 0;
 
-                IBuilder builder = ;
-               
-                bool firstTick = curInstr == null;
+                curInstrPC = reg.PC;
+                curOpCode = mem[reg.PC++]; // fetch
 
-                // TODO: remove once all instructions are implemented
-                if ( builder != null )
-                {
-                    curInstr = builder.Build();
-                }
-
-                return firstTick;
+                curOp = isa[curOpCode].Instr().GetEnumerator();
             }
 
-            ++curInstrCycle;
-            return true;
+            return !fetch;
         }
     }
 }

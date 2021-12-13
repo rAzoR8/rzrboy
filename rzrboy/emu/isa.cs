@@ -18,26 +18,34 @@ namespace rzr
             }
         }
 
-        private static IEnumerable<op> ExtOps( ) 
-        {
-            byte opcode = 0;
-            yield return (reg, mem) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
-            Builder b = m_extInstructions[opcode];
-
-            if ( b == null ) yield break;
-
-            foreach ( var op in m_extInstructions[opcode].Instr( ) )
-            {
-                yield return op;
-            }
-        }
-
-        // return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
-
         public class ExtBuilder : Builder
         {
-            public ExtBuilder( ) : base( ExtOps )
+            public ExtBuilder( ) : base( ExtOps ) {}
+
+            private static IEnumerable<op> ExtOps()
             {
+                byte opcode = 0;
+                yield return ( reg, mem ) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
+                Builder b = m_extInstructions[opcode];
+
+                if ( b == null ) yield break;
+
+                foreach ( var op in m_extInstructions[opcode].Instr() )
+                {
+                    yield return op;
+                }
+            }
+
+            public override IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
+            {
+                byte opcode = mem[pc.Value++];
+                Builder builder = m_extInstructions[opcode];
+                if ( builder == null )
+                {
+                    return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
+                }
+
+                return builder.Disassemble( pc, mem );
             }
         }
 

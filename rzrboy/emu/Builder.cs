@@ -43,7 +43,6 @@ namespace rzr
         public ProduceInstruction Instr { get; }
         private List<dis> m_dis = new();
         private IEnumerator<dis> cur_dis;
-        public bool ExtInstr { get; } = false;
 
         public Builder( ProduceInstruction ops, dis? dis = null )
         {
@@ -70,7 +69,7 @@ namespace rzr
 
         public static implicit operator Builder( ProduceInstruction ops ) { return new Builder( ops ); }
 
-        public IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
+        public virtual IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
         {
             while ( cur_dis.MoveNext() )
             {
