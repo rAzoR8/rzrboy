@@ -12,7 +12,7 @@ namespace rzr
         public Apu apu { get; }
         public Cartridge cart { get; }
 
-
+        public bool IsRunning { get; private set; }
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
@@ -57,23 +57,28 @@ namespace rzr
             return cart.Load( cartData );
         }
 
-        public async Task Execute( CancellationToken token = default )
+        public async Task<ulong> Execute( CancellationToken token = default )
         {
             ulong cycles = 0;
 
-            //try
+            try
             {
-                while( true )
+                await Task.Run( () =>
                 {
-                    token.ThrowIfCancellationRequested();
-                    cycles += await Step( false );
-                }
+                    IsRunning = true;
+                    while( true )
+                    {
+                        token.ThrowIfCancellationRequested();
+                        cycles += Step( false );
+                    }
+                } );
             }
-            //catch( OperationCanceledException )
-            //{
-            //}
+            catch( OperationCanceledException )
+            {
+                IsRunning = false;
+            }
 
-            //return cycles;
+            return cycles;
         }
 
         public bool Tick() 
@@ -91,7 +96,7 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public async Task<uint> Step( bool debugPrint )
+        public uint Step( bool debugPrint )
         {
             uint cycles = 1;
 

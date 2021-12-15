@@ -191,11 +191,11 @@ namespace rzrboy
 
         private CancellationTokenSource cts = new();
 
-        private void OnRunClicked( object sender, EventArgs e ) 
+        private async void OnRunClicked( object sender, EventArgs e ) 
         {
             Button button = sender as Button;
 
-            if( cts.IsCancellationRequested == false )
+            if( boy.IsRunning == false )
             {
                 button.Text = "Stop";
 
@@ -204,13 +204,15 @@ namespace rzrboy
                     step();
                 }
 
-                boy.Execute( cts.Token ).ContinueWith( ct =>
+                await boy.Execute( cts.Token );
                 {
+                    button.Text = "Run";
+
                     foreach( Callback step in m_afterStep )
                     {
                         step();
                     }
-                });
+                }
             }
             else
             {
