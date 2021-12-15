@@ -18,7 +18,7 @@ namespace rzr
             }
         }
 
-        public class ExtBuilder : Builder
+        private class ExtBuilder : Builder
         {
             public ExtBuilder( ) : base( ExtOps ) {}
 
@@ -36,23 +36,24 @@ namespace rzr
                 }
             }
 
-            public override IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
+            public override IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
             {
-                byte opcode = mem[pc.Value++];
+                byte opcode = mem[pc.Value];
                 Builder builder = m_extInstructions[opcode];
                 if ( builder == null )
                 {
                     return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
                 }
 
-                return builder.Disassemble( pc, mem );
+                pc.Value++;
+                return builder.Operands( pc, mem );
             }
         }
 
-        private delegate Builder Build<Y, X>(Y y, X x);
+        private delegate Builder BuildFunc<Y, X>(Y y, X x);
 
         // returns next opcode for validation
-        private static void Fill<Y, X>(Builder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+        private static void Fill<Y, X>(Builder[] target, byte offsetX, byte stepY, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
@@ -64,11 +65,11 @@ namespace rzr
                 offsetX += stepY;
             }
         }
-        private static void Fill<Y, X>( Builder[] target, byte offsetX, Build<Y, X> builder, Y y, IEnumerable<X> xs)
+        private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
         {
             Fill(target, offsetX, stepY: 0, builder, new[] { y }, xs);
         }
-        private static void Fill<Y, X>( Builder[] target, byte offsetX, byte stepY, Build<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>( Builder[] target, byte offsetX, byte stepY, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
         {
             Fill(target, offsetX, stepY, builder, ys, new[] { x });
         }
@@ -282,8 +283,8 @@ namespace rzr
             this[0x3D] = Dec( Reg8.A );
 
             // CALL cc, nn
-            this[0xC5] = CallCc( Ops.NZ, "NZ" );
-            this[0xD5] = CallCc( Ops.NC, "NC" );
+            this[0xC4] = CallCc( Ops.NZ, "NZ" );
+            this[0xD4] = CallCc( Ops.NC, "NC" );
             this[0xCC] = CallCc( Ops.Z, "Z" );
             this[0xDC] = CallCc( Ops.C, "C" );
 
@@ -298,6 +299,30 @@ namespace rzr
 
             // RET
             this[0xC9] = Ret;
+
+            // TODO RETI
+
+            // POP r16
+            this[0xC1] = Pop (Reg16.BC);
+            this[0xD1] = Pop( Reg16.DE );
+            this[0xE1] = Pop( Reg16.HL );
+            this[0xF1] = Pop( Reg16.AF );
+
+            this[0xC5] = Push( Reg16.BC );
+            this[0xD5] = Push( Reg16.DE );
+            this[0xE5] = Push( Reg16.HL );
+            this[0xF5] = Push( Reg16.AF );
+
+            // RST vec
+            this[0xC7] = Rst( 0x00);
+            this[0xD7] = Rst( 0x10 );
+            this[0xE7] = Rst( 0x20 );
+            this[0xF7] = Rst( 0x30 );
+
+            this[0xCF] = Rst( 0x08 );
+            this[0xDF] = Rst( 0x18 );
+            this[0xEF] = Rst( 0x28 );
+            this[0xFF] = Rst( 0x38 );
 
             DebugReport();
         }

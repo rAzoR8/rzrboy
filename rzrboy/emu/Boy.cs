@@ -1,17 +1,17 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace rzr
 {
     public class Boy
     {
-        public Mem mem { get; private set; }
-        public Ppu ppu{ get; private set; }
-        public Cpu cpu{ get; private set; }
-        public Apu apu { get; private set; }
-        public Cartridge cart { get; private set; }
+        public Isa isa { get; }
+        public Mem mem { get; }
+        public Ppu ppu{ get; }
+        public Cpu cpu{ get; }
+        public Apu apu { get; }
+        public Cartridge cart { get; }
 
-        private ulong cycle = 0u;
-        public bool Running { get; set; } = true;
 
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
@@ -20,12 +20,24 @@ namespace rzr
 
         public List<Callback> StepCallbacks { get; } = new();
 
-        public Boy(byte[] cart)
+        public Boy()
         {
-            Reset( cart );
+            mem = new();
+            isa = new Isa();
+
+            cpu = new Cpu( mem, isa );
+            ppu = new Ppu( mem );
+            apu = new Apu( mem );
+
+            cart = new( mem.rom, mem.eram, mem.io );
         }
 
-        public Boy( string cartPath )
+        public Boy(byte[] cart)  : this()
+        {
+            LoadCart( cart );
+        }
+
+        public Boy( string cartPath ) : this()
         {
             byte[] data;
             try
@@ -37,36 +49,31 @@ namespace rzr
                 data = new byte[0x8000];
             }
 
-            Reset( data );
+            LoadCart( data );
         }
 
-        public void Reset( byte[] cartData )
+        public bool LoadCart( byte[] cartData )
         {
-            Running = false;
-
-            cycle = 0;
-
-            mem = new();
-
-            cpu = new Cpu( mem );
-            ppu = new Ppu( mem );
-            apu = new Apu( mem );
-
-            cart = new( mem.rom, mem.eram, mem.io, cartData );
-
-            Running = true;
+            return cart.Load( cartData );
         }
 
-        public IEnumerable<ulong> Execute() 
+        public async Task Execute( CancellationToken token = default )
         {
-            while (Running)
+            ulong cycles = 0;
+
+            //try
             {
-                Tick();
-
-                yield return cycle;
-
-                ++cycle;
+                while( true )
+                {
+                    token.ThrowIfCancellationRequested();
+                    cycles += await Step( false );
+                }
             }
+            //catch( OperationCanceledException )
+            //{
+            //}
+
+            //return cycles;
         }
 
         public bool Tick() 
@@ -84,17 +91,17 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public int Step( bool debugPrint )
+        public async Task<uint> Step( bool debugPrint )
         {
-            int cycles = 0;
-            ushort pc = cpu.curInstrPC;
+            uint cycles = 1;
 
             // execute all ops
             while ( Tick() ) { ++cycles; }
 
             if ( debugPrint )
             {
-                Debug.WriteLine( $"{Cpu.isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} fetch|cycles" );
+                ushort pc = cpu.prevInstrPC;
+                Debug.WriteLine( $"{isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
             foreach ( Callback fun in StepCallbacks )

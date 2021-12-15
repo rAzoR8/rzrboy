@@ -8,6 +8,7 @@ using rzr;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Threading;
 
 namespace rzrboy
 {
@@ -114,7 +115,7 @@ namespace rzrboy
             {
                 int i = 0;
                 StringBuilder sb = new();
-                foreach ( string instr in Cpu.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
+                foreach ( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
                 {
                     if ( i++ > instructions )                    
                     {
@@ -188,22 +189,33 @@ namespace rzrboy
 
         enum Row { ControlButtons, RegAndMem, Disassembly }
 
-        private IEnumerable<ulong> m_ticks => boy.Execute();
+        private CancellationTokenSource cts = new();
+
         private void OnRunClicked( object sender, EventArgs e ) 
         {
-            foreach ( Callback step in m_beforeStep )
-            {
-                step();
-            }
+            Button button = sender as Button;
 
-            for ( int i = 0; i < 4000; i++ )
+            if( cts.IsCancellationRequested == false )
             {
-                boy.Step(debugPrint: false);
-            }
+                button.Text = "Stop";
 
-            foreach ( Callback step in m_afterStep )
+                foreach( Callback step in m_beforeStep )
+                {
+                    step();
+                }
+
+                boy.Execute( cts.Token ).ContinueWith( ct =>
+                {
+                    foreach( Callback step in m_afterStep )
+                    {
+                        step();
+                    }
+                });
+            }
+            else
             {
-                step();
+                cts.Cancel();
+                button.Text = "Run";
             }
         }
 

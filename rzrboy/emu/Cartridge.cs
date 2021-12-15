@@ -123,21 +123,29 @@ namespace rzr
 
         private Dictionary<CartridgeType, MBC> mbcs = new();
 
-        public Cartridge( ProxySection rom, ProxySection eram, ISection io, byte[] cart )
+        public Cartridge( ProxySection rom, ProxySection eram, ISection io )
         {
             m_romProxy = rom;
             m_eramProxy = eram;
             IO = io;
 
             mbcs.Add( CartridgeType.ROM_ONLY, new MBC() { romRead = MBC0ReadRomOnly } );
-
-            Load( cart );
         }
 
         public bool Load( byte[] cart )
         {
+            m_romBanks.Clear();
+            m_ramBanks.Clear();
+            m_selectedRamBank = 0;
+            m_selectedRomBank = 0;
+            m_ramEnabled = false;
+            m_bankingMode = default;
+
+            m_primaryRomBank = 0;
+            m_selectedRomBank = 0;
+
             // copy cartridge data
-            for ( int i = 0; i < cart.Length; i += RomBankSize )
+            for( int i = 0; i < cart.Length; i += RomBankSize )
             {
                 RSection bank = new( start: i < RomBankSize ? (ushort)0 : RomBankSize, RomBankSize, $"rom{m_romBanks.Count()}" );
                 bank.write(cart, src_offset: i, dst_offset: 0, RomBankSize);

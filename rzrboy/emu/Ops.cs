@@ -153,14 +153,14 @@
             // JP HL 1 cycle
             public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
 
-            public delegate bool Cond( Reg reg );
-            public readonly static Cond NZ = ( Reg reg ) => !reg.Zero;
-            public readonly static Cond Z = ( Reg reg ) => reg.Zero;
-            public readonly static Cond NC = ( Reg reg ) => !reg.Carry;
-            public readonly static Cond C = ( Reg reg ) => reg.Carry;
+            public delegate bool Condition( Reg reg );
+            public readonly static Condition NZ = ( Reg reg ) => !reg.Zero;
+            public readonly static Condition Z = ( Reg reg ) => reg.Zero;
+            public readonly static Condition NC = ( Reg reg ) => !reg.Carry;
+            public readonly static Condition C = ( Reg reg ) => reg.Carry;
 
             // JP cc, a16 3/4 cycles
-            public static IEnumerable<op> JpImm16( Cond? cc = null )
+            public static IEnumerable<op> JpImm16( Condition? cc = null )
             {
                 ushort nn = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -175,7 +175,7 @@
             private static op JrHelper( sbyte offset ) => ( reg, mem ) => reg.PC = (ushort)( reg.PC + offset );
 
             // JR cc, e8 2/3 ycles
-            public static IEnumerable<op> JrImm( Cond? cc = null )
+            public static IEnumerable<op> JrImm( Condition? cc = null )
             {
                 byte offset = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => offset = mem[reg.PC++];
@@ -275,12 +275,12 @@
             }
 
             // CALL cc, nn, 3-6 cycles
-            public static IEnumerable<op> Call( Cond? cc = null ) 
+            public static IEnumerable<op> Call( Condition? cc = null )
             {
                 ushort nn = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => nn = mem[reg.PC++];
                 yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
-                yield return (reg, mem) => takeBranch = cc == null || cc( reg );
+                yield return ( reg, mem ) => takeBranch = cc == null || cc( reg );
                 if ( takeBranch )
                 {
                     yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
@@ -290,7 +290,7 @@
             }
 
             // Ret, 4 cycles Ret cc 2/5 cycles
-            public static IEnumerable<op> Ret( Cond? cc = null ) 
+            public static IEnumerable<op> Ret( Condition? cc = null ) 
             {
                 bool takeBranch = true;
                 yield return (reg, mem) => takeBranch = cc == null || cc( reg );
@@ -306,6 +306,34 @@
                     yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, lsb );
                     yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, msb );
                 }
+            }
+
+            // PUSH r16 4-cycle
+            public static IEnumerable<op> Push( Reg16 src )
+            {
+                byte lsb = 0; byte msb = 0;
+                yield return ( reg, mem ) => msb = reg[src].GetMsb();
+                yield return ( reg, mem ) => lsb = reg[src].GetLsb();
+                yield return ( reg, mem ) => mem[--reg.SP] = msb;
+                yield return ( reg, mem ) => mem[--reg.SP] = lsb;
+            }
+
+            // POP r16 3-cycle
+            public static IEnumerable<op> Pop( Reg16 dst )
+            {
+                byte lsb = 0; byte msb = 0;
+                yield return ( reg, mem ) => lsb = mem[reg.SP++];
+                yield return ( reg, mem ) => msb = mem[reg.SP++];
+                yield return ( reg, mem ) => reg[dst] = binutil.Combine( msb, lsb );
+            }
+
+            // RST n, 4 cycles
+            public static IEnumerable<op> Rst( byte vec )
+            {
+                yield return Nop;
+                yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
+                yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetLsb();
+                yield return ( reg, mem ) => reg.PC = binutil.Combine(0x00, vec);
             }
         };
 
@@ -324,7 +352,6 @@
         private static Builder Dec( Reg16 dst ) => new Builder( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
         // INC (HL)
         private readonly static Builder DecHl = new Builder( Ops.DecHl, "Dec" ) + "(HL)";
-
 
         // BIT i, r8
         private static Builder Bit( byte bit, Reg8 target ) => Ops.Bit( bit, target ).Get( "BIT" ) + $"{bit}" + Ops.operand( target );
@@ -383,24 +410,33 @@
         private static readonly Builder JpImm16 = new Builder( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
 
         // JP cc, a16
-        private static Builder JpCcImm16( Ops.Cond cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
+        private static Builder JpCcImm16( Ops.Condition cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
 
         // JR e8
         private static readonly Builder JrImm = new Builder( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
 
         // JR cc, e8
-        private static Builder JrCcImm( Ops.Cond cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
+        private static Builder JrCcImm( Ops.Condition cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
 
         // CALL nn
         private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
 
         // CALL cc, nn
-        private static Builder CallCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
+        private static Builder CallCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
 
         // RET
         private static readonly Builder Ret = new Builder( () => Ops.Ret(), "RET" );
 
         // RET cc
-        private static Builder RetCc( Ops.Cond cc, string flag ) => new Builder( () => Ops.Ret( cc ), "RET" ) + flag;
+        private static Builder RetCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Ret( cc ), "RET" ) + flag;
+
+        // PUSH r16
+        private static Builder Push( Reg16 src ) => new Builder( () => Ops.Push( src ), "PUSH" ) + Ops.operand( src );
+
+        // POP r16
+        private static Builder Pop( Reg16 dst ) => new Builder( () => Ops.Pop( dst ), "POP" ) + Ops.operand( dst );
+
+        // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
+        private static Builder Rst( byte vec ) => new Builder( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
     }
 }

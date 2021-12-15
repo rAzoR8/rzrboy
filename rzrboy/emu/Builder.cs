@@ -42,7 +42,6 @@ namespace rzr
     {
         public ProduceInstruction Instr { get; }
         private List<dis> m_dis = new();
-        private IEnumerator<dis> cur_dis;
 
         public Builder( ProduceInstruction ops, dis? dis = null )
         {
@@ -51,8 +50,6 @@ namespace rzr
             {
                 m_dis.Add( dis );
             }
-
-            cur_dis = m_dis.GetEnumerator();
         }
 
         public Builder( op op, dis? dis = null )
@@ -69,21 +66,16 @@ namespace rzr
 
         public static implicit operator Builder( ProduceInstruction ops ) { return new Builder( ops ); }
 
-        public virtual IEnumerable<string> Disassemble( Ref<ushort> pc, ISection mem )
+        public virtual IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
         {
-            while ( cur_dis.MoveNext() )
-            {
-                yield return cur_dis.Current( ref pc.Value, mem );
-            }
-
-            cur_dis = m_dis.GetEnumerator();
+            return m_dis.Select( dis => dis( ref pc.Value, mem ) );
         }
 
         public string ToString( ref ushort pc, ISection mem )
         {
             Ref<ushort> ref_pc = new( pc );
             string[] seps = { " ", ", ", "" };
-            string[] ops = Disassemble( ref_pc, mem ).ToArray();
+            string[] ops = Operands( ref_pc, mem ).ToArray();
 
             StringBuilder sb = new();
 
