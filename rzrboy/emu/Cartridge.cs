@@ -68,6 +68,12 @@ namespace rzr
             Type = 0x147,
             RomBanks = 0x148,
             RamBanks = 0x149,
+            DestinationCode = 0x14A, // 0 = japanese
+            OldLicenseeCode = 0x14B,
+            Version = 0x14C, // game version
+            HeaderChecksum = 0x14D, // 0x134-14C
+            RomChecksumStart = 0x14E,
+            RomChecksumEnd = 0x14F
         }
 
         private ProxySection m_romProxy;
@@ -76,7 +82,7 @@ namespace rzr
         private List<RWSection> m_romBanks = new();
         private List<RWSection> m_ramBanks = new();
 
-        public CartridgeType Type => (CartridgeType)m_romBanks[0][(ushort)Header.Type];
+        public CartridgeType Type { get => (CartridgeType)m_romBanks[0][(ushort)Header.Type]; set => m_romBanks[0][(ushort)Header.Type] = (byte)value; }
         public string Title
         {
             get
@@ -92,9 +98,16 @@ namespace rzr
 
                 return sb.ToString();
             }
+            set {
+                m_romBanks[0].write(
+                    src: value.Select( c => (byte)c ).ToArray(), 
+                    src_offset:0,
+                    dst_offset: (ushort)Header.TitleStart,
+                    len: Header.TitleStart - Header.TitleStart );
+            }
         }
 
-        public int RomBanks => ( 2 << m_romBanks[0][(ushort)Header.RomBanks] );
+        public int RomBanks { get => ( 2 << m_romBanks[0][(ushort)Header.RomBanks] ); set { m_romBanks[0][(ushort)Header.RomBanks] = (byte)( value >> 2 ); } }
         public int RamBanks
         {
             get
@@ -111,6 +124,18 @@ namespace rzr
                     default: throw new ArgumentOutOfRangeException("Unknown ram bank specifier");
                 }
             }
+        }
+
+        public static byte HeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart ) 
+        {
+            int len = Header.TitleEnd - Header.TitleStart;
+            byte checksum = 0;
+            for( int i = start; i < start + len; i++ )
+            {
+                checksum -= header.ElementAt(i);
+                checksum--;
+            }
+            return checksum;
         }
 
         private struct MBC
