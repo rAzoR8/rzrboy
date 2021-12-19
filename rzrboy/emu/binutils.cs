@@ -2,8 +2,8 @@
 {
     public static class binutil
     {
-        public static ushort Combine( this byte high, byte low ) { return (ushort)( ( high << 8 ) | low ); }
-        public static void Split( this ushort val, out byte high, out byte low ) { high = (byte)( ( val & 0xff00 ) >> 8 ); low = (byte)( val & 0xff ); }
+        public static ushort Combine( this byte msb, byte lsb ) { return (ushort)( ( msb << 8 ) | lsb ); }
+        public static void Split( this ushort val, out byte msb, out byte lsb ) { msb = (byte)( ( val & 0xff00 ) >> 8 ); lsb = (byte)( val & 0xff ); }
 
         public static byte GetLsb( this ushort val ) => (byte)( val & 0xff );
         public static byte GetMsb( this ushort val ) => (byte)( ( val & 0xff00 ) >> 8 );

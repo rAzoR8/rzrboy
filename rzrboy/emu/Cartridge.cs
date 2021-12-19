@@ -84,13 +84,49 @@ namespace rzr
             HeaderEnd = RomChecksumEnd,
 
             LogoLength = LogoEnd + 1 - LogoStart,
-            TitleLength = TitleEnd + 1 - TitleStart
+            TitleLength = TitleEnd + 1 - TitleStart,
+            ManufacturerLength = ManufacturerEnd + 1 - ManufacturerStart,
+        }
+
+        public byte HeaderChecksum
+        {
+            get => m_romBanks[0][(ushort)Header.HeaderChecksum];
+            set => m_romBanks[0][(ushort)Header.HeaderChecksum] = value;
+        }
+        public ushort RomChecksum
+        {
+            get => binutil.Combine( msb: m_romBanks[0][(ushort)Header.RomChecksumStart], lsb: m_romBanks[0][(ushort)Header.RomChecksumEnd] );
+            set
+            {
+                m_romBanks[0][(ushort)Header.RomChecksumStart] = value.GetMsb();
+                m_romBanks[0][(ushort)Header.RomChecksumEnd] = value.GetLsb();
+            }
         }
 
         public enum DestinationCode : byte 
         {
             Japan = 0,
             NotJapan = 1
+        }
+
+        public bool Japan
+        {
+            get => (byte)DestinationCode.Japan == m_romBanks[0][(ushort)Header.DestinationCode];
+            set => m_romBanks[0][(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
+        }
+
+        public byte Version { get => m_romBanks[0][(ushort)Header.Version]; set => m_romBanks[0][(ushort)Header.Version] = value; }
+
+        public enum SGBFlag
+        {
+            None = 0,
+            SGBSupport = 0x3
+        }
+
+        public bool SGBSupport
+        {
+            get => (byte)SGBFlag.SGBSupport == m_romBanks[0][(ushort)Header.DestinationCode];
+            set => m_romBanks[0][(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
         }
 
         public CartridgeType Type { get => (CartridgeType)m_romBanks[0][(ushort)Header.Type]; set => m_romBanks[0][(ushort)Header.Type] = (byte)value; }
@@ -115,31 +151,47 @@ namespace rzr
             }
         }
 
-        public string Title
+        private string GetHeaderString( Header start, Header end )
         {
-            get
+            StringBuilder sb = new();
+
+            for( var i = start; i <= end; i++ )
             {
-                StringBuilder sb = new();
-
-                for ( var i = Header.TitleStart; i <= Header.TitleEnd; i++ )
-                {
-                    char c = (char)m_romBanks[0][(ushort)i];
-                    if ( c == 0 ) break;
-                    sb.Append(c);
-                }
-
-                return sb.ToString();
+                char c = (char)m_romBanks[0][(ushort)i];
+                if( c == 0 ) break;
+                sb.Append( c );
             }
-            set {
-                m_romBanks[0].write(
-                    src: value.Select( c => (byte)c ).ToArray(), 
-                    src_offset:0,
-                    dst_offset: (ushort)Header.TitleStart,
-                    len: Header.TitleStart - Header.TitleStart );
-            }
+
+            return sb.ToString();
         }
 
-        public int RomBanks { get => ( 2 << m_romBanks[0][(ushort)Header.RomBanks] ); set { m_romBanks[0][(ushort)Header.RomBanks] = (byte)( value >> 2 ); } }
+        private void SetHeaderString(Header start, Header len, string str )
+        {
+            m_romBanks[0].write(
+               src: str.Select( c => (byte)c ).ToArray(),
+               src_offset: 0,
+               dst_offset: (ushort)start,
+               len: (ushort)len );
+        }
+
+        public string Title
+        {
+            get => GetHeaderString( Header.TitleStart, Header.TitleEnd );
+            set => SetHeaderString( Header.TitleStart, Header.TitleLength, value );
+        }
+
+        public string Manufacturer
+        {
+            get => GetHeaderString( Header.ManufacturerStart, Header.ManufacturerEnd );
+            set => SetHeaderString( Header.ManufacturerStart, Header.ManufacturerLength, value );
+        }
+
+        public int RomBanks 
+        {
+            get => ( 2 << m_romBanks[0][(ushort)Header.RomBanks] );
+            set => m_romBanks[0][(ushort)Header.RomBanks] = (byte)( value >> 2 );
+        }
+
         public int RamBanks
         {
             get
@@ -158,7 +210,7 @@ namespace rzr
             }
         }
 
-        public static byte HeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
+        public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
         {
             byte checksum = 0;
             for( int i = start; i < start + (int)Header.TitleLength; i++ )
@@ -177,7 +229,7 @@ namespace rzr
         /// <param name="header"></param>
         /// <param name="start"></param>
         /// <returns>Checksum lsb first, needs to be byte swapped!</returns>
-        public static ushort GlobalChecksum( IEnumerable<byte> header, int start = 0 )
+        public static ushort ComputeRomChecksum( IEnumerable<byte> header, int start = 0 )
         {
             int len = start + (int)Header.RomChecksumStart;
             byte checksum = 0;
@@ -252,7 +304,12 @@ namespace rzr
                 return false;
             }
 
-            Debug.WriteLine( $"Loaded cartridge {Title} [{cart.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
+            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{cart.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
+            Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum}|{RomChecksum} SGB support {SGBSupport}" );
+            Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
+
+            var hCheck = ComputeHeaderChecksum( m_romBanks[0].mem );
+            var rCheck = ComputeRomChecksum(m_romBanks[0].mem );
 
             return true;
         }
