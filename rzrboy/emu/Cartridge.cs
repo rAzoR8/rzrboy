@@ -52,17 +52,23 @@ namespace rzr
 
         private bool Booting => IO[BootRomReg] == 0;
 
-        enum Header : ushort
+        private ProxySection m_romProxy;
+        private ProxySection m_eramProxy;
+
+        private List<RWSection> m_romBanks = new();
+        private List<RWSection> m_ramBanks = new();
+
+        public enum Header : ushort
         {
             EntryPoint = 0x100,
             LogoStart = 0x104,
-            LogoEnd = 0x133, // includsive
+            LogoEnd = 0x133, // inclusive
             TitleStart = 0x134,
-            TitleEnd = 0x143, // includsive           
+            TitleEnd = 0x143, // inclusive           
             ManufacturerStart = 0x13F,
             ManufacturerEnd = 0x142, // inclusuvie
             CGBFlag = 0x143,
-            NewLicenseeCodeStart =0x144,
+            NewLicenseeCodeStart = 0x144,
             NewLicenseeCodeEnd = 0x145,
             SGBFlag = 0x146,
             Type = 0x147,
@@ -73,23 +79,49 @@ namespace rzr
             Version = 0x14C, // game version
             HeaderChecksum = 0x14D, // 0x134-14C
             RomChecksumStart = 0x14E,
-            RomChecksumEnd = 0x14F
+            RomChecksumEnd = 0x14F,
+
+            HeaderEnd = RomChecksumEnd,
+
+            LogoLength = LogoEnd + 1 - LogoStart,
+            TitleLength = TitleEnd + 1 - TitleStart
         }
 
-        private ProxySection m_romProxy;
-        private ProxySection m_eramProxy;
-
-        private List<RWSection> m_romBanks = new();
-        private List<RWSection> m_ramBanks = new();
+        public enum DestinationCode : byte 
+        {
+            Japan = 0,
+            NotJapan = 1
+        }
 
         public CartridgeType Type { get => (CartridgeType)m_romBanks[0][(ushort)Header.Type]; set => m_romBanks[0][(ushort)Header.Type] = (byte)value; }
+
+        public Span<byte> Logo
+        {
+            get
+            {
+                var len = Header.LogoEnd + 1 - Header.LogoStart;
+                return new Span<byte>( m_romBanks[0].mem, (int)Header.LogoStart, (int)len );
+            }
+            set
+            {
+                if( value.Length != (int) Header.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)Header.LogoLength} bytes long" );
+
+                var src = value.ToArray();
+                m_romBanks[0].write(
+                    src: src,
+                    src_offset: 0,
+                    dst_offset: (ushort)Header.LogoStart,
+                    len: (int)Header.LogoLength );
+            }
+        }
+
         public string Title
         {
             get
             {
                 StringBuilder sb = new();
 
-                for ( var i = Header.TitleStart; i < Header.TitleEnd; i++ )
+                for ( var i = Header.TitleStart; i <= Header.TitleEnd; i++ )
                 {
                     char c = (char)m_romBanks[0][(ushort)i];
                     if ( c == 0 ) break;
@@ -126,14 +158,38 @@ namespace rzr
             }
         }
 
-        public static byte HeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart ) 
+        public static byte HeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
         {
-            int len = Header.TitleEnd - Header.TitleStart;
             byte checksum = 0;
-            for( int i = start; i < start + len; i++ )
+            for( int i = start; i < start + (int)Header.TitleLength; i++ )
             {
-                checksum -= header.ElementAt(i);
+                checksum -= header.ElementAt( i );
                 checksum--;
+            }
+            return checksum;
+        }
+
+        /// <summary>
+        /// Contains a 16 bit checksum (upper byte first) across the whole cartridge ROM.
+        /// Produced by adding all bytes of the cartridge (except for the two checksum bytes).
+        /// The Game Boy doesn’t verify this checksum.
+        /// </summary>
+        /// <param name="header"></param>
+        /// <param name="start"></param>
+        /// <returns>Checksum lsb first, needs to be byte swapped!</returns>
+        public static ushort GlobalChecksum( IEnumerable<byte> header, int start = 0 )
+        {
+            int len = start + (int)Header.RomChecksumStart;
+            byte checksum = 0;
+            for( int i = start; i < len; i++ )
+            {
+                checksum += header.ElementAt( i );
+            }
+            // skip global checksum, but accumulate everything else
+            len = header.Count();
+            for( int i = start + (int)Header.RomChecksumEnd + 1; i < len; ++i ) 
+            {
+                checksum += header.ElementAt( i );
             }
             return checksum;
         }
