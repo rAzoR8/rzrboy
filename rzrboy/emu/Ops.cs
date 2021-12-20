@@ -289,7 +289,7 @@
                 }
             }
 
-            // Ret, 4 cycles Ret cc 2/5 cycles
+            // RET, 4 cycles Ret cc 2/5 cycles
             public static IEnumerable<op> Ret( Condition? cc = null ) 
             {
                 bool takeBranch = true;
@@ -307,6 +307,8 @@
                     yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, msb );
                 }
             }
+
+            // TODO: RETI
 
             // PUSH r16 4-cycle
             public static IEnumerable<op> Push( Reg16 src )
@@ -335,7 +337,19 @@
                 yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetLsb();
                 yield return ( reg, mem ) => reg.PC = binutil.Combine(0x00, vec);
             }
-        };
+
+            // CCF
+            public static IEnumerable<op> Ccf() 
+            {
+                yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: !reg.Carry);
+            }
+
+            // SCF
+            public static IEnumerable<op> Scf()
+            {
+                yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: true );
+            }
+        }
 
         private static Builder Nop = Ops.Nop.Get( "NOP" );
 
@@ -438,5 +452,10 @@
 
         // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
         private static Builder Rst( byte vec ) => new Builder( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
+
+        // CCF
+        private static readonly Builder Ccf = new Builder( Ops.Ccf, "CCF" );
+        // SCF
+        private static readonly Builder Scf = new Builder( Ops.Scf, "SCF" );
     }
 }

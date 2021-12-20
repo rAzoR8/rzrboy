@@ -324,6 +324,12 @@ namespace rzr
             this[0xEF] = Rst( 0x28 );
             this[0xFF] = Rst( 0x38 );
 
+            // SCF
+            this[0x37] = Scf;
+
+            // CCF
+            this[0x3F] = Ccf;
+
             DebugReport();
         }
 
