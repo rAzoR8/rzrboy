@@ -51,6 +51,8 @@ namespace rzr
         }
 
         private delegate Builder BuildFunc<Y, X>(Y y, X x);
+        private delegate Builder BuildFunc<X>( X x );
+
 
         // returns next opcode for validation
         private static void Fill<Y, X>(Builder[] target, byte offsetX, byte stepY, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
@@ -73,7 +75,24 @@ namespace rzr
         {
             Fill(target, offsetX, stepY, builder, ys, new[] { x });
         }
+        private static void FillX<X>( Builder[] target, byte offsetX,  BuildFunc<X> builder, IEnumerable<X> xs )
+        {
+            foreach( (X x, int i) in xs.Indexed() )
+            {
+                Debug.Assert( target[offsetX + i] == null );
+                target[offsetX + i] = builder( x );
+            }
+        }
 
+        private static void FillY<Y>( Builder[] target, byte offsetX, byte stepY, BuildFunc<Y> builder, IEnumerable<Y> ys )
+        {
+            foreach( Y y in ys )
+            {
+                Debug.Assert( target[offsetX] == null );
+                target[offsetX] = builder( y );
+                offsetX += stepY;
+            }
+        }
         public Isa() 
         {
             Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
@@ -329,6 +348,16 @@ namespace rzr
 
             // CCF
             this[0x3F] = Ccf;
+
+            // RLC r
+            FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehl );
+            // TODO: RLC (HL) 0x06
+            m_extInstructions[0x07] = Rlc(Reg8.A);
+
+            // RRC r
+            FillX( m_extInstructions, offsetX: 0x08, Rrc, bcdehl );
+            // TODO: RRC (HL) 0x0E
+            m_extInstructions[0x0F] = Rrc( Reg8.A );
 
             DebugReport();
         }

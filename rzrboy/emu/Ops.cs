@@ -349,6 +349,40 @@
             {
                 yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: true );
             }
+
+            // RLC r
+            public static IEnumerable<op> Rlc( Reg8 dst ) 
+            {
+                yield return (Reg reg,ISection mem ) =>
+                {
+                    byte val = reg[dst];
+                    reg.Carry = val.IsBitSet( 7 );
+                    val <<= 1;
+                    if(reg.Carry) val |= 1;
+                    reg[dst] = val;
+
+                    reg.Zero = val == 0;
+                    reg.Sub = false;
+                    reg.HalfCarry = false;
+                };
+            }
+
+            // RRC r
+            public static IEnumerable<op> Rrc( Reg8 dst )
+            {
+                yield return ( Reg reg, ISection mem ) =>
+                {
+                    byte val = reg[dst];
+                    reg.Carry = val.IsBitSet( 0 );
+                    val >>= 1;
+                    if( reg.Carry ) val |= (1 << 7);
+                    reg[dst] = val;
+
+                    reg.Zero = val == 0;
+                    reg.Sub = false;
+                    reg.HalfCarry = false;
+                };
+            }
         }
 
         private static Builder Nop = Ops.Nop.Get( "NOP" );
@@ -455,7 +489,13 @@
 
         // CCF
         private static readonly Builder Ccf = new Builder( Ops.Ccf, "CCF" );
+
         // SCF
         private static readonly Builder Scf = new Builder( Ops.Scf, "SCF" );
+
+        // RLC
+        private static Builder Rlc( Reg8 dst ) => new Builder( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
+        // RRC
+        private static Builder Rrc( Reg8 dst ) => new Builder( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
     }
 }
