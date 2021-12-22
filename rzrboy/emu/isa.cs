@@ -55,7 +55,7 @@ namespace rzr
 
 
         // returns next opcode for validation
-        private static void Fill<Y, X>(Builder[] target, byte offsetX, byte stepY, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
+        private static void Fill<Y, X>(Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
         {
             foreach (Y y in ys)
             {
@@ -64,16 +64,16 @@ namespace rzr
                     Debug.Assert( target[offsetX + i] == null);
                     target[offsetX + i] = builder(y, x);
                 }
-                offsetX += stepY;
+                offsetX += 0x10;
             }
         }
         private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
         {
-            Fill(target, offsetX, stepY: 0, builder, new[] { y }, xs);
+            Fill(target, offsetX, builder, new[] { y }, xs);
         }
-        private static void Fill<Y, X>( Builder[] target, byte offsetX, byte stepY, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
         {
-            Fill(target, offsetX, stepY, builder, ys, new[] { x });
+            Fill(target, offsetX, builder, ys, new[] { x });
         }
         private static void FillX<X>( Builder[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
         {
@@ -83,7 +83,6 @@ namespace rzr
                 target[offsetX + i] = builder( x );
             }
         }
-
         private static void FillY<Y>( Builder[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
         {
             foreach( Y y in ys )
@@ -96,8 +95,11 @@ namespace rzr
 
         public Isa() 
         {
-            Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
+            RegX[] bcdehl = { RegX.B, RegX.C, RegX.D, RegX.E, RegX.H, RegX.L };
             RegX[] bcdehlHLa = { RegX.B, RegX.C, RegX.D, RegX.E, RegX.H, RegX.L, RegX.HL, RegX.A };
+            RegX[] cela = { RegX.C, RegX.E, RegX.L, RegX.A };
+            RegX[] bdhHL = {RegX.B, RegX.D, RegX.H, RegX.HL };
+            RegX[] BCDEHLSP = {RegX.BC, RegX.DE, RegX.HL, RegX.SP };
 
             this[0xCB] = new ExtBuilder();
 
@@ -105,47 +107,44 @@ namespace rzr
 
             // 16bit loads
             // LD (BC), .DB16
-            this[0x01] = LdImm16(Reg16.BC);
-            this[0x11] = LdImm16(Reg16.DE);
-            this[0x21] = LdImm16(Reg16.HL);
-            this[0x31] = LdImm16(Reg16.SP);
+			FillY( m_instructions, 0x01, LdImm, BCDEHLSP );
 
-            // LD [B D H], .DB8
-            this[0x06] = LdImm8(Reg8.B);
-            this[0x16] = LdImm8(Reg8.D);
-            this[0x26] = LdImm8(Reg8.H);
+			// LD [B D H], .DB8
+			this[0x06] = LdImm(RegX.B);
+            this[0x16] = LdImm(RegX.D);
+            this[0x26] = LdImm(RegX.H);
 
             // LD HL, .DB16
-            this[0x36] = LdImm16(Reg16.HL);
+            this[0x36] = LdImm(RegX.HL);
+
+            // LD (.DB16), SP
+            this[0x8] = LdImm16Sp;
+
+            // LD [C E L A], .DB8
+            FillY( m_instructions, 0x0E, LdImm, cela );
 
             // 8bit loads
             // LD (BC DE), A
-            this[0x02] = LdAddr(Reg16.BC, Reg8.A);
-            this[0x12] = LdAddr(Reg16.DE, Reg8.A);
+            this[0x02] = Ld(RegX.BC, RegX.A);
+            this[0x12] = Ld(RegX.DE, RegX.A);
             // LD (HL+-), A
             this[0x22] = LdHlPlusA;
             this[0x32] = LdHlMinusA;
 
             // LD A, (BC DE)
-            this[0x0A] = LdAddr( Reg8.A, Reg16.BC );
-            this[0x1A] = LdAddr( Reg8.A, Reg16.DE );
+            this[0x0A] = Ld( RegX.A, RegX.BC );
+            this[0x1A] = Ld( RegX.A, RegX.DE );
             // LD A, (HL+-)
             this[0x2A] = LdAHlPlus;
             this[0x3A] = LdAHlMinus;
 
-            // LD [C E L A], .DB8
-            this[0x0E] = LdImm8( Reg8.C );
-            this[0x1E] = LdImm8( Reg8.E );
-            this[0x2E] = LdImm8( Reg8.L );
-            this[0x3E] = LdImm8( Reg8.A );
-
-            // LD (.DB16), SP
-            this[0x8] = LdImm16Sp;
+            Fill(target: m_instructions, offsetX: 0x40, builder: Ld, ys: new RegX[]{ RegX.B, RegX.D, RegX.H}, ys: bcdehlHLa);
+            FillX( m_instructions, offsetX: 0x70, (RegX src) => Ld(RegX.HL, src), xs: bcdehl );
 
             // single byte reg moves
             // LD B, B | LD B, C ...
             // LD [B D H], [B C D E H L]
-            Fill( m_instructions, offsetX: 0x40, stepY: 0x10,
+            Fill( m_instructions, offsetX: 0x40,
                 ( Reg8 dst, Reg8 src ) => LdReg8( dst, src ),
                 ys: new[] { Reg8.B, Reg8.D, Reg8.H },
                 xs: bcdehl );
@@ -166,7 +165,7 @@ namespace rzr
             this[0x77] = LdAddr(Reg16.HL, Reg8.A);
 
             // LD [C E L], [B C D E H L]
-            Fill( m_instructions, offsetX: 0x48, stepY: 0x10,
+            Fill( m_instructions, offsetX: 0x48,
                 (Reg8 dst, Reg8 src) => LdReg8(dst, src),
                 ys: new[] { Reg8.C, Reg8.E, Reg8.L },
                 xs: bcdehl);
@@ -183,16 +182,14 @@ namespace rzr
             this[0x6F] = LdReg8(Reg8.L, Reg8.A);
             this[0x7F] = LdReg8(Reg8.A, Reg8.A);
 
-            // LD (HL), [B C D E H L]
-            Fill( m_instructions, offsetX: 0x70, stepY: 0,
-                (Reg16 dst, Reg8 src) => LdAddr(dst, src),
-                ys: new[] { Reg16.HL },
-                xs: bcdehl);
+			// LD (HL), [B C D E H L]
+			FillX( m_instructions, offsetX: 0x70,
+				( Reg8 src ) => LdAddr( Reg16.HL, src ),
+				xs: bcdehl );
 
-            // LD A, [B C D E H L]
-            Fill( m_instructions, offsetX: 0x78,
-                (Reg8 dst, Reg8 src) => LdReg8(dst, src),
-                y: Reg8.A,
+			// LD A, [B C D E H L]
+			FillX( m_instructions, offsetX: 0x78,
+                ( Reg8 src) => LdReg8( Reg8.A, src),
                 xs: bcdehl);
 
             // LD SP, HL
@@ -248,29 +245,29 @@ namespace rzr
             this[0XAF] = Xor( Reg8.A );
 
             // BIT [0 2 4 6], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x40, stepY: 0x10, Bit,
+            Fill( m_extInstructions, offsetX: 0x40, Bit,
                   new byte[]{ 0, 2, 4, 6 }, bcdehl );
 
             // BIT [0 2 4 6], (HL)
-            Fill( m_extInstructions, offsetX: 0x46, stepY: 0x10,
+            Fill( m_extInstructions, offsetX: 0x46,
                 ( byte bit, Reg16 hl ) => BitHl( bit ),
                 new byte[] { 0, 2, 4, 6 }, Reg16.HL );
 
             // BIT [0 2 4 6], A
-            Fill( m_extInstructions, offsetX: 0x47, stepY: 0x10, Bit,
+            Fill( m_extInstructions, offsetX: 0x47, Bit,
                   new byte[] { 0, 2, 4, 6 }, Reg8.A );
 
             // BIT [1 3 5 7], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x48, stepY: 0x10, Bit,
+            Fill( m_extInstructions, offsetX: 0x48, Bit,
                   new byte[] { 1, 3, 5, 7 }, bcdehl );
 
             // BIT [1 3 5 7], (HL)
-            Fill( m_extInstructions, offsetX: 0x4E, stepY: 0x10,
+            Fill( m_extInstructions, offsetX: 0x4E,
                 ( byte bit, Reg16 hl ) => BitHl( bit ),
                 new byte[] { 1, 3, 5, 7 }, Reg16.HL );
 
             // BIT [1 3 5 7], A
-            Fill( m_extInstructions, offsetX: 0x4F, stepY: 0x10, Bit,
+            Fill( m_extInstructions, offsetX: 0x4F, Bit,
                   new byte[] { 1, 3, 5, 7 }, Reg8.A );
 
             this[0x03] = Inc( Reg16.BC );
@@ -372,13 +369,18 @@ namespace rzr
             DebugReport( 259 );
         }
 
-        /// <summary>
-        /// only advances PC if the instructions is implemented
-        /// </summary>
-        /// <param name="pc"></param>
-        /// <param name="bin"></param>
-        /// <returns></returns>
-        public string Disassemble( ref ushort pc, ISection bin )
+		private Builder Ld( RegX x )
+		{
+			throw new NotImplementedException();
+		}
+
+		/// <summary>
+		/// only advances PC if the instructions is implemented
+		/// </summary>
+		/// <param name="pc"></param>
+		/// <param name="bin"></param>
+		/// <returns></returns>
+		public string Disassemble( ref ushort pc, ISection bin )
         {
             byte opcode = bin[pc]; // fetch
             Builder builder = this[opcode];

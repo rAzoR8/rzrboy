@@ -28,7 +28,7 @@
             public static op Nop = ( reg, mem ) => { };
 
             // read next byte from mem[pc++], 2 m-cycles
-            public static IEnumerable<op> LdImm8( Reg8 target )
+            private static IEnumerable<op> LdImm8( Reg8 target )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.PC++;
@@ -36,7 +36,7 @@
             }
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
-            public static IEnumerable<op> LdImm16( Reg16 target )
+            private static IEnumerable<op> LdImm16( Reg16 target )
             {
                 ushort val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -44,11 +44,16 @@
                 yield return ( reg, mem ) => reg[target] = val;
             }
 
-            // LD r8, r8' 1-cycle
-            public static op LdReg8( Reg8 dst, Reg8 src ) => ( reg, mem ) => { reg[dst] = reg[src]; };
+			public static IEnumerable<op> LdImm( RegX target ) => target.Is8() ? LdImm8( target.To8() ) : LdImm16( target.To16() );
+
+			// LD r8, r8' 1-cycle
+			private static IEnumerable<op> LdReg8( Reg8 dst, Reg8 src ) 
+            { 
+                yield return (reg, mem) => { reg[dst] = reg[src]; };
+            }
 
             // LD r16, r16' 2-cycles
-            public static IEnumerable<op> LdReg16( Reg16 dst, Reg16 src )
+            private static IEnumerable<op> LdReg16( Reg16 dst, Reg16 src )
             {
                 // simulate 16 bit register being written in two cycles
                 yield return ( reg, mem ) => reg[dst] = binutil.SetLsb( reg[dst], reg[src].GetLsb() );
@@ -56,7 +61,7 @@
             }
 
             // LD r8, (r16) 2-cycle
-            public static IEnumerable<op> LdAddr( Reg8 dst, Reg16 src_addr )
+            private static IEnumerable<op> LdAddr( Reg8 dst, Reg16 src_addr )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg[src_addr];
@@ -64,11 +69,19 @@
             }
 
             // LD (r16), r8 2-cycle
-            public static IEnumerable<op> LdAddr( Reg16 dst_addr, Reg8 src )
+            private static IEnumerable<op> LdAddr( Reg16 dst_addr, Reg8 src )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg[dst_addr];
                 yield return ( reg, mem ) => mem[address] = reg[src];
+            }
+
+            public static IEnumerable<op> LdRegOrAddr(RegX dst, RegX src )
+			{
+				if( dst.Is8() && src.Is8() )    return LdReg8( dst.To8(), src.To8() );
+				if( dst.Is16() && src.Is16() )  return LdReg16( dst.To16(), src.To16() );
+                if( dst.Is8() && src.Is16() )   return LdAddr( dst.To8(), src.To16() );
+                return LdAddr( dst.To16(), src.To8() );
             }
 
             // LD (HL+), A
@@ -485,20 +498,35 @@
         // XOR A, (HL)
         private static readonly Builder XorHl = new Builder( Ops.XorHl, "XOR" ) + "A" + "(HL)";
 
-        // LD r8, db8
-        private static Builder LdImm8( Reg8 target ) => new Builder( () => Ops.LdImm8( target ), "LD" ) + Ops.operand( target ) + Ops.operandDB8;
-        // LD r16, db16
-        private static Builder LdImm16( Reg16 target ) => new Builder( () => Ops.LdImm16( target ), "LD" ) + Ops.operand( target ) + Ops.operandDB16;
+        // LD r8, db8 LD r16, db16
+        private static Builder LdImm( RegX dst ) => new Builder( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
 
-        // LD r8, r8'
-        private static Builder LdReg8( Reg8 dst, Reg8 src ) => Ops.LdReg8( dst, src ).Get( "LD" ) + Ops.operand( dst, src );
-        // LD r16, r16'
-        private static Builder LdReg16( Reg16 dst, Reg16 src ) => new Builder( () => Ops.LdReg16( dst, src ), "LD" ) + Ops.operand( dst, src );
+        /// <summary>
+        /// LD r8, r8' 
+        /// LD r16, r16'
+        /// LD r, (r16)
+        /// LD (r16), r
+        /// </summary>
+        /// <param name="dst"></param>
+        /// <param name="src"></param>
+        /// <returns></returns>
+        private static Builder Ld( RegX dst, RegX src ) 
+        {
+			Builder builder = new( () => Ops.LdRegOrAddr( dst, src ), "LD" );
 
-        // LD r, (r16)
-        private static Builder LdAddr( Reg8 dst, Reg16 src_addr ) => new Builder( () => Ops.LdAddr( dst, src_addr ), "LD" ) + Ops.operand( dst ) + $"({src_addr})";
-        // LD (r16), r
-        private static Builder LdAddr( Reg16 dst_addr, Reg8 src ) => new Builder( () => Ops.LdAddr( dst_addr, src ), "LD" ) + $"({dst_addr})" + Ops.operand( src );
+            if( ( dst.Is8() && src.Is8() ) || ( dst.Is16() && src.Is16() ) )
+            {
+                return builder + Ops.operand( dst ) + Ops.operand( src );
+            }
+            else if( dst.Is16() && src.Is8() )
+            {
+                return builder + $"({dst})" + Ops.operand( src );
+            }
+            else 
+            {
+                return builder + Ops.operand( dst ) + $"({src})";
+            }
+        }
 
         // LD (HL+), A
         private static readonly Builder LdHlPlusA = new Builder( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
