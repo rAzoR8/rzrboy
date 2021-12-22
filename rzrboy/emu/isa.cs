@@ -75,7 +75,7 @@ namespace rzr
         {
             Fill(target, offsetX, stepY, builder, ys, new[] { x });
         }
-        private static void FillX<X>( Builder[] target, byte offsetX,  BuildFunc<X> builder, IEnumerable<X> xs )
+        private static void FillX<X>( Builder[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
         {
             foreach( (X x, int i) in xs.Indexed() )
             {
@@ -84,18 +84,20 @@ namespace rzr
             }
         }
 
-        private static void FillY<Y>( Builder[] target, byte offsetX, byte stepY, BuildFunc<Y> builder, IEnumerable<Y> ys )
+        private static void FillY<Y>( Builder[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
         {
             foreach( Y y in ys )
             {
                 Debug.Assert( target[offsetX] == null );
                 target[offsetX] = builder( y );
-                offsetX += stepY;
+                offsetX += 0x10;
             }
         }
+
         public Isa() 
         {
             Reg8[] bcdehl = { Reg8.B, Reg8.C, Reg8.D, Reg8.E, Reg8.H, Reg8.L };
+            RegX[] bcdehlHLa = { RegX.B, RegX.C, RegX.D, RegX.E, RegX.H, RegX.L, RegX.HL, RegX.A };
 
             this[0xCB] = new ExtBuilder();
 
@@ -343,23 +345,31 @@ namespace rzr
             this[0xEF] = Rst( 0x28 );
             this[0xFF] = Rst( 0x38 );
 
+            // DAA
+            this[0x27] = Daa;
+
             // SCF
             this[0x37] = Scf;
+
+            // CPL
+            this[0x2F] = Cpl;
 
             // CCF
             this[0x3F] = Ccf;
 
             // RLC r
-            FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehl );
-            // TODO: RLC (HL) 0x06
-            m_extInstructions[0x07] = Rlc(Reg8.A);
+            FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
 
             // RRC r
-            FillX( m_extInstructions, offsetX: 0x08, Rrc, bcdehl );
-            // TODO: RRC (HL) 0x0E
-            m_extInstructions[0x0F] = Rrc( Reg8.A );
+            FillX( m_extInstructions, offsetX: 0x08, Rrc, bcdehlHLa );
 
-            DebugReport();
+            // RL r
+            FillX( m_extInstructions, offsetX: 0x10, Rl, bcdehlHLa );
+
+            // RR r
+            FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
+
+            DebugReport( 259 );
         }
 
         /// <summary>
@@ -399,7 +409,7 @@ namespace rzr
             }
         }
 
-        private void DebugReport() 
+        private void DebugReport( ushort expected )
         {
             Mem mem = new();
 
@@ -433,6 +443,7 @@ namespace rzr
             }
 
             Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/500.0f}%");
+            Debug.Assert(count == expected);
         }
     }
 

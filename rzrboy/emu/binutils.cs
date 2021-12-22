@@ -32,5 +32,8 @@
                 target &= (byte)~( 1 << index );
             return target;
         }
+
+        public static byte Flip( this byte val ) => (byte)( ~val );
+        public static ushort Flip( this ushort val ) => (ushort)( ~val );
     }
 }

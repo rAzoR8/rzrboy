@@ -5,6 +5,7 @@
         public static class Ops
         {
             public static dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
+            public static dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
             public static dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
             public static dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
 
@@ -33,8 +34,6 @@
                 yield return ( reg, mem ) => address = reg.PC++;
                 yield return ( reg, mem ) => reg[target] = mem[address];
             }
-
-            private static op LdStack8Helper( Ref<byte> val ) => ( Reg reg, ISection mem ) => val.Value = mem[reg.SP++];
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
             public static IEnumerable<op> LdImm16( Reg16 target )
@@ -350,39 +349,114 @@
                 yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: true );
             }
 
-            // RLC r
-            public static IEnumerable<op> Rlc( Reg8 dst ) 
+            // SCF
+            public static IEnumerable<op> Cpl()
             {
-                yield return (Reg reg,ISection mem ) =>
-                {
-                    byte val = reg[dst];
-                    reg.Carry = val.IsBitSet( 7 );
-                    val <<= 1;
-                    if(reg.Carry) val |= 1;
-                    reg[dst] = val;
+                yield return ( reg, mem ) => { reg.A = reg.A.Flip(); reg.SetFlags( Z: reg.Zero, N: true, H: true, C: reg.Carry ); };
+            }
 
-                    reg.Zero = val == 0;
-                    reg.Sub = false;
+            // DAA
+            public static IEnumerable<op> Daa()
+            {
+                yield return ( reg, mem ) => 
+                {
+                    ushort res = reg.A;
+
+                    if( reg.Sub )
+                    {
+                        if( reg.HalfCarry ) res = (byte)( res - 0x06 );
+                        if( reg.Carry ) res = (byte)( res - 0x60 );
+                    }
+                    else
+                    {
+                        if( reg.HalfCarry || ( res & 0b0000_1111 ) > 9 ) res += 0x06;
+                        if( reg.Carry || res > 0b1001_1111 ) res += 0x60;
+                    }
+
                     reg.HalfCarry = false;
+                    reg.Carry = res > 0xFF ? true : reg.Carry;
+                    reg.A = (byte)res;
+                    reg.Zero = reg.A == 0;
                 };
             }
 
-            // RRC r
-            public static IEnumerable<op> Rrc( Reg8 dst )
-            {
-                yield return ( Reg reg, ISection mem ) =>
-                {
-                    byte val = reg[dst];
-                    reg.Carry = val.IsBitSet( 0 );
-                    val >>= 1;
-                    if( reg.Carry ) val |= (1 << 7);
-                    reg[dst] = val;
+            private delegate byte AluFunc( Reg reg, byte val );
 
-                    reg.Zero = val == 0;
-                    reg.Sub = false;
-                    reg.HalfCarry = false;
-                };
+            // RLC r, RRC r etc - 1 or 3 cycles (+1 fetch)
+            private static IEnumerable<op> BitOpWithFlagHelper( RegX dst, AluFunc func )
+            {
+                if( dst.Is8() )
+                {
+                    yield return ( reg, mem ) => reg[dst.To8()] = func( reg, reg[dst.To8()] );
+                }
+                else
+                {
+                    byte val = 0;
+                    yield return ( reg, mem ) => val = mem[reg[dst.To16()]];
+                    yield return ( reg, mem ) => val = func( reg, val );
+                    yield return ( reg, mem ) => mem[reg[dst.To16()]] = val;
+                }
             }
+
+            private static byte RlcHelper( Reg reg, byte val )
+            {
+                reg.Carry = val.IsBitSet( 7 );
+                val <<= 1;
+                if( reg.Carry ) val |= 1;
+
+                reg.Zero = val == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return val;
+            }
+
+            // RLC r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<op> Rlc( RegX dst ) => BitOpWithFlagHelper( dst, RlcHelper );
+
+            private static byte RrcHelper( Reg reg, byte val )
+            {
+                reg.Carry = val.IsBitSet( 0 );
+                val >>= 1;
+                if( reg.Carry ) val |= ( 1 << 7 );
+
+                reg.Zero = val == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return val;
+            }
+
+            // RRC r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<op> Rrc( RegX dst ) => BitOpWithFlagHelper( dst, RrcHelper );
+
+            private static byte RlHelper( Reg reg, byte val )
+            {
+                byte res = (byte)( val << 1 );                
+                if( reg.Carry ) res |= 1;
+
+                reg.Carry = val.IsBitSet( 7 );
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return res;
+            }
+
+            // RL r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<op> Rl( RegX dst ) => BitOpWithFlagHelper( dst, RlHelper );
+
+            private static byte RrHelper( Reg reg, byte val )
+            {
+                byte res = (byte)( val >> 1 );
+                if( reg.Carry ) res |= (1 << 7);
+
+                reg.Carry = val.IsBitSet( 0 );
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return res;
+            }
+
+            // RR r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<op> Rr( RegX dst ) => BitOpWithFlagHelper( dst, RrHelper );
         }
 
         private static Builder Nop = Ops.Nop.Get( "NOP" );
@@ -489,13 +563,21 @@
 
         // CCF
         private static readonly Builder Ccf = new Builder( Ops.Ccf, "CCF" );
-
         // SCF
         private static readonly Builder Scf = new Builder( Ops.Scf, "SCF" );
+        // SCF
+        private static readonly Builder Cpl = new Builder( Ops.Cpl, "CPL" );
+        // DAA
+        private static readonly Builder Daa = new Builder( Ops.Daa, "DAA" );
 
         // RLC
-        private static Builder Rlc( Reg8 dst ) => new Builder( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
+        private static Builder Rlc( RegX dst ) => new Builder( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
         // RRC
-        private static Builder Rrc( Reg8 dst ) => new Builder( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
+        private static Builder Rrc( RegX dst ) => new Builder( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
+
+        // RL
+        private static Builder Rl( RegX dst ) => new Builder( () => Ops.Rl( dst ), "RL" ) + Ops.operand( dst );
+        // RR
+        private static Builder Rr( RegX dst ) => new Builder( () => Ops.Rr( dst ), "RR" ) + Ops.operand( dst );
     }
 }
