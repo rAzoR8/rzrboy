@@ -138,62 +138,13 @@ namespace rzr
             this[0x2A] = LdAHlPlus;
             this[0x3A] = LdAHlMinus;
 
-            Fill(target: m_instructions, offsetX: 0x40, builder: Ld, ys: new RegX[]{ RegX.B, RegX.D, RegX.H}, ys: bcdehlHLa);
-            FillX( m_instructions, offsetX: 0x70, (RegX src) => Ld(RegX.HL, src), xs: bcdehl );
-
-            // single byte reg moves
-            // LD B, B | LD B, C ...
-            // LD [B D H], [B C D E H L]
-            Fill( m_instructions, offsetX: 0x40,
-                ( Reg8 dst, Reg8 src ) => LdReg8( dst, src ),
-                ys: new[] { Reg8.B, Reg8.D, Reg8.H },
-                xs: bcdehl );
-
-            // LD [B D H], (HL)
-            this[0x46] = LdAddr(Reg8.B, Reg16.HL);
-            this[0x56] = LdAddr(Reg8.D, Reg16.HL);
-            this[0x66] = LdAddr(Reg8.H, Reg16.HL);
-
-            // LD [B D H], A
-            this[0x47] = LdReg8(Reg8.B, Reg8.A);
-            this[0x57] = LdReg8(Reg8.D, Reg8.A);
-            this[0x67] = LdReg8(Reg8.H, Reg8.A);
-
-            //this[0x76] = halt;
-
-            // LD (HL), A ( the one right after HALT)
-            this[0x77] = LdAddr(Reg16.HL, Reg8.A);
-
-            // LD [C E L], [B C D E H L]
-            Fill( m_instructions, offsetX: 0x48,
-                (Reg8 dst, Reg8 src) => LdReg8(dst, src),
-                ys: new[] { Reg8.C, Reg8.E, Reg8.L },
-                xs: bcdehl);
-
-            // LD [C E L A], (HL)
-            this[0x4E] = LdAddr(Reg8.C, Reg16.HL);
-            this[0x5E] = LdAddr(Reg8.E, Reg16.HL);
-            this[0x6E] = LdAddr(Reg8.L, Reg16.HL);
-            this[0x7E] = LdAddr(Reg8.A, Reg16.HL);
-
-            // LD [C E L A], A
-            this[0x4F] = LdReg8(Reg8.C, Reg8.A);
-            this[0x5F] = LdReg8(Reg8.E, Reg8.A);
-            this[0x6F] = LdReg8(Reg8.L, Reg8.A);
-            this[0x7F] = LdReg8(Reg8.A, Reg8.A);
-
-			// LD (HL), [B C D E H L]
-			FillX( m_instructions, offsetX: 0x70,
-				( Reg8 src ) => LdAddr( Reg16.HL, src ),
-				xs: bcdehl );
-
-			// LD A, [B C D E H L]
-			FillX( m_instructions, offsetX: 0x78,
-                ( Reg8 src) => LdReg8( Reg8.A, src),
-                xs: bcdehl);
+			Fill( m_instructions, offsetX: 0x40, builder: Ld, ys: new RegX[] { RegX.B, RegX.D, RegX.H }, ys: bcdehlHLa );
+			FillX( m_instructions, offsetX: 0x70, ( RegX src ) => Ld( RegX.HL, src ), xs: bcdehl );
+			this[0x77] = Ld( RegX.HL, RegX.A ); // LD (HL), A ( the one right after HALT)
+            FillX( m_instructions, offsetX: 0x78, ( RegX src ) => Ld( RegX.A, src ), xs: bcdehlHLa );
 
             // LD SP, HL
-            this[0xF9] = LdReg16( Reg16.SP, Reg16.HL );
+            this[0xF9] = Ld( RegX.SP, RegX.HL );
 
             // LD (0xFF00+db8), A
             this[0XE0] = LdhImmA;
@@ -233,10 +184,7 @@ namespace rzr
             this[0x38] = JrCcImm( Ops.C, "C" );
 
             // XOR A, r
-            Fill( m_instructions, offsetX: 0xA8,
-                ( Reg8 dst, Reg8 src ) => Xor( src ),
-                y: Reg8.A,
-                xs: bcdehl );
+            FillX( m_instructions, offsetX: 0xA8, Xor, xs: bcdehl.Cast<Reg8>() );
 
             // XOR A, (HL)
             this[0xAE] = XorHl;
@@ -368,11 +316,6 @@ namespace rzr
 
             DebugReport( 259 );
         }
-
-		private Builder Ld( RegX x )
-		{
-			throw new NotImplementedException();
-		}
 
 		/// <summary>
 		/// only advances PC if the instructions is implemented
