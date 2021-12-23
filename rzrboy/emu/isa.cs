@@ -54,20 +54,20 @@ namespace rzr
         private delegate Builder BuildFunc<X>( X x );
 
 
-        // returns next opcode for validation
-        private static void Fill<Y, X>(Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs) 
-        {
-            foreach (Y y in ys)
-            {
-                foreach ((X x, int i) in xs.Indexed())
-                {
-                    Debug.Assert( target[offsetX + i] == null);
-                    target[offsetX + i] = builder(y, x);
-                }
-                offsetX += 0x10;
-            }
-        }
-        private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
+		// returns next opcode for validation
+		private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
+		{
+			foreach( Y y in ys )
+			{
+				foreach( (X x, int i) in xs.Indexed() )
+				{
+					Debug.Assert( target[offsetX + i] == null );
+					target[offsetX + i] = builder( y, x );
+				}
+				offsetX += 0x10;
+			}
+		}
+		private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
         {
             Fill(target, offsetX, builder, new[] { y }, xs);
         }
@@ -138,7 +138,7 @@ namespace rzr
             this[0x2A] = LdAHlPlus;
             this[0x3A] = LdAHlMinus;
 
-			Fill( m_instructions, offsetX: 0x40, builder: Ld, ys: new RegX[] { RegX.B, RegX.D, RegX.H }, ys: bcdehlHLa );
+			Fill( m_instructions, offsetX: 0x40, builder: Ld, xs: new RegX[] { RegX.B, RegX.D, RegX.H }, ys: bcdehlHLa );
 			FillX( m_instructions, offsetX: 0x70, ( RegX src ) => Ld( RegX.HL, src ), xs: bcdehl );
 			this[0x77] = Ld( RegX.HL, RegX.A ); // LD (HL), A ( the one right after HALT)
             FillX( m_instructions, offsetX: 0x78, ( RegX src ) => Ld( RegX.A, src ), xs: bcdehlHLa );
@@ -193,7 +193,7 @@ namespace rzr
             this[0XAF] = Xor( Reg8.A );
 
             // BIT [0 2 4 6], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x40, Bit,
+            Fill( m_extInstructions, offsetX: 0x40, (byte bit, RegX dst) => Bit(bit, dst.To8()),
                   new byte[]{ 0, 2, 4, 6 }, bcdehl );
 
             // BIT [0 2 4 6], (HL)
@@ -206,7 +206,7 @@ namespace rzr
                   new byte[] { 0, 2, 4, 6 }, Reg8.A );
 
             // BIT [1 3 5 7], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x48, Bit,
+            Fill( m_extInstructions, offsetX: 0x48, ( byte bit, RegX dst ) => Bit( bit, dst.To8() ),
                   new byte[] { 1, 3, 5, 7 }, bcdehl );
 
             // BIT [1 3 5 7], (HL)
