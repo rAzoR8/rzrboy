@@ -106,30 +106,24 @@ namespace rzr
             this[0x00] = Nop;
 
             // 16bit loads
-            // LD (BC), .DB16
+            // LD [BC DE HL SP], .DB16
 			FillY( m_instructions, 0x01, LdImm, BCDEHLSP );
 
-			// LD [B D H], .DB8
-			this[0x06] = LdImm(RegX.B);
-            this[0x16] = LdImm(RegX.D);
-            this[0x26] = LdImm(RegX.H);
-
-            // LD HL, .DB16
-            this[0x36] = LdImm(RegX.HL);
-
-            // LD (.DB16), SP
-            this[0x8] = LdImm16Sp;
-
-            // LD [C E L A], .DB8
-            FillY( m_instructions, 0x0E, LdImm, cela );
-
-            // 8bit loads
             // LD (BC DE), A
-            this[0x02] = Ld(RegX.BC, RegX.A);
-            this[0x12] = Ld(RegX.DE, RegX.A);
+            this[0x02] = Ld( RegX.BC, RegX.A );
+            this[0x12] = Ld( RegX.DE, RegX.A );
             // LD (HL+-), A
             this[0x22] = LdHlPlusA;
             this[0x32] = LdHlMinusA;
+
+			// LD [B D H HL], .DB8
+			this[0x06] = LdImm(RegX.B);
+            this[0x16] = LdImm(RegX.D);
+            this[0x26] = LdImm(RegX.H);            
+            this[0x36] = LdImm(RegX.HL); // LD HL, .DB16
+
+            // LD (.DB16), SP
+            this[0x8] = LdImm16Sp;
 
             // LD A, (BC DE)
             this[0x0A] = Ld( RegX.A, RegX.BC );
@@ -138,10 +132,21 @@ namespace rzr
             this[0x2A] = LdAHlPlus;
             this[0x3A] = LdAHlMinus;
 
-			Fill( m_instructions, offsetX: 0x40, builder: Ld, xs: new RegX[] { RegX.B, RegX.D, RegX.H }, ys: bcdehlHLa );
-			FillX( m_instructions, offsetX: 0x70, ( RegX src ) => Ld( RegX.HL, src ), xs: bcdehl );
-			this[0x77] = Ld( RegX.HL, RegX.A ); // LD (HL), A ( the one right after HALT)
-            FillX( m_instructions, offsetX: 0x78, ( RegX src ) => Ld( RegX.A, src ), xs: bcdehlHLa );
+            // LD [C E L A], .DB8
+            FillY( m_instructions, 0x0E, LdImm, cela );
+
+            // LD [B D H HL], [B C D E H L)
+			Fill( m_instructions, offsetX: 0x40, builder: Ld,
+                ys: new RegX[] { RegX.B, RegX.D, RegX.H, RegX.HL },
+                xs: bcdehl );
+
+            // LD [B D H], (HL)
+            FillY( m_instructions, offsetX: 0x46, builder: ( RegX dst ) => Ld( dst, RegX.HL ), ys: new RegX[] { RegX.B, RegX.D, RegX.H } );
+
+            // LD [B D H (HL)], [A B C D E H L (HL) A]
+            Fill( m_instructions, offsetX: 0x47, builder: Ld,
+                ys: new RegX[] { RegX.B, RegX.D, RegX.H, RegX.HL }, // dst
+                xs: bcdehlHLa.Prepend(RegX.A) ); // src
 
             // LD SP, HL
             this[0xF9] = Ld( RegX.SP, RegX.HL );
