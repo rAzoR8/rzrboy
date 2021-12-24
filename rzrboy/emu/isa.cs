@@ -147,6 +147,12 @@ namespace rzr
                 ys: new RegX[] { RegX.B, RegX.D, RegX.H, RegX.HL }, // dst
                 xs: bcdehlHLa.Prepend(RegX.A) ); // src
 
+            // ADD A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0x80, builder: Add, xs: bcdehlHLa );
+
+            // SUB A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0x90, builder: Sub, xs: bcdehlHLa );
+
             // LD SP, HL
             this[0xF9] = Ld( RegX.SP, RegX.HL );
 
@@ -292,7 +298,7 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
-            DebugReport( 259 );
+            DebugReport( 275 );
         }
 
 		/// <summary>

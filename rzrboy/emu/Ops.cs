@@ -162,6 +162,40 @@
                 yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
             }
 
+            // ADD A, [r8, (HL)] 1-2 cycles
+            public static IEnumerable<op> Add(RegX src ) 
+            {
+                byte val = 0;
+                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) => 
+                {
+                    if( src.Is8() ) val = reg[src.To8()];
+                    ushort acc = reg.A;
+                    reg.Sub = false;
+                    reg.HalfCarry = ( val & 0b1111 ) + ( acc & 0b1111 ) > 0b1111;
+                    acc += val;
+                    reg.Carry = acc > 0xFF;
+                    reg.Zero = ( reg.A = (byte)acc ) == 0;
+                };
+            }
+
+            // Sub A, [r8, (HL)] 1-2 cycles
+            public static IEnumerable<op> Sub( RegX src )
+            {
+                byte val = 0;
+                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( src.Is8() ) val = reg[src.To8()];
+                    ushort acc = reg.A;
+                    reg.Sub = false;
+                    reg.HalfCarry = ( val & 0b1111 ) > ( acc & 0b1111 );
+                    reg.Carry = val > acc;
+                    acc -= val;
+                    reg.Zero = ( reg.A = (byte)acc ) == 0;
+                };
+            }
+
             private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
 
             // JP HL 1 cycle
@@ -388,7 +422,7 @@
             private delegate byte AluFunc( Reg reg, byte val );
 
             // RLC r, RRC r etc - 1 or 3 cycles (+1 fetch)
-            private static IEnumerable<op> BitOpWithFlagHelper( RegX dst, AluFunc func )
+            private static IEnumerable<op> MemAluMemHelper( RegX dst, AluFunc func )
             {
                 if( dst.Is8() )
                 {
@@ -416,7 +450,7 @@
             }
 
             // RLC r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rlc( RegX dst ) => BitOpWithFlagHelper( dst, RlcHelper );
+            public static IEnumerable<op> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
 
             private static byte RrcHelper( Reg reg, byte val )
             {
@@ -431,7 +465,7 @@
             }
 
             // RRC r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rrc( RegX dst ) => BitOpWithFlagHelper( dst, RrcHelper );
+            public static IEnumerable<op> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
 
             private static byte RlHelper( Reg reg, byte val )
             {
@@ -446,7 +480,7 @@
             }
 
             // RL r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rl( RegX dst ) => BitOpWithFlagHelper( dst, RlHelper );
+            public static IEnumerable<op> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
 
             private static byte RrHelper( Reg reg, byte val )
             {
@@ -461,7 +495,7 @@
             }
 
             // RR r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rr( RegX dst ) => BitOpWithFlagHelper( dst, RrHelper );
+            public static IEnumerable<op> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
         }
 
         private static Builder Nop = Ops.Nop.Get( "NOP" );
@@ -540,6 +574,12 @@
 
         // LD (a16), SP
         private static readonly Builder LdImm16Sp = new Builder( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
+
+		// ADD A, [r8 (HL)]
+		private static Builder Add( RegX src ) => new Builder( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // SUB A, [r8 (HL)]
+        private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
 
         // JP HL
         private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
