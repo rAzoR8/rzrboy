@@ -159,6 +159,18 @@ namespace rzr
             // SBC A, [r8 (HL)]
             FillX( m_instructions, offsetX: 0x98, builder: Sbc, xs: bcdehlHLa );
 
+            // AND A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0xA0, And, xs: bcdehlHLa );
+
+            // XOR A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0xA8, Xor, xs: bcdehlHLa );
+
+            // OR A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0xB0, Or, xs: bcdehlHLa );
+
+            // CP A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0xB8, Cp, xs: bcdehlHLa );
+
             // LD SP, HL
             this[0xF9] = Ld( RegX.SP, RegX.HL );
 
@@ -198,9 +210,6 @@ namespace rzr
             // JR Z, e8
             this[0x28] = JrCcImm( Ops.Z, "Z" );
             this[0x38] = JrCcImm( Ops.C, "C" );
-
-            // XOR A, [r8 (HL)]
-            FillX( m_instructions, offsetX: 0xA8, Xor, xs: bcdehlHLa );
 
             // BIT [0 2 4 6], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[]{ 0, 2, 4, 6 }, bcdehlHLa );
@@ -304,7 +313,7 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
-            DebugReport( 291 );
+            DebugReport( 315 );
         }
 
 		/// <summary>

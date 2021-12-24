@@ -203,7 +203,55 @@
 				};
 			}
 
-			private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
+            // AND A, [r8, (HL)] 1-2 -cycle
+            public static IEnumerable<op> And( RegX src )
+            {
+                byte val = 0;
+                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( src.Is8() ) val = reg[src.To8()];
+                    val = reg.A &= val;
+                    reg.Zero = val == 0;
+                    reg.Sub = false;
+                    reg.HalfCarry = true;
+                    reg.Carry = false;
+                };
+            }
+
+            // AND A, [r8, (HL)] 1-2 -cycle
+            public static IEnumerable<op> Or( RegX src )
+            {
+                byte val = 0;
+                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( src.Is8() ) val = reg[src.To8()];
+                    val = reg.A |= val;
+                    reg.Zero = val == 0;
+                    reg.Sub = false;
+                    reg.HalfCarry = false;
+                    reg.Carry = false;
+                };
+            }
+
+            // CP A, [r8, (HL)] 1-2 -cycle
+            public static IEnumerable<op> Cp( RegX src )
+            {
+                byte val = 0;
+                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( src.Is8() ) val = reg[src.To8()];
+                    var res = reg.A - val;
+                    reg.Zero = (byte)val == 0;
+                    reg.Sub = true;
+                    reg.HalfCarry = (val & 0b1111) > (reg.A & 0b1111);
+                    reg.Carry = res < 0;
+                };
+            }
+
+            private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
 
             // JP HL 1 cycle
             public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
@@ -593,6 +641,16 @@
 
         // SBC A, [r8 (HL)]
         private static Builder Sbc( RegX src ) => new Builder( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // AND A, [r8 (HL)]
+        private static Builder And( RegX src ) => new Builder( () => Ops.And( src), "AND" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // AND A, [r8 (HL)]
+        private static Builder Or( RegX src ) => new Builder( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
+       
+        // CP A, [r8 (HL)]
+        private static Builder Cp( RegX src ) => new Builder( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
+
 
         // JP HL
         private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
