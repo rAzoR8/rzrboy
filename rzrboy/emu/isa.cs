@@ -105,7 +105,6 @@ namespace rzr
 
             this[0x00] = Nop;
 
-            // 16bit loads
             // LD [BC DE HL SP], .DB16
 			FillY( m_instructions, 0x01, LdImm, BCDEHLSP );
 
@@ -188,14 +187,8 @@ namespace rzr
             this[0x28] = JrCcImm( Ops.Z, "Z" );
             this[0x38] = JrCcImm( Ops.C, "C" );
 
-            // XOR A, r
-            FillX( m_instructions, offsetX: 0xA8, Xor, xs: bcdehl.Cast<Reg8>() );
-
-            // XOR A, (HL)
-            this[0xAE] = XorHl;
-
-            // XOR A, A
-            this[0XAF] = Xor( Reg8.A );
+            // XOR A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0xA8, Xor, xs: bcdehlHLa );
 
             // BIT [0 2 4 6], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[]{ 0, 2, 4, 6 }, bcdehlHLa );

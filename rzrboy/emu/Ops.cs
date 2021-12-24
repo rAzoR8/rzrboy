@@ -9,8 +9,9 @@
 			public static dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
 			public static dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
 			public static dis addr( Reg16 reg ) => ( ref ushort pc, ISection mem ) => $"({reg})";
+            public static dis operand8OrAdd16( RegX reg ) => reg.Is8() ? operand(reg) : addr(reg.To16());
 
-			public static readonly dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+            public static readonly dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
             public static readonly dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
             public static dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
 
@@ -199,16 +200,13 @@
                 }
             }
 
-            // XOR A, (HL)', 2 cycles
-            public static IEnumerable<op> XorHl()
-            {
-                byte val = 0;
-                yield return (reg, mem) => val = mem[reg.HL];
-                yield return ( reg, mem ) => { reg.A ^= val; reg.SetFlags( reg.A == 0, false, false, false ); };
-            }
-
-            // XOR A, src 1-cycle
-            public static op Xor( Reg8 src ) => ( reg, mem ) => { reg.A ^= reg[src]; reg.SetFlags( reg.A == 0, false, false, false ); };
+			// XOR A, [r8, (HL)]  1-2 cycles
+			public static IEnumerable<op> Xor( RegX src )
+			{
+				byte val = 0;
+				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+				yield return ( reg, mem ) => { if( src.Is8() ) { val = reg[src.To8()]; } reg.A ^= val; reg.SetFlags( reg.A == 0, false, false, false ); };
+			}
 
             // BIT i, [r8, (HL)] 1-2 -cycle
             public static IEnumerable<op> Bit( byte bit, RegX src )
@@ -482,13 +480,11 @@
         // INC (HL)
         private readonly static Builder DecHl = new Builder( Ops.DecHl, "Dec" ) + "(HL)";
 
-        // BIT i, [r8, (HL)]
-        private static Builder Bit( byte bit, RegX target ) => new Builder( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + ( target.Is8() ? Ops.operand( target ) : Ops.addr(target.To16()) );
+		// BIT i, [r8, (HL)]
+		private static Builder Bit( byte bit, RegX target ) => new Builder( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
 
-        // XOR A, src
-        private static Builder Xor( Reg8 target ) => Ops.Xor( target ).Get( "XOR" ) + "A" + Ops.operand( target );
-        // XOR A, (HL)
-        private static readonly Builder XorHl = new Builder( Ops.XorHl, "XOR" ) + "A" + "(HL)";
+		// XOR A, [r8, (HL)]
+		private static Builder Xor( RegX target ) => new Builder(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
 
         // LD r8, db8 LD r16, db16
         private static Builder LdImm( RegX dst ) => new Builder( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
