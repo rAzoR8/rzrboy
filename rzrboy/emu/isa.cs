@@ -156,6 +156,9 @@ namespace rzr
             // SUB A, [r8 (HL)]
             FillX( m_instructions, offsetX: 0x90, builder: Sub, xs: bcdehlHLa );
 
+            // SBC A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0x98, builder: Sbc, xs: bcdehlHLa );
+
             // LD SP, HL
             this[0xF9] = Ld( RegX.SP, RegX.HL );
 
@@ -301,7 +304,7 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
-            DebugReport( 283);
+            DebugReport( 291 );
         }
 
 		/// <summary>

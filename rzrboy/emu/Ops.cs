@@ -169,8 +169,8 @@
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) => 
                 {
-                    if( src.Is8() ) val = reg[src.To8()];
-                    if( carry != 0 ) carry = (byte)(reg.Carry ? 1 : 0);
+                    if( src.Is8() ) val = reg[src.To8()];                    carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
+                    carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
 
                     ushort acc = reg.A;
                     reg.Sub = false;
@@ -182,24 +182,28 @@
                 };
             }
 
-            // SUB A, [r8, (HL)] 1-2 cycles
-            public static IEnumerable<op> Sub( RegX src )
-            {
-                byte val = 0;
-                if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-                yield return ( reg, mem ) =>
-                {
-                    if( src.Is8() ) val = reg[src.To8()];
-                    ushort acc = reg.A;
-                    reg.Sub = true;
-                    reg.HalfCarry = ( val & 0b1111 ) > ( acc & 0b1111 );
-                    reg.Carry = val > acc;
-                    acc -= val;
-                    reg.Zero = ( reg.A = (byte)acc ) == 0;
-                };
-            }
+			// SUB|SBC A, [r8, (HL)] 1-2 cycles
+			public static IEnumerable<op> Sub( RegX src, byte carry = 0 )
+			{
+				byte val = 0;
+				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+				yield return ( reg, mem ) =>
+				{
+					if( src.Is8() ) val = reg[src.To8()];
+					carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
 
-            private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
+					ushort acc = reg.A;
+					reg.Sub = true;
+					if( carry == 0 ) reg.HalfCarry = ( val & 0b1111 ) > ( acc & 0b1111 );
+					reg.Carry = val > acc;
+					acc -= val;
+					acc -= carry;
+					if( carry != 0 ) reg.HalfCarry = ( ( reg.A ^ val ^ ( acc & 0xFF ) ) & ( 1 << 4 ) ) != 0;
+					reg.Zero = ( reg.A = (byte)acc ) == 0;
+				};
+			}
+
+			private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
 
             // JP HL 1 cycle
             public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
@@ -582,10 +586,13 @@
 		private static Builder Add( RegX src ) => new Builder( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
 
         // ADD A, [r8 (HL)]
-        private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
         
         // SUB A, [r8 (HL)]
         private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // SBC A, [r8 (HL)]
+        private static Builder Sbc( RegX src ) => new Builder( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
 
         // JP HL
         private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
