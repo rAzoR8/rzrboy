@@ -150,6 +150,9 @@ namespace rzr
             // ADD A, [r8 (HL)]
             FillX( m_instructions, offsetX: 0x80, builder: Add, xs: bcdehlHLa );
 
+            // Adc A, [r8 (HL)]
+            FillX( m_instructions, offsetX: 0x88, builder: Adc, xs: bcdehlHLa );
+
             // SUB A, [r8 (HL)]
             FillX( m_instructions, offsetX: 0x90, builder: Sub, xs: bcdehlHLa );
 
@@ -298,7 +301,7 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
-            DebugReport( 275 );
+            DebugReport( 283);
         }
 
 		/// <summary>

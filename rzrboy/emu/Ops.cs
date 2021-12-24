@@ -162,24 +162,27 @@
                 yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
             }
 
-            // ADD A, [r8, (HL)] 1-2 cycles
-            public static IEnumerable<op> Add(RegX src ) 
+            // ADD|ADC A, [r8, (HL)] 1-2 cycles
+            public static IEnumerable<op> Add( RegX src, byte carry = 0 ) 
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) => 
                 {
                     if( src.Is8() ) val = reg[src.To8()];
+                    if( carry != 0 ) carry = (byte)(reg.Carry ? 1 : 0);
+
                     ushort acc = reg.A;
                     reg.Sub = false;
-                    reg.HalfCarry = ( val & 0b1111 ) + ( acc & 0b1111 ) > 0b1111;
+                    reg.HalfCarry = ( val & 0b1111 ) + ( acc & 0b1111 ) + carry > 0b1111;
                     acc += val;
+                    acc += carry;
                     reg.Carry = acc > 0xFF;
                     reg.Zero = ( reg.A = (byte)acc ) == 0;
                 };
             }
 
-            // Sub A, [r8, (HL)] 1-2 cycles
+            // SUB A, [r8, (HL)] 1-2 cycles
             public static IEnumerable<op> Sub( RegX src )
             {
                 byte val = 0;
@@ -188,7 +191,7 @@
                 {
                     if( src.Is8() ) val = reg[src.To8()];
                     ushort acc = reg.A;
-                    reg.Sub = false;
+                    reg.Sub = true;
                     reg.HalfCarry = ( val & 0b1111 ) > ( acc & 0b1111 );
                     reg.Carry = val > acc;
                     acc -= val;
@@ -578,6 +581,9 @@
 		// ADD A, [r8 (HL)]
 		private static Builder Add( RegX src ) => new Builder( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
 
+        // ADD A, [r8 (HL)]
+        private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+        
         // SUB A, [r8 (HL)]
         private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
 
