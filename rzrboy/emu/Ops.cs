@@ -4,12 +4,13 @@
     {
         public static class Ops
         {
-            public static dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
-            public static dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
-            public static dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
-            public static dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
+			public static dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static dis addr( Reg16 reg ) => ( ref ushort pc, ISection mem ) => $"({reg})";
 
-            public static readonly dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+			public static readonly dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
             public static readonly dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
             public static dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
 
@@ -209,26 +210,19 @@
             // XOR A, src 1-cycle
             public static op Xor( Reg8 src ) => ( reg, mem ) => { reg.A ^= reg[src]; reg.SetFlags( reg.A == 0, false, false, false ); };
 
-            // BIT i, r 1-cycle
-            public static op Bit( byte bit, Reg8 src ) => ( reg, mem ) =>
+            // BIT i, [r8, (HL)] 1-2 -cycle
+            public static IEnumerable<op> Bit( byte bit, RegX src )
             {
-                reg.Zero = !reg[src].IsBitSet( bit );
-                reg.Sub = false;
-                reg.HalfCarry = true;
-            };
-
-            // BIT i, (HL) 2-cycle
-            public static IEnumerable<op> BitHl( byte bit )
-            {
-                byte val = 0;
-                yield return ( reg, mem ) => val = mem[reg.HL];
-                yield return ( reg, mem ) =>
-                {
-                    reg.Zero = !val.IsBitSet( bit );
-                    reg.Sub = false;
-                    reg.HalfCarry = true;
-                };
-            }
+				byte val = 0;
+				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+				yield return ( reg, mem ) =>
+				{
+					if( src.Is8() ) val = reg[src.To8()];
+					reg.Zero = !val.IsBitSet( bit );
+					reg.Sub = false;
+					reg.HalfCarry = true;
+				};
+			}
 
             // INC r16: 16bit alu op => 2 cycles
             public static IEnumerable<op> Inc( Reg16 dst )
@@ -488,10 +482,8 @@
         // INC (HL)
         private readonly static Builder DecHl = new Builder( Ops.DecHl, "Dec" ) + "(HL)";
 
-        // BIT i, r8
-        private static Builder Bit( byte bit, Reg8 target ) => Ops.Bit( bit, target ).Get( "BIT" ) + $"{bit}" + Ops.operand( target );
-        // BIT i, (HL)
-        private static Builder BitHl( byte bit ) => new Builder( () => Ops.BitHl( bit ), "BIT" ) + $"{bit}" + "(HL)";
+        // BIT i, [r8, (HL)]
+        private static Builder Bit( byte bit, RegX target ) => new Builder( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + ( target.Is8() ? Ops.operand( target ) : Ops.addr(target.To16()) );
 
         // XOR A, src
         private static Builder Xor( Reg8 target ) => Ops.Xor( target ).Get( "XOR" ) + "A" + Ops.operand( target );

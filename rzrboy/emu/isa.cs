@@ -197,31 +197,11 @@ namespace rzr
             // XOR A, A
             this[0XAF] = Xor( Reg8.A );
 
-            // BIT [0 2 4 6], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x40, (byte bit, RegX dst) => Bit(bit, dst.To8()),
-                  new byte[]{ 0, 2, 4, 6 }, bcdehl );
+            // BIT [0 2 4 6], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[]{ 0, 2, 4, 6 }, bcdehlHLa );
 
-            // BIT [0 2 4 6], (HL)
-            Fill( m_extInstructions, offsetX: 0x46,
-                ( byte bit, Reg16 hl ) => BitHl( bit ),
-                new byte[] { 0, 2, 4, 6 }, Reg16.HL );
-
-            // BIT [0 2 4 6], A
-            Fill( m_extInstructions, offsetX: 0x47, Bit,
-                  new byte[] { 0, 2, 4, 6 }, Reg8.A );
-
-            // BIT [1 3 5 7], [B C D E H L]
-            Fill( m_extInstructions, offsetX: 0x48, ( byte bit, RegX dst ) => Bit( bit, dst.To8() ),
-                  new byte[] { 1, 3, 5, 7 }, bcdehl );
-
-            // BIT [1 3 5 7], (HL)
-            Fill( m_extInstructions, offsetX: 0x4E,
-                ( byte bit, Reg16 hl ) => BitHl( bit ),
-                new byte[] { 1, 3, 5, 7 }, Reg16.HL );
-
-            // BIT [1 3 5 7], A
-            Fill( m_extInstructions, offsetX: 0x4F, Bit,
-                  new byte[] { 1, 3, 5, 7 }, Reg8.A );
+            // BIT [1 3 5 7], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x48, Bit, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
             this[0x03] = Inc( Reg16.BC );
             this[0x13] = Inc( Reg16.DE );
