@@ -211,12 +211,6 @@ namespace rzr
             this[0x28] = JrCcImm( Ops.Z, "Z" );
             this[0x38] = JrCcImm( Ops.C, "C" );
 
-            // BIT [0 2 4 6], [B C D E H L, HL, A]
-            Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[]{ 0, 2, 4, 6 }, bcdehlHLa );
-
-            // BIT [1 3 5 7], [B C D E H L, HL, A]
-            Fill( m_extInstructions, offsetX: 0x48, Bit, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
-
             this[0x03] = Inc( Reg16.BC );
             this[0x13] = Inc( Reg16.DE );
             this[0x23] = Inc( Reg16.HL );
@@ -313,7 +307,25 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
-            DebugReport( 315 );
+            // BIT [0 2 4 6], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[] { 0, 2, 4, 6 }, bcdehlHLa );
+
+            // BIT [1 3 5 7], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x48, Bit, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
+
+            // BIT [0 2 4 6], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x80, Res, new byte[] { 0, 2, 4, 6 }, bcdehlHLa );
+
+            // BIT [1 3 5 7], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0x88, Res, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
+
+            // BIT [0 2 4 6], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0xC0, Set, new byte[] { 0, 2, 4, 6 }, bcdehlHLa );
+
+            // BIT [1 3 5 7], [B C D E H L, HL, A]
+            Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
+
+            DebugReport( 443 );
         }
 
 		/// <summary>

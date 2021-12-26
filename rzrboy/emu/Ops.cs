@@ -311,6 +311,30 @@
 				};
 			}
 
+            public static IEnumerable<op> Set( byte bit, RegX target )
+            {
+                byte val = 0;
+                if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( target.Is8() ) val = reg[target.To8()];
+                    val |= (byte)( 1 << bit );
+                };
+                if( target.Is16() ) yield return ( reg, mem ) => mem[reg.HL] = val;
+            }
+
+            public static IEnumerable<op> Res( byte bit, RegX target )
+            {
+                byte val = 0;
+                if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
+                yield return ( reg, mem ) =>
+                {
+                    if( target.Is8() ) val = reg[target.To8()];
+                    val &= (byte)~( 1 << bit );
+                };
+                if( target.Is16() ) yield return ( reg, mem ) => mem[reg.HL] = val;
+            }
+
             // INC r16: 16bit alu op => 2 cycles
             public static IEnumerable<op> Inc( Reg16 dst )
             {
@@ -572,8 +596,14 @@
 		// BIT i, [r8, (HL)]
 		private static Builder Bit( byte bit, RegX target ) => new Builder( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
 
-		// XOR A, [r8, (HL)]
-		private static Builder Xor( RegX target ) => new Builder(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
+        // SET i, [r8, (HL)]
+        private static Builder Set( byte bit, RegX target ) => new Builder( () => Ops.Set( bit, target ), "SET" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+
+        // SET i, [r8, (HL)]
+        private static Builder Res( byte bit, RegX target ) => new Builder( () => Ops.Res( bit, target ), "RES" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+
+        // XOR A, [r8, (HL)]
+        private static Builder Xor( RegX target ) => new Builder(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
 
         // LD r8, db8 LD r16, db16
         private static Builder LdImm( RegX dst ) => new Builder( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
