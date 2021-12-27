@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 
 namespace rzr
 {
-	public class InterruptHanlder
+	public class Int
 	{
+        public const ushort IFRegister = 0xFF0F;
+        public const ushort IERegister = 0xFFFF;
         public enum Type : byte
         {
             VBlank = 0,
@@ -17,36 +15,37 @@ namespace rzr
             Joypad
         }
 
-        public readonly record struct Interrupt( ushort addr, Type type ) 
+        public readonly record struct Entry( ushort addr, Type type ) 
         {
 			public byte bit => (byte)( 1 << (byte)type );
 		}
 
-		public static readonly Interrupt[] Interrupts = new Interrupt[]{
-			new Interrupt(0x0040, Type.VBlank),
-			new Interrupt(0x0048, Type.Lcdc),
-			new Interrupt(0x0050, Type.Timer),
-			new Interrupt(0x0058, Type.Serial),
-			new Interrupt(0x0060, Type.Joypad),
+		public static readonly Entry[] Interrupts = new Entry[]{
+			new Entry(0x0040, Type.VBlank),
+			new Entry(0x0048, Type.Lcdc),
+			new Entry(0x0050, Type.Timer),
+			new Entry(0x0058, Type.Serial),
+			new Entry(0x0060, Type.Joypad),
 		};
 
-		// Handle interrupt
-		public static IEnumerable<op> HandleInterrupts()
+		// Handle interrupt, 5 cycles
+		public /*static*/ IEnumerable<op> HandleInterrupts()
         {
             byte IF = 0; byte IE = 0;
             yield return ( reg, mem ) => IF = mem[0xFF0F];
             yield return ( reg, mem ) => IE = mem[0xFFFF];
 
-            foreach( Interrupt Int in Interrupts )
+            foreach( Entry Int in Interrupts )
 			{
 				int mask = IF & IE & Int.bit;
 				if( mask != 0 )
                 {
+                    Debug.WriteLine( $"INT 0x{Int.addr:X2}:{Int.type}" );
                     yield return ( reg, mem ) =>
                     {
                         // clear the interrupt being handled now
                         mem[0xFF0F] &= (byte)~Int.bit;
-                        reg.IME = false; // disable interrupts
+                        reg.IME = IMEState.Disabled; // disable interrupts
                         mem[--reg.SP] = reg.PC.GetMsb();
                     };
 

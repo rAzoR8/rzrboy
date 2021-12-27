@@ -425,7 +425,31 @@
                 }
             }
 
-            // TODO: RETI
+            // RETI 4 cycles
+            public static IEnumerable<op> Reti( )
+            {
+				byte lsb = 0; byte msb = 0;
+				yield return ( reg, mem ) => lsb = mem[reg.SP++];
+				yield return ( reg, mem ) => msb = mem[reg.SP++];
+				yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, lsb );
+                yield return ( reg, mem ) =>
+                { 
+                    reg.PC = binutil.SetMsb( reg.PC, msb );
+                    reg.IME = IMEState.Enabled;
+                };
+			}
+
+            // EI 1 + 1' cycles
+            public static IEnumerable<op> Ei() 
+            {
+                yield return ( reg, mem ) => reg.IME = IMEState.RequestEnabled;
+            }
+
+            // DI 1 cycle
+            public static IEnumerable<op> Di()
+            {
+                yield return ( reg, mem ) => reg.IME = IMEState.Disabled;
+            }
 
             // PUSH r16 4-cycle
             public static IEnumerable<op> Push( Reg16 src )
@@ -703,9 +727,18 @@
         // CALL cc, nn
         private static Builder CallCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
 
+        // RETI
+        private static readonly Builder Reti = new Builder( Ops.Reti, "RETI" );
+
+        // EI
+        private static readonly Builder Ei = new Builder( Ops.Ei, "EI" );
+
+        // DI
+        private static readonly Builder Di = new Builder( Ops.Di, "DI" );
+
         // RET
         private static readonly Builder Ret = new Builder( () => Ops.Ret(), "RET" );
-
+  
         // RET cc
         private static Builder RetCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Ret( cc ), "RET" ) + flag;
 

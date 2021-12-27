@@ -295,6 +295,15 @@ namespace rzr
             // CCF
             this[0x3F] = Ccf;
 
+            // DI
+            this[0xF3] = Di;
+
+            // EI
+            this[0xFB] = Ei;
+
+            // RETI
+            this[0xD9] = Reti;
+
             // RLC r
             FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
 
@@ -325,7 +334,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 443 );
+            DebugReport( 446 );
         }
 
 		/// <summary>

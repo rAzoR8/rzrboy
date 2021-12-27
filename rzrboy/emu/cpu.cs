@@ -9,6 +9,7 @@ namespace rzr
         private Reg m_reg = new();
         private Mem m_mem;
         private Isa m_isa;
+        private Int m_int = new();
 
         public byte curOpCode { get; private set; } = 0; // opcode od the currenlty executed instruction
         public ushort curInstrPC { get; private set; } = 0; // start ProgramCounter of the currently executed instruction
@@ -49,7 +50,22 @@ namespace rzr
                 prevInstrPC = curInstrPC;
                 curInstrPC = m_reg.PC;
 
-                curOpCode = m_mem[curInstrPC]; // fetch
+				if( reg.IME == IMEState.Enabled ) // handle interrupts, if any
+				{
+					byte interrupts = (byte)( m_mem[0xFF0F] & m_mem[0xFFFF] );
+					if( interrupts != 0 )
+					{
+						curOp = m_int.HandleInterrupts().GetEnumerator();
+						curOp.MoveNext();
+						return false;
+					}
+				}
+				else if( reg.IME == IMEState.RequestEnabled )
+					reg.IME = IMEState.Enabled;
+				else if( reg.IME == IMEState.RequestDisabled )
+					reg.IME = IMEState.Disabled;
+
+				curOpCode = m_mem[curInstrPC]; // fetch
 
                 Builder builder = m_isa[curOpCode];
                 if( builder == null )                
