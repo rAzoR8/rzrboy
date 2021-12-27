@@ -52,6 +52,8 @@
         public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { binutil.SetBit( ref _flags, 5, value); } }
         public bool Carry { get => _flags.IsBitSet( 4 ); set { binutil.SetBit( ref _flags, 4, value); } }
 
+        public bool IME = false;
+
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {
             Zero = Z;
