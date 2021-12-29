@@ -304,8 +304,20 @@ namespace rzr
             // RETI
             this[0xD9] = Reti;
 
-            // RLC r
-            FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
+			// RLCA
+			this[0x07] = Rlc( RegX.A );
+
+			// RLA
+			this[0x17] = Rl( RegX.A );
+
+			// RRCA
+			this[0x0F] = Rrc( RegX.A );
+
+			// RRA
+			this[0x1F] = Rr( RegX.A );
+
+			// RLC r
+			FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
 
             // RRC r
             FillX( m_extInstructions, offsetX: 0x08, Rrc, bcdehlHLa );
@@ -334,7 +346,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 446 );
+            DebugReport( 450 );
         }
 
 		/// <summary>
