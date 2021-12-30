@@ -169,7 +169,7 @@
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) => 
                 {
-                    if( src.Is8() ) val = reg[src.To8()];                    carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
+                    if( src.Is8() ) val = reg[src.To8()];
                     carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
 
                     ushort acc = reg.A;
@@ -179,6 +179,21 @@
                     acc += carry;
                     reg.Carry = acc > 0xFF;
                     reg.Zero = ( reg.A = (byte)acc ) == 0;
+                };
+            }
+
+            // ADD HL, r16 2 cycles
+            public static IEnumerable<op> AddHl( Reg16 src ) 
+            {
+                yield return Nop;
+                yield return (Reg reg, ISection mem ) =>
+                {
+                    ushort l = reg.HL;
+                    ushort r = reg[src];
+                    reg.Sub = false;
+                    reg.HalfCarry = ( l & 0x0FFF ) + ( r & 0x0FFF ) > 0x0FFF;
+                    reg.Carry = l + r > 0xFFFF;
+                    reg.HL += r;
                 };
             }
 
@@ -689,6 +704,9 @@
 
         // ADD A, [r8 (HL)]
         private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // ADD HL, r16
+        private static Builder AddHl( Reg16 src ) => new Builder( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
         
         // SUB A, [r8 (HL)]
         private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );

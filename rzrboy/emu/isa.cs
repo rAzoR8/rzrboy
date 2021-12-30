@@ -124,6 +124,12 @@ namespace rzr
             // LD (.DB16), SP
             this[0x8] = LdImm16Sp;
 
+            // ADD HL, r16
+            this[0x09] = AddHl( Reg16.BC );
+            this[0x19] = AddHl( Reg16.DE );
+            this[0x29] = AddHl( Reg16.HL );
+            this[0x39] = AddHl( Reg16.SP );
+
             // LD A, (BC DE)
             this[0x0A] = Ld( RegX.A, RegX.BC );
             this[0x1A] = Ld( RegX.A, RegX.DE );
@@ -346,7 +352,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 450 );
+            DebugReport( 454 );
         }
 
 		/// <summary>
@@ -419,7 +425,7 @@ namespace rzr
                 Print( 0xCB, (byte)j );
             }
 
-            Debug.WriteLine($"{count} out of 511 Instructions implemented: {100.0f*count/500.0f}%");
+            Debug.WriteLine($"{count} out of 501 Instructions implemented: {100.0f*count/500.0f}%");
             Debug.Assert(count == expected);
         }
     }
