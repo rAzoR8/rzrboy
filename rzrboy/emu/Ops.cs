@@ -162,23 +162,39 @@
                 yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
             }
 
-            // ADD|ADC A, [r8, (HL)] 1-2 cycles
-            public static IEnumerable<op> Add( RegX src, byte carry = 0 ) 
+			private static void AddHelper( Reg reg, byte rhs, byte carry = 0 )
+			{
+                carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
+
+                ushort acc = reg.A;
+                reg.Sub = false;
+                reg.HalfCarry = ( rhs & 0b1111 ) + ( acc & 0b1111 ) + carry > 0b1111;
+                acc += rhs;
+                acc += carry;
+                reg.Carry = acc > 0xFF;
+                reg.Zero = ( reg.A = (byte)acc ) == 0;
+            }
+
+			// ADD|ADC A, [r8, (HL)] 1-2 cycles
+			public static IEnumerable<op> Add( RegX src, byte carry = 0 ) 
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-                yield return ( reg, mem ) => 
-                {
-                    if( src.Is8() ) val = reg[src.To8()];
-                    carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
+				yield return ( reg, mem ) =>
+				{
+					if( src.Is8() ) val = reg[src.To8()];
+					AddHelper( reg, val, carry );
+				};
+			}
 
-                    ushort acc = reg.A;
-                    reg.Sub = false;
-                    reg.HalfCarry = ( val & 0b1111 ) + ( acc & 0b1111 ) + carry > 0b1111;
-                    acc += val;
-                    acc += carry;
-                    reg.Carry = acc > 0xFF;
-                    reg.Zero = ( reg.A = (byte)acc ) == 0;
+            // ADD A, db8 2-cycle
+            public static IEnumerable<op> AddImm8()
+            {
+                byte val = 0;
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) =>
+                {
+                    AddHelper( reg, val, carry: 0 );
                 };
             }
 
@@ -702,11 +718,15 @@
 		// ADD A, [r8 (HL)]
 		private static Builder Add( RegX src ) => new Builder( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
 
+        // ADD HL, r16
+        private static Builder AddHl( Reg16 src ) => new Builder( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
+
+        // ADD A, db8
+        private static readonly Builder AddImm8 = new Builder( Ops.AddImm8, "ADD" ) + "A" + Ops.operandDB8;
+
         // ADD A, [r8 (HL)]
         private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
 
-        // ADD HL, r16
-        private static Builder AddHl( Reg16 src ) => new Builder( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
         
         // SUB A, [r8 (HL)]
         private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
