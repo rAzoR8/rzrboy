@@ -325,6 +325,9 @@ namespace rzr
             // ADD A, db8
             this[0xC6] = AddImm8;
 
+            // ADC A, db8
+            this[0xCE] = AdcImm8;
+
 			// RLC r
 			FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
 
@@ -355,7 +358,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 455 );
+            DebugReport( 456 );
         }
 
 		/// <summary>

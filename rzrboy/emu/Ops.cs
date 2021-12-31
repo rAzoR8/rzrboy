@@ -188,13 +188,13 @@
 			}
 
             // ADD A, db8 2-cycle
-            public static IEnumerable<op> AddImm8()
+            public static IEnumerable<op> AddImm8( byte carry = 0 )
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
                 yield return ( reg, mem ) =>
                 {
-                    AddHelper( reg, val, carry: 0 );
+                    AddHelper( reg, val, carry );
                 };
             }
 
@@ -721,8 +721,11 @@
         // ADD HL, r16
         private static Builder AddHl( Reg16 src ) => new Builder( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
 
-        // ADD A, db8
-        private static readonly Builder AddImm8 = new Builder( Ops.AddImm8, "ADD" ) + "A" + Ops.operandDB8;
+		// ADD A, db8
+		private static readonly Builder AddImm8 = new Builder( () => Ops.AddImm8( carry: 0 ), "ADD" ) + "A" + Ops.operandDB8;
+
+        // ADC A, db8
+        private static readonly Builder AdcImm8 = new Builder( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
 
         // ADD A, [r8 (HL)]
         private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
