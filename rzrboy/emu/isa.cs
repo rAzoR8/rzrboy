@@ -328,8 +328,26 @@ namespace rzr
             // ADC A, db8
             this[0xCE] = AdcImm8;
 
-			// RLC r
-			FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
+            // SUB A, db8
+            this[0xD6] = SubImm8;
+
+            // SBC A, db8
+            this[0xDE] = SbcImm8;
+
+            // AND A, db8
+            this[0xE6] = AndImm8;
+
+            // XOR A, db8
+            this[0xEE] = XorImm8;
+
+            // OR A, db8
+            this[0xF6] = OrImm8;
+
+            // CP A, db8
+            this[0xFE] = CpImm8;
+
+            // RLC r
+            FillX( m_extInstructions, offsetX: 0x00, Rlc, bcdehlHLa );
 
             // RRC r
             FillX( m_extInstructions, offsetX: 0x08, Rrc, bcdehlHLa );
@@ -358,7 +376,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 456 );
+            DebugReport( 462 );
         }
 
 		/// <summary>

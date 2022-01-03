@@ -192,10 +192,7 @@
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
-                yield return ( reg, mem ) =>
-                {
-                    AddHelper( reg, val, carry );
-                };
+                yield return ( reg, mem ) => AddHelper( reg, val, carry );
             }
 
             // ADD HL, r16 2 cycles
@@ -213,6 +210,20 @@
                 };
             }
 
+            public static void SubHelper( Reg reg, byte rhs, byte carry = 0 ) 
+            {
+                carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
+
+                ushort acc = reg.A;
+                reg.Sub = true;
+                if( carry == 0 ) reg.HalfCarry = ( rhs & 0b1111 ) > ( acc & 0b1111 );
+                reg.Carry = rhs > acc;
+                acc -= rhs;
+                acc -= carry;
+                if( carry != 0 ) reg.HalfCarry = ( ( reg.A ^ rhs ^ ( acc & 0xFF ) ) & ( 1 << 4 ) ) != 0;
+                reg.Zero = ( reg.A = (byte)acc ) == 0;
+            }
+
 			// SUB|SBC A, [r8, (HL)] 1-2 cycles
 			public static IEnumerable<op> Sub( RegX src, byte carry = 0 )
 			{
@@ -221,49 +232,65 @@
 				yield return ( reg, mem ) =>
 				{
 					if( src.Is8() ) val = reg[src.To8()];
-					carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
-
-					ushort acc = reg.A;
-					reg.Sub = true;
-					if( carry == 0 ) reg.HalfCarry = ( val & 0b1111 ) > ( acc & 0b1111 );
-					reg.Carry = val > acc;
-					acc -= val;
-					acc -= carry;
-					if( carry != 0 ) reg.HalfCarry = ( ( reg.A ^ val ^ ( acc & 0xFF ) ) & ( 1 << 4 ) ) != 0;
-					reg.Zero = ( reg.A = (byte)acc ) == 0;
+					SubHelper( reg, val, carry );
 				};
 			}
+
+            // SUB|SBC A, db8 2-cycle
+            public static IEnumerable<op> SubImm8( byte carry = 0 )
+            {
+                byte val = 0;
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) => SubHelper( reg, val, carry );
+            }
 
             // AND A, [r8, (HL)] 1-2 -cycle
             public static IEnumerable<op> And( RegX src )
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-                yield return ( reg, mem ) =>
+                yield return ( Reg reg, ISection mem ) =>
                 {
-                    if( src.Is8() ) val = reg[src.To8()];
-                    val = reg.A &= val;
-                    reg.Zero = val == 0;
-                    reg.Sub = false;
-                    reg.HalfCarry = true;
-                    reg.Carry = false;
-                };
-            }
+					if( src.Is8() ) val = reg[src.To8()];
+                    reg.SetFlags( Z: ( reg.A &= val ) == 0, N: false, H: true, C: false );
+				};
+			}
 
-            // AND A, [r8, (HL)] 1-2 -cycle
-            public static IEnumerable<op> Or( RegX src )
+			// AND A, db8 2-cycle
+			public static IEnumerable<op> AndImm8()
+			{
+				byte val = 0;
+				yield return ( reg, mem ) => val = mem[reg.PC++];
+				yield return ( reg, mem ) => reg.SetFlags( Z: ( reg.A &= val ) == 0, N: false, H: true, C: false );
+			}
+
+			// Or A, [r8, (HL)] 1-2 -cycle
+			public static IEnumerable<op> Or( RegX src )
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
                 yield return ( reg, mem ) =>
                 {
                     if( src.Is8() ) val = reg[src.To8()];
-                    val = reg.A |= val;
-                    reg.Zero = val == 0;
-                    reg.Sub = false;
-                    reg.HalfCarry = false;
-                    reg.Carry = false;
+                    reg.SetFlags( Z: ( reg.A |= val ) == 0, N: false, H: false, C: false );
                 };
+            }
+
+            // Or A, db8 2-cycle
+            public static IEnumerable<op> OrImm8()
+            {
+                byte val = 0;
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) => reg.SetFlags( Z: ( reg.A |= val ) == 0, N: false, H: false, C: false );
+            }
+
+            public static void CpHelper(Reg reg, byte rhs ) 
+            {
+                var res = reg.A - rhs;
+                reg.Zero = (byte)res == 0;
+                reg.Sub = true;
+                reg.HalfCarry = ( rhs & 0b1111 ) > ( reg.A & 0b1111 );
+                reg.Carry = res < 0;
             }
 
             // CP A, [r8, (HL)] 1-2 -cycle
@@ -274,15 +301,17 @@
                 yield return ( reg, mem ) =>
                 {
                     if( src.Is8() ) val = reg[src.To8()];
-                    var res = reg.A - val;
-                    reg.Zero = (byte)val == 0;
-                    reg.Sub = true;
-                    reg.HalfCarry = (val & 0b1111) > (reg.A & 0b1111);
-                    reg.Carry = res < 0;
+                    CpHelper( reg, val );
                 };
             }
 
-            private static op JpHelper( ushort addr ) => ( reg, mem ) => { reg.PC = addr; };
+            // Or A, db8 2-cycle
+            public static IEnumerable<op> CpImm8()
+            {
+                byte val = 0;
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) => CpHelper( reg, val );
+            }
 
             // JP HL 1 cycle
             public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
@@ -302,11 +331,9 @@
                 if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
-                    yield return JpHelper( nn );
+                    yield return ( reg, mem ) => { reg.PC = nn; };
                 }
             }
-
-            private static op JrHelper( sbyte offset ) => ( reg, mem ) => reg.PC = (ushort)( reg.PC + offset );
 
             // JR cc, e8 2/3 ycles
             public static IEnumerable<op> JrImm( Condition? cc = null )
@@ -316,7 +343,7 @@
                 if ( cc != null ) yield return ( reg, mem ) => takeBranch = cc( reg );
                 if ( takeBranch )
                 {
-                    yield return JrHelper( (sbyte)offset );
+                    yield return ( reg, mem ) => reg.PC = (ushort)( reg.PC + (sbyte)offset );
                 }
             }
 
@@ -325,8 +352,20 @@
 			{
 				byte val = 0;
 				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-				yield return ( reg, mem ) => { if( src.Is8() ) { val = reg[src.To8()]; } reg.A ^= val; reg.SetFlags( reg.A == 0, false, false, false ); };
+				yield return ( reg, mem ) => 
+                { 
+                    if( src.Is8() ) { val = reg[src.To8()]; } 
+                    reg.SetFlags(( reg.A ^= val ) == 0, false, false, false );
+                };
 			}
+
+            // XOR A, [r8, (HL)]  1-2 cycles
+            public static IEnumerable<op> XorImm8()
+            {
+                byte val = 0;
+                yield return ( reg, mem ) => val = mem[reg.PC++];
+                yield return ( reg, mem ) => reg.SetFlags( ( reg.A ^= val ) == 0, false, false, false );
+            }
 
             // BIT i, [r8, (HL)] 1-2 -cycle
             public static IEnumerable<op> Bit( byte bit, RegX src )
@@ -660,6 +699,9 @@
         // XOR A, [r8, (HL)]
         private static Builder Xor( RegX target ) => new Builder(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
 
+        // XOR A, db8
+        private static readonly Builder XorImm8 = new Builder( Ops.XorImm8, "XOR" ) + "A" + Ops.operandDB8;
+
         // LD r8, db8 LD r16, db16
         private static Builder LdImm( RegX dst ) => new Builder( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
 
@@ -734,18 +776,32 @@
         // SUB A, [r8 (HL)]
         private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
 
+        // SUB A, db8
+        private static readonly Builder SubImm8 = new Builder( () => Ops.SubImm8( carry: 0 ), "SUB" ) + "A" + Ops.operandDB8;
+
         // SBC A, [r8 (HL)]
         private static Builder Sbc( RegX src ) => new Builder( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // SBC A, db8
+        private static readonly Builder SbcImm8 = new Builder( () => Ops.SubImm8( carry: 1), "SBC") + "A" + Ops.operandDB8;
 
         // AND A, [r8 (HL)]
         private static Builder And( RegX src ) => new Builder( () => Ops.And( src), "AND" ) + "A" + Ops.operand8OrAdd16( src );
 
-        // AND A, [r8 (HL)]
+        // AND A, db8
+        private static readonly Builder AndImm8 = new Builder( Ops.AndImm8, "AND" ) + "A" + Ops.operandDB8;
+
+        // OR A, [r8 (HL)]
         private static Builder Or( RegX src ) => new Builder( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
-       
+
+        // OR A, db8
+        private static readonly Builder OrImm8 = new Builder( Ops.OrImm8, "OR" ) + "A" + Ops.operandDB8;
+
         // CP A, [r8 (HL)]
         private static Builder Cp( RegX src ) => new Builder( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
 
+        // CP A, db8
+        private static readonly Builder CpImm8 = new Builder( Ops.CpImm8, "CP" ) + "A" + Ops.operandDB8;
 
         // JP HL
         private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
