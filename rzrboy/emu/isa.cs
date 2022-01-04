@@ -5,10 +5,10 @@ namespace rzr
 {
     public partial class Isa
     {
-        private static readonly Builder[] m_instructions = new Builder[256];
-        private static readonly Builder[] m_extInstructions = new Builder[256];
+        private static readonly Instruction[] m_instructions = new Instruction[256];
+        private static readonly Instruction[] m_extInstructions = new Instruction[256];
 
-        public Builder this[byte opcode]
+        public Instruction this[byte opcode]
         { 
             get => m_instructions[opcode];
             private set
@@ -18,19 +18,19 @@ namespace rzr
             }
         }
 
-        private class ExtBuilder : Builder
+        private class ExtBuilder : Instruction
         {
             public ExtBuilder( ) : base( ExtOps ) {}
 
-            private static IEnumerable<op> ExtOps()
+            private static IEnumerable<Op> ExtOps()
             {
                 byte opcode = 0;
                 yield return ( reg, mem ) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
-                Builder b = m_extInstructions[opcode];
+                Instruction b = m_extInstructions[opcode];
 
                 if ( b == null ) yield break;
 
-                foreach ( var op in m_extInstructions[opcode].Instr() )
+                foreach ( var op in m_extInstructions[opcode].Make() )
                 {
                     yield return op;
                 }
@@ -39,7 +39,7 @@ namespace rzr
             public override IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
             {
                 byte opcode = mem[pc.Value];
-                Builder builder = m_extInstructions[opcode];
+                Instruction builder = m_extInstructions[opcode];
                 if ( builder == null )
                 {
                     return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
@@ -50,12 +50,12 @@ namespace rzr
             }
         }
 
-        private delegate Builder BuildFunc<Y, X>(Y y, X x);
-        private delegate Builder BuildFunc<X>( X x );
+        private delegate Instruction BuildFunc<Y, X>(Y y, X x);
+        private delegate Instruction BuildFunc<X>( X x );
 
 
 		// returns next opcode for validation
-		private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
+		private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
 		{
 			foreach( Y y in ys )
 			{
@@ -67,15 +67,15 @@ namespace rzr
 				offsetX += 0x10;
 			}
 		}
-		private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
+		private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
         {
             Fill(target, offsetX, builder, new[] { y }, xs);
         }
-        private static void Fill<Y, X>( Builder[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
+        private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
         {
             Fill(target, offsetX, builder, ys, new[] { x });
         }
-        private static void FillX<X>( Builder[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
+        private static void FillX<X>( Instruction[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
         {
             foreach( (X x, int i) in xs.Indexed() )
             {
@@ -83,7 +83,7 @@ namespace rzr
                 target[offsetX + i] = builder( x );
             }
         }
-        private static void FillY<Y>( Builder[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
+        private static void FillY<Y>( Instruction[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
         {
             foreach( Y y in ys )
             {
@@ -358,6 +358,18 @@ namespace rzr
             // RR r
             FillX( m_extInstructions, offsetX: 0x18, Rr, bcdehlHLa );
 
+            // SLA r
+            FillX( m_extInstructions, offsetX: 0x20, Sla, bcdehlHLa );
+
+            // SRA r
+            FillX( m_extInstructions, offsetX: 0x28, Sra, bcdehlHLa );
+
+            // SWAP r
+            FillX( m_extInstructions, offsetX: 0x30, Swap, bcdehlHLa );
+
+            // SRL r
+            FillX( m_extInstructions, offsetX: 0x38, Srl, bcdehlHLa );
+
             // BIT [0 2 4 6], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0x40, Bit, new byte[] { 0, 2, 4, 6 }, bcdehlHLa );
 
@@ -376,7 +388,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 462 );
+            DebugReport( 494 );
         }
 
 		/// <summary>
@@ -388,7 +400,7 @@ namespace rzr
 		public string Disassemble( ref ushort pc, ISection bin )
         {
             byte opcode = bin[pc]; // fetch
-            Builder builder = this[opcode];
+            Instruction builder = this[opcode];
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );

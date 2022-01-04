@@ -23,7 +23,7 @@ namespace rzr
     /// </summary>
     /// <param name="reg"></param>
     /// <param name="mem"></param>
-    public delegate void op( Reg reg, ISection mem );
+    public delegate void Op( Reg reg, ISection mem );
 
     /// <summary>
     /// Mnemonic and operand name for this op
@@ -31,40 +31,40 @@ namespace rzr
     /// <param name="pc"></param>
     /// <param name="mem"></param>
     /// <returns></returns>
-    public delegate string dis( ref ushort pc, ISection mem);
+    public delegate string Dis( ref ushort pc, ISection mem);
 
-    public delegate IEnumerable<op> ProduceInstruction( );
+    public delegate IEnumerable<Op> ProduceInstruction( );
 
     /// <summary>
     /// Instruction op does not include instruction fetch cycle
     /// </summary>
-    public class Builder
+    public class Instruction
     {
-        public ProduceInstruction Instr { get; }
-        private List<dis> m_dis = new();
+        public ProduceInstruction Make { get; }
+        private List<Dis> m_dis = new();
 
-        public Builder( ProduceInstruction ops, dis? dis = null )
+        public Instruction( ProduceInstruction ops, Dis? dis = null )
         {
-            Instr = ops;
+            Make = ops;
             if ( dis != null )
             {
                 m_dis.Add( dis );
             }
         }
 
-        public Builder( op op, dis? dis = null )
-            : this (() => Enumerable.Repeat(op, 1), dis)
-        {
-        }
+		public Instruction( Op op, Dis? dis = null )
+			: this( () => Enumerable.Repeat( op, 1 ), dis )
+		{
+		}
 
-        public Builder( ProduceInstruction ops, string mnemonic )
+		public Instruction( ProduceInstruction ops, string mnemonic )
         : this( ops, Isa.Ops.mnemonic( mnemonic ) )
         {
         }
 
-        public static implicit operator Builder( op op ) { return new Builder( op ); }
+        public static implicit operator Instruction( Op op ) { return new Instruction( op ); }
 
-        public static implicit operator Builder( ProduceInstruction ops ) { return new Builder( ops ); }
+        public static implicit operator Instruction( ProduceInstruction ops ) { return new Instruction( ops ); }
 
         public virtual IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
         {
@@ -93,20 +93,20 @@ namespace rzr
             return sb.ToString();
         }
 
-        public static Builder operator +(Builder b, dis op) { b.m_dis.Add(op); return b; }
-        public static Builder operator +(Builder b, IEnumerable<dis> dis) { b.m_dis.AddRange(dis); return b; }
-        public static Builder operator +(Builder b, string str) { b.m_dis.Add(Isa.Ops.mnemonic(str)); return b; }
+        public static Instruction operator +(Instruction b, Dis op) { b.m_dis.Add(op); return b; }
+        public static Instruction operator +(Instruction b, IEnumerable<Dis> dis) { b.m_dis.AddRange(dis); return b; }
+        public static Instruction operator +(Instruction b, string str) { b.m_dis.Add(Isa.Ops.mnemonic(str)); return b; }
     }
 
     public static class BuilderExtensions
     {
-        public static Builder Get( this ProduceInstruction op ) => new Builder( op );
-        public static Builder Get( this ProduceInstruction op, string mnemonic) => new Builder(op) + mnemonic;
-        public static Builder Get( this ProduceInstruction op, dis dis) => new Builder( op ) + dis;
+        public static Instruction Get( this ProduceInstruction op ) => new Instruction( op );
+        public static Instruction Get( this ProduceInstruction op, string mnemonic) => new Instruction(op) + mnemonic;
+        public static Instruction Get( this ProduceInstruction op, Dis dis) => new Instruction( op ) + dis;
 
-        public static Builder Get( this op op ) => new Builder( op );
-        public static Builder Get( this op op, string mnemonic ) => new Builder( op ) + mnemonic;
-        public static Builder Get( this op op, dis dis ) => new Builder( op ) + dis;
+        public static Instruction Get( this Op op ) => new Instruction( op );
+        public static Instruction Get( this Op op, string mnemonic ) => new Instruction( op ) + mnemonic;
+        public static Instruction Get( this Op op, Dis dis ) => new Instruction( op ) + dis;
 
         // Debug name
         public static string ToString( this ProduceInstruction ops )

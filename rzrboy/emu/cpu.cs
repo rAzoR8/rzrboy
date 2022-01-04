@@ -18,7 +18,7 @@ namespace rzr
         public byte prevInstrCycles { get; private set; } = 1; // number of non-fetch cycles spend on the previous instructions
         public byte curInstrCycle { get; private set; } = 1; // number of Non-fetch cycles already spent on executing the current instruction
 
-        IEnumerator<op>? curOp = null;
+        IEnumerator<Op>? curOp = null;
 
         public Cpu( Mem memory, Isa isa ) 
         {
@@ -67,7 +67,7 @@ namespace rzr
 
 				curOpCode = m_mem[curInstrPC]; // fetch
 
-                Builder builder = m_isa[curOpCode];
+                Instruction builder = m_isa[curOpCode];
                 if( builder == null )                
                 {
                     return false;
@@ -75,7 +75,7 @@ namespace rzr
 
                 ++m_reg.PC; // advance only for implemented instructions
 
-                curOp = builder.Instr().GetEnumerator();
+                curOp = builder.Make().GetEnumerator();
                 curOp.MoveNext();
             }
 

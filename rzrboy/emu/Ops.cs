@@ -4,33 +4,30 @@
     {
         public static class Ops
         {
-			public static dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
-			public static dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
-			public static dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
-			public static dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
-			public static dis addr( Reg16 reg ) => ( ref ushort pc, ISection mem ) => $"({reg})";
-            public static dis operand8OrAdd16( RegX reg ) => reg.Is8() ? operand(reg) : addr(reg.To16());
+			public static Dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
+			public static Dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static Dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static Dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+			public static Dis addr( Reg16 reg ) => ( ref ushort pc, ISection mem ) => $"({reg})";
+            public static Dis operand8OrAdd16( RegX reg ) => reg.Is8() ? operand(reg) : addr(reg.To16());
 
-            public static readonly dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
-            public static readonly dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
-            public static dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
+            public static readonly Dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+            public static readonly Dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
+            public static Dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
 
-            public static readonly dis operandDB16 = ( ref ushort pc, ISection mem ) =>
+            public static readonly Dis operandDB16 = ( ref ushort pc, ISection mem ) =>
             {
                 string str = $"0x{mem[(ushort)( pc + 1 )]:X2}{mem[pc]:X2}";
                 pc += 2;
                 return str;
             };
 
-            public readonly static dis addrDB16 = ( ref ushort pc, ISection mem ) => $"({operandDB16( ref pc, mem )})";
+            public readonly static Dis addrDB16 = ( ref ushort pc, ISection mem ) => $"({operandDB16( ref pc, mem )})";
 
-            public static dis[] operand( Reg8 dst, Reg8 src ) => new dis[] { operand( dst ), operand( src ) };
-            public static dis[] operand( Reg16 dst, Reg16 src ) => new dis[] { operand( dst ), operand( src ) };
-
-            public static op Nop = ( reg, mem ) => { };
+            public static Op Nop = ( reg, mem ) => { };
 
             // read next byte from mem[pc++], 2 m-cycles
-            private static IEnumerable<op> LdImm8( Reg8 target )
+            private static IEnumerable<Op> LdImm8( Reg8 target )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.PC++;
@@ -38,7 +35,7 @@
             }
 
             // read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
-            private static IEnumerable<op> LdImm16( Reg16 target )
+            private static IEnumerable<Op> LdImm16( Reg16 target )
             {
                 ushort val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -46,16 +43,16 @@
                 yield return ( reg, mem ) => reg[target] = val;
             }
 
-			public static IEnumerable<op> LdImm( RegX target ) => target.Is8() ? LdImm8( target.To8() ) : LdImm16( target.To16() );
+			public static IEnumerable<Op> LdImm( RegX target ) => target.Is8() ? LdImm8( target.To8() ) : LdImm16( target.To16() );
 
 			// LD r8, r8' 1-cycle
-			private static IEnumerable<op> LdReg8( Reg8 dst, Reg8 src ) 
+			private static IEnumerable<Op> LdReg8( Reg8 dst, Reg8 src ) 
             { 
                 yield return (reg, mem) => { reg[dst] = reg[src]; };
             }
 
             // LD r16, r16' 2-cycles
-            private static IEnumerable<op> LdReg16( Reg16 dst, Reg16 src )
+            private static IEnumerable<Op> LdReg16( Reg16 dst, Reg16 src )
             {
                 // simulate 16 bit register being written in two cycles
                 yield return ( reg, mem ) => reg[dst] = binutil.SetLsb( reg[dst], reg[src].GetLsb() );
@@ -63,7 +60,7 @@
             }
 
             // LD r8, (r16) 2-cycle
-            private static IEnumerable<op> LdAddr( Reg8 dst, Reg16 src_addr )
+            private static IEnumerable<Op> LdAddr( Reg8 dst, Reg16 src_addr )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg[src_addr];
@@ -71,14 +68,14 @@
             }
 
             // LD (r16), r8 2-cycle
-            private static IEnumerable<op> LdAddr( Reg16 dst_addr, Reg8 src )
+            private static IEnumerable<Op> LdAddr( Reg16 dst_addr, Reg8 src )
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg[dst_addr];
                 yield return ( reg, mem ) => mem[address] = reg[src];
             }
 
-            public static IEnumerable<op> LdRegOrAddr(RegX dst, RegX src )
+            public static IEnumerable<Op> LdRegOrAddr(RegX dst, RegX src )
 			{
 				if( dst.Is8() && src.Is8() )    return LdReg8( dst.To8(), src.To8() );
 				if( dst.Is16() && src.Is16() )  return LdReg16( dst.To16(), src.To16() );
@@ -87,7 +84,7 @@
             }
 
             // LD (HL+), A
-            public static IEnumerable<op> LdHlPlusA()
+            public static IEnumerable<Op> LdHlPlusA()
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.HL++;
@@ -95,7 +92,7 @@
             }
 
             // LD (HL-), A
-            public static IEnumerable<op> LdHlMinusA()
+            public static IEnumerable<Op> LdHlMinusA()
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.HL--;
@@ -103,7 +100,7 @@
             }
 
             // LD A, (HL+)
-            public static IEnumerable<op> LdAHlPlus()
+            public static IEnumerable<Op> LdAHlPlus()
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.HL++;
@@ -111,7 +108,7 @@
             }
 
             // LD A, (HL-)
-            public static IEnumerable<op> LdAHlMinus()
+            public static IEnumerable<Op> LdAHlMinus()
             {
                 ushort address = 0;
                 yield return ( reg, mem ) => address = reg.HL--;
@@ -119,7 +116,7 @@
             }
 
             // LD A, (0xFF00+C)
-            public static IEnumerable<op> LdhAc()
+            public static IEnumerable<Op> LdhAc()
             {
                 ushort address = 0xFF00;
                 yield return ( reg, mem ) => { address += reg.C; };
@@ -127,7 +124,7 @@
             }
 
             // LD (0xFF00+C), A
-            public static IEnumerable<op> LdhCa()
+            public static IEnumerable<Op> LdhCa()
             {
                 ushort address = 0xFF00;
                 yield return ( reg, mem ) => { address += reg.C; };
@@ -135,7 +132,7 @@
             }
 
             // LD A, (0xFF00+db8)
-            public static IEnumerable<op> LdhAImm()
+            public static IEnumerable<Op> LdhAImm()
             {
                 byte lsb = 0; ushort address = 0xFF00;
                 yield return ( reg, mem ) => lsb = mem[reg.PC++];
@@ -144,7 +141,7 @@
             }
 
             // LD (0xFF00+db8), A
-            public static IEnumerable<op> LdhImmA()
+            public static IEnumerable<Op> LdhImmA()
             {
                 byte lsb = 0; ushort address = 0xFF00;
                 yield return ( reg, mem ) => lsb = mem[reg.PC++];
@@ -153,7 +150,7 @@
             }
 
             // LD (a16), SP
-            public static IEnumerable<op> LdImm16Sp()
+            public static IEnumerable<Op> LdImm16Sp()
             {
                 ushort nn = 0;
                 yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -176,7 +173,7 @@
             }
 
 			// ADD|ADC A, [r8, (HL)] 1-2 cycles
-			public static IEnumerable<op> Add( RegX src, byte carry = 0 ) 
+			public static IEnumerable<Op> Add( RegX src, byte carry = 0 ) 
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -188,7 +185,7 @@
 			}
 
             // ADD A, db8 2-cycle
-            public static IEnumerable<op> AddImm8( byte carry = 0 )
+            public static IEnumerable<Op> AddImm8( byte carry = 0 )
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -196,7 +193,7 @@
             }
 
             // ADD HL, r16 2 cycles
-            public static IEnumerable<op> AddHl( Reg16 src ) 
+            public static IEnumerable<Op> AddHl( Reg16 src ) 
             {
                 yield return Nop;
                 yield return (Reg reg, ISection mem ) =>
@@ -225,7 +222,7 @@
             }
 
 			// SUB|SBC A, [r8, (HL)] 1-2 cycles
-			public static IEnumerable<op> Sub( RegX src, byte carry = 0 )
+			public static IEnumerable<Op> Sub( RegX src, byte carry = 0 )
 			{
 				byte val = 0;
 				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -237,7 +234,7 @@
 			}
 
             // SUB|SBC A, db8 2-cycle
-            public static IEnumerable<op> SubImm8( byte carry = 0 )
+            public static IEnumerable<Op> SubImm8( byte carry = 0 )
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -245,7 +242,7 @@
             }
 
             // AND A, [r8, (HL)] 1-2 -cycle
-            public static IEnumerable<op> And( RegX src )
+            public static IEnumerable<Op> And( RegX src )
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -257,7 +254,7 @@
 			}
 
 			// AND A, db8 2-cycle
-			public static IEnumerable<op> AndImm8()
+			public static IEnumerable<Op> AndImm8()
 			{
 				byte val = 0;
 				yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -265,7 +262,7 @@
 			}
 
 			// Or A, [r8, (HL)] 1-2 -cycle
-			public static IEnumerable<op> Or( RegX src )
+			public static IEnumerable<Op> Or( RegX src )
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -277,7 +274,7 @@
             }
 
             // Or A, db8 2-cycle
-            public static IEnumerable<op> OrImm8()
+            public static IEnumerable<Op> OrImm8()
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -294,7 +291,7 @@
             }
 
             // CP A, [r8, (HL)] 1-2 -cycle
-            public static IEnumerable<op> Cp( RegX src )
+            public static IEnumerable<Op> Cp( RegX src )
             {
                 byte val = 0;
                 if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -306,7 +303,7 @@
             }
 
             // Or A, db8 2-cycle
-            public static IEnumerable<op> CpImm8()
+            public static IEnumerable<Op> CpImm8()
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -314,7 +311,7 @@
             }
 
             // JP HL 1 cycle
-            public static readonly op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
+            public static readonly Op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
 
             public delegate bool Condition( Reg reg );
             public readonly static Condition NZ = ( Reg reg ) => !reg.Zero;
@@ -323,7 +320,7 @@
             public readonly static Condition C = ( Reg reg ) => reg.Carry;
 
             // JP cc, a16 3/4 cycles
-            public static IEnumerable<op> JpImm16( Condition? cc = null )
+            public static IEnumerable<Op> JpImm16( Condition? cc = null )
             {
                 ushort nn = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -336,7 +333,7 @@
             }
 
             // JR cc, e8 2/3 ycles
-            public static IEnumerable<op> JrImm( Condition? cc = null )
+            public static IEnumerable<Op> JrImm( Condition? cc = null )
             {
                 byte offset = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => offset = mem[reg.PC++];
@@ -348,7 +345,7 @@
             }
 
 			// XOR A, [r8, (HL)]  1-2 cycles
-			public static IEnumerable<op> Xor( RegX src )
+			public static IEnumerable<Op> Xor( RegX src )
 			{
 				byte val = 0;
 				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -360,7 +357,7 @@
 			}
 
             // XOR A, [r8, (HL)]  1-2 cycles
-            public static IEnumerable<op> XorImm8()
+            public static IEnumerable<Op> XorImm8()
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -368,7 +365,7 @@
             }
 
             // BIT i, [r8, (HL)] 1-2 -cycle
-            public static IEnumerable<op> Bit( byte bit, RegX src )
+            public static IEnumerable<Op> Bit( byte bit, RegX src )
             {
 				byte val = 0;
 				if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -381,7 +378,7 @@
 				};
 			}
 
-            public static IEnumerable<op> Set( byte bit, RegX target )
+            public static IEnumerable<Op> Set( byte bit, RegX target )
             {
                 byte val = 0;
                 if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -393,7 +390,7 @@
                 if( target.Is16() ) yield return ( reg, mem ) => mem[reg.HL] = val;
             }
 
-            public static IEnumerable<op> Res( byte bit, RegX target )
+            public static IEnumerable<Op> Res( byte bit, RegX target )
             {
                 byte val = 0;
                 if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -406,7 +403,7 @@
             }
 
             // INC r16: 16bit alu op => 2 cycles
-            public static IEnumerable<op> Inc( Reg16 dst )
+            public static IEnumerable<Op> Inc( Reg16 dst )
             {
                 yield return Nop;
                 yield return ( reg, mem ) => { reg[dst] += 1; };
@@ -422,10 +419,10 @@
             }
 
             // INC r8: 1 cycle
-            public static op Inc( Reg8 dst ) => ( reg, mem ) => reg[dst] = Inc8Helper( reg[dst], reg );
+            public static Op Inc( Reg8 dst ) => ( reg, mem ) => reg[dst] = Inc8Helper( reg[dst], reg );
 
             // INC (HL): 3 cycles
-            public static IEnumerable<op> IncHl()
+            public static IEnumerable<Op> IncHl()
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.HL];
@@ -434,7 +431,7 @@
             }
 
             // DEC r16: 16bit alu op => 2 cycles
-            public static IEnumerable<op> Dec( Reg16 dst )
+            public static IEnumerable<Op> Dec( Reg16 dst )
             {
                 yield return Nop;
                 yield return ( reg, mem ) => { reg[dst] -= 1; };
@@ -450,10 +447,10 @@
             }
 
             // DEC r8: 1 cycle
-            public static op Dec( Reg8 dst ) => ( reg, mem ) => reg[dst] = Dec8Helper( reg[dst], reg );
+            public static Op Dec( Reg8 dst ) => ( reg, mem ) => reg[dst] = Dec8Helper( reg[dst], reg );
 
             // DEC (HL): 3 cycles
-            public static IEnumerable<op> DecHl()
+            public static IEnumerable<Op> DecHl()
             {
                 byte val = 0;
                 yield return ( reg, mem ) => val = mem[reg.HL];
@@ -462,7 +459,7 @@
             }
 
             // CALL cc, nn, 3-6 cycles
-            public static IEnumerable<op> Call( Condition? cc = null )
+            public static IEnumerable<Op> Call( Condition? cc = null )
             {
                 ushort nn = 0; bool takeBranch = true;
                 yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -477,7 +474,7 @@
             }
 
             // RET, 4 cycles Ret cc 2/5 cycles
-            public static IEnumerable<op> Ret( Condition? cc = null ) 
+            public static IEnumerable<Op> Ret( Condition? cc = null ) 
             {
                 bool takeBranch = true;
                 yield return (reg, mem) => takeBranch = cc == null || cc( reg );
@@ -496,7 +493,7 @@
             }
 
             // RETI 4 cycles
-            public static IEnumerable<op> Reti( )
+            public static IEnumerable<Op> Reti( )
             {
 				byte lsb = 0; byte msb = 0;
 				yield return ( reg, mem ) => lsb = mem[reg.SP++];
@@ -510,19 +507,19 @@
 			}
 
             // EI 1 + 1' cycles
-            public static IEnumerable<op> Ei() 
+            public static IEnumerable<Op> Ei() 
             {
                 yield return ( reg, mem ) => reg.IME = IMEState.RequestEnabled;
             }
 
             // DI 1 cycle
-            public static IEnumerable<op> Di()
+            public static IEnumerable<Op> Di()
             {
                 yield return ( reg, mem ) => reg.IME = IMEState.Disabled;
             }
 
             // PUSH r16 4-cycle
-            public static IEnumerable<op> Push( Reg16 src )
+            public static IEnumerable<Op> Push( Reg16 src )
             {
                 byte lsb = 0; byte msb = 0;
                 yield return ( reg, mem ) => msb = reg[src].GetMsb();
@@ -532,7 +529,7 @@
             }
 
             // POP r16 3-cycle
-            public static IEnumerable<op> Pop( Reg16 dst )
+            public static IEnumerable<Op> Pop( Reg16 dst )
             {
                 byte lsb = 0; byte msb = 0;
                 yield return ( reg, mem ) => lsb = mem[reg.SP++];
@@ -541,7 +538,7 @@
             }
 
             // RST n, 4 cycles
-            public static IEnumerable<op> Rst( byte vec )
+            public static IEnumerable<Op> Rst( byte vec )
             {
                 yield return Nop;
                 yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
@@ -550,25 +547,25 @@
             }
 
             // CCF
-            public static IEnumerable<op> Ccf() 
+            public static IEnumerable<Op> Ccf() 
             {
                 yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: !reg.Carry);
             }
 
             // SCF
-            public static IEnumerable<op> Scf()
+            public static IEnumerable<Op> Scf()
             {
                 yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: true );
             }
 
             // SCF
-            public static IEnumerable<op> Cpl()
+            public static IEnumerable<Op> Cpl()
             {
                 yield return ( reg, mem ) => { reg.A = reg.A.Flip(); reg.SetFlags( Z: reg.Zero, N: true, H: true, C: reg.Carry ); };
             }
 
             // DAA
-            public static IEnumerable<op> Daa()
+            public static IEnumerable<Op> Daa()
             {
                 yield return ( reg, mem ) => 
                 {
@@ -595,7 +592,7 @@
             private delegate byte AluFunc( Reg reg, byte val );
 
             // RLC r, RRC r etc - 1 or 3 cycles (+1 fetch)
-            private static IEnumerable<op> MemAluMemHelper( RegX dst, AluFunc func )
+            private static IEnumerable<Op> MemAluMemHelper( RegX dst, AluFunc func )
             {
                 if( dst.Is8() )
                 {
@@ -623,7 +620,7 @@
             }
 
             // RLC r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
+            public static IEnumerable<Op> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
 
             private static byte RrcHelper( Reg reg, byte val )
             {
@@ -638,7 +635,7 @@
             }
 
             // RRC r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
+            public static IEnumerable<Op> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
 
             private static byte RlHelper( Reg reg, byte val )
             {
@@ -653,7 +650,7 @@
             }
 
             // RL r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
+            public static IEnumerable<Op> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
 
             private static byte RrHelper( Reg reg, byte val )
             {
@@ -668,42 +665,98 @@
             }
 
             // RR r - 1 or 3 cycles (+1 fetch)
-            public static IEnumerable<op> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
+            public static IEnumerable<Op> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
+
+            private static byte SlaHelper( Reg reg, byte val )
+            {
+                byte res = (byte)( val << 1 );
+                reg.Carry = val.IsBitSet( 7 );
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return res;
+            }
+
+            // SLA r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<Op> Sla( RegX dst ) => MemAluMemHelper( dst, SlaHelper );
+
+            private static byte SraHelper( Reg reg, byte val )
+            {
+                // shift right into carry, MSB stays the same
+                byte res = (byte)( ( val >> 1 ) | ( val & ( 1 << 7 ) ) );
+				reg.Carry = val.IsBitSet( 0 );
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return res;
+            }
+
+            // SRA r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<Op> Sra( RegX dst ) => MemAluMemHelper( dst, SraHelper );
+
+            private static byte SwapHelper( Reg reg, byte val )
+            {
+				byte low = (byte)( val & 0b0000_1111 );
+				byte high = (byte)( val & 0b1111_0000 );
+				byte res = (byte)( ( low << 4 ) | ( high >> 4 ) );
+				reg.Carry = false;
+				reg.Zero = res == 0;
+				reg.Sub = false;
+				reg.HalfCarry = false;
+				return res;
+			}
+
+            // SWAP r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<Op> Swap( RegX dst ) => MemAluMemHelper( dst, SwapHelper );
+
+            private static byte SrlHelper( Reg reg, byte val )
+            {
+                byte res = (byte)( val >> 1 ); // shift right into carry, MSB is set to 0
+                reg.Carry = val.IsBitSet( 0 );
+                reg.Zero = res == 0;
+                reg.Sub = false;
+                reg.HalfCarry = false;
+                return res;
+            }
+
+            // SRL r - 1 or 3 cycles (+1 fetch)
+            public static IEnumerable<Op> Srl( RegX dst ) => MemAluMemHelper( dst, SrlHelper );
         }
 
-        private static Builder Nop = Ops.Nop.Get( "NOP" );
+        // NOP
+        private static Instruction Nop = Ops.Nop.Get( "NOP" );
 
         // INC r8
-        private static Builder Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
         // INC r16
-        private static Builder Inc( Reg16 dst ) => new Builder (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
+        private static Instruction Inc( Reg16 dst ) => new Instruction (() => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
         // INC (HL)
-        private readonly static Builder IncHl = new Builder( Ops.IncHl, "INC" ) + "(HL)";
+        private readonly static Instruction IncHl = new Instruction( Ops.IncHl, "INC" ) + "(HL)";
 
         // INC r8
-        private static Builder Dec( Reg8 dst ) => Ops.Dec( dst ).Get( "Dec" ) + Ops.operand( dst );
+        private static Instruction Dec( Reg8 dst ) => Ops.Dec( dst ).Get( "Dec" ) + Ops.operand( dst );
         // INC r16
-        private static Builder Dec( Reg16 dst ) => new Builder( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
+        private static Instruction Dec( Reg16 dst ) => new Instruction( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
         // INC (HL)
-        private readonly static Builder DecHl = new Builder( Ops.DecHl, "Dec" ) + "(HL)";
+        private readonly static Instruction DecHl = new Instruction( Ops.DecHl, "Dec" ) + "(HL)";
 
 		// BIT i, [r8, (HL)]
-		private static Builder Bit( byte bit, RegX target ) => new Builder( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+		private static Instruction Bit( byte bit, RegX target ) => new Instruction( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
 
         // SET i, [r8, (HL)]
-        private static Builder Set( byte bit, RegX target ) => new Builder( () => Ops.Set( bit, target ), "SET" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+        private static Instruction Set( byte bit, RegX target ) => new Instruction( () => Ops.Set( bit, target ), "SET" ) + $"{bit}" + Ops.operand8OrAdd16( target );
 
         // SET i, [r8, (HL)]
-        private static Builder Res( byte bit, RegX target ) => new Builder( () => Ops.Res( bit, target ), "RES" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+        private static Instruction Res( byte bit, RegX target ) => new Instruction( () => Ops.Res( bit, target ), "RES" ) + $"{bit}" + Ops.operand8OrAdd16( target );
 
         // XOR A, [r8, (HL)]
-        private static Builder Xor( RegX target ) => new Builder(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
+        private static Instruction Xor( RegX target ) => new Instruction(() => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
 
         // XOR A, db8
-        private static readonly Builder XorImm8 = new Builder( Ops.XorImm8, "XOR" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction XorImm8 = new Instruction( Ops.XorImm8, "XOR" ) + "A" + Ops.operandDB8;
 
         // LD r8, db8 LD r16, db16
-        private static Builder LdImm( RegX dst ) => new Builder( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
+        private static Instruction LdImm( RegX dst ) => new Instruction( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
 
         /// <summary>
         /// LD r8, r8' 
@@ -714,9 +767,9 @@
         /// <param name="dst"></param>
         /// <param name="src"></param>
         /// <returns></returns>
-        private static Builder Ld( RegX dst, RegX src ) 
+        private static Instruction Ld( RegX dst, RegX src ) 
         {
-			Builder builder = new( () => Ops.LdRegOrAddr( dst, src ), "LD" );
+			Instruction builder = new( () => Ops.LdRegOrAddr( dst, src ), "LD" );
 
             if( ( dst.Is8() && src.Is8() ) || ( dst.Is16() && src.Is16() ) )
             {
@@ -733,138 +786,149 @@
         }
 
         // LD (HL+), A
-        private static readonly Builder LdHlPlusA = new Builder( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
+        private static readonly Instruction LdHlPlusA = new Instruction( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
         // LD (HL-), A
-        private static readonly Builder LdHlMinusA = new Builder( Ops.LdHlMinusA, "LD" ) + $"(HL-)" + "A";
+        private static readonly Instruction LdHlMinusA = new Instruction( Ops.LdHlMinusA, "LD" ) + $"(HL-)" + "A";
 
         // LD A, (HL+)
-        private static readonly Builder LdAHlPlus = new Builder( Ops.LdAHlPlus, "LD" ) + "A" + $"(HL+)";
+        private static readonly Instruction LdAHlPlus = new Instruction( Ops.LdAHlPlus, "LD" ) + "A" + $"(HL+)";
         // LD A, (HL-)
-        private static readonly Builder LdAHlMinus = new Builder( Ops.LdAHlMinus, "LD" ) + "A" + $"(HL-)";
+        private static readonly Instruction LdAHlMinus = new Instruction( Ops.LdAHlMinus, "LD" ) + "A" + $"(HL-)";
 
         // LD A, (0xFF00+C)
-        private static readonly Builder LdhAc = new Builder( Ops.LdhAc, "LD" ) + "A" + "(0xFF00+C)";
+        private static readonly Instruction LdhAc = new Instruction( Ops.LdhAc, "LD" ) + "A" + "(0xFF00+C)";
 
         // LD (0xFF00+C), A
-        private static readonly Builder LdhCa = new Builder( Ops.LdhCa, "LD" ) + "(0xFF00+C)" + "A";
+        private static readonly Instruction LdhCa = new Instruction( Ops.LdhCa, "LD" ) + "(0xFF00+C)" + "A";
 
         // LD A, (0xFF00+db8)
-        private static readonly Builder LdhAImm = new Builder( Ops.LdhAImm, "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
+        private static readonly Instruction LdhAImm = new Instruction( Ops.LdhAImm, "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
 
         // LD (0xFF00+db8), A
-        private static readonly Builder LdhImmA = new Builder(  Ops.LdhImmA, "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
+        private static readonly Instruction LdhImmA = new Instruction(  Ops.LdhImmA, "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
 
         // LD (a16), SP
-        private static readonly Builder LdImm16Sp = new Builder( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
+        private static readonly Instruction LdImm16Sp = new Instruction( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
 
 		// ADD A, [r8 (HL)]
-		private static Builder Add( RegX src ) => new Builder( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+		private static Instruction Add( RegX src ) => new Instruction( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
 
         // ADD HL, r16
-        private static Builder AddHl( Reg16 src ) => new Builder( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
+        private static Instruction AddHl( Reg16 src ) => new Instruction( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
 
 		// ADD A, db8
-		private static readonly Builder AddImm8 = new Builder( () => Ops.AddImm8( carry: 0 ), "ADD" ) + "A" + Ops.operandDB8;
+		private static readonly Instruction AddImm8 = new Instruction( () => Ops.AddImm8( carry: 0 ), "ADD" ) + "A" + Ops.operandDB8;
 
         // ADC A, db8
-        private static readonly Builder AdcImm8 = new Builder( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction AdcImm8 = new Instruction( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
 
         // ADD A, [r8 (HL)]
-        private static Builder Adc( RegX src ) => new Builder( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Adc( RegX src ) => new Instruction( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
 
         
         // SUB A, [r8 (HL)]
-        private static Builder Sub( RegX src ) => new Builder( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Sub( RegX src ) => new Instruction( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
 
         // SUB A, db8
-        private static readonly Builder SubImm8 = new Builder( () => Ops.SubImm8( carry: 0 ), "SUB" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction SubImm8 = new Instruction( () => Ops.SubImm8( carry: 0 ), "SUB" ) + "A" + Ops.operandDB8;
 
         // SBC A, [r8 (HL)]
-        private static Builder Sbc( RegX src ) => new Builder( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Sbc( RegX src ) => new Instruction( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
 
         // SBC A, db8
-        private static readonly Builder SbcImm8 = new Builder( () => Ops.SubImm8( carry: 1), "SBC") + "A" + Ops.operandDB8;
+        private static readonly Instruction SbcImm8 = new Instruction( () => Ops.SubImm8( carry: 1), "SBC") + "A" + Ops.operandDB8;
 
         // AND A, [r8 (HL)]
-        private static Builder And( RegX src ) => new Builder( () => Ops.And( src), "AND" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction And( RegX src ) => new Instruction( () => Ops.And( src), "AND" ) + "A" + Ops.operand8OrAdd16( src );
 
         // AND A, db8
-        private static readonly Builder AndImm8 = new Builder( Ops.AndImm8, "AND" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction AndImm8 = new Instruction( Ops.AndImm8, "AND" ) + "A" + Ops.operandDB8;
 
         // OR A, [r8 (HL)]
-        private static Builder Or( RegX src ) => new Builder( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Or( RegX src ) => new Instruction( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
 
         // OR A, db8
-        private static readonly Builder OrImm8 = new Builder( Ops.OrImm8, "OR" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction OrImm8 = new Instruction( Ops.OrImm8, "OR" ) + "A" + Ops.operandDB8;
 
         // CP A, [r8 (HL)]
-        private static Builder Cp( RegX src ) => new Builder( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Cp( RegX src ) => new Instruction( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
 
         // CP A, db8
-        private static readonly Builder CpImm8 = new Builder( Ops.CpImm8, "CP" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction CpImm8 = new Instruction( Ops.CpImm8, "CP" ) + "A" + Ops.operandDB8;
 
         // JP HL
-        private static readonly Builder JpHl = Ops.JpHl.Get( "JP" ) + "HL";
+        private static readonly Instruction JpHl = Ops.JpHl.Get( "JP" ) + "HL";
 
         // JP a16
-        private static readonly Builder JpImm16 = new Builder( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
+        private static readonly Instruction JpImm16 = new Instruction( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
 
         // JP cc, a16
-        private static Builder JpCcImm16( Ops.Condition cc, string flag ) => new Builder( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
+        private static Instruction JpCcImm16( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
 
         // JR e8
-        private static readonly Builder JrImm = new Builder( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
+        private static readonly Instruction JrImm = new Instruction( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
 
         // JR cc, e8
-        private static Builder JrCcImm( Ops.Condition cc, string flag ) => new Builder( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
+        private static Instruction JrCcImm( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
 
         // CALL nn
-        private static readonly Builder Call = new Builder( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
+        private static readonly Instruction Call = new Instruction( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
 
         // CALL cc, nn
-        private static Builder CallCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
+        private static Instruction CallCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Call(cc), "CALL" ) + flag +  Ops.operandDB16;
 
         // RETI
-        private static readonly Builder Reti = new Builder( Ops.Reti, "RETI" );
+        private static readonly Instruction Reti = new Instruction( Ops.Reti, "RETI" );
 
         // EI
-        private static readonly Builder Ei = new Builder( Ops.Ei, "EI" );
+        private static readonly Instruction Ei = new Instruction( Ops.Ei, "EI" );
 
         // DI
-        private static readonly Builder Di = new Builder( Ops.Di, "DI" );
+        private static readonly Instruction Di = new Instruction( Ops.Di, "DI" );
 
         // RET
-        private static readonly Builder Ret = new Builder( () => Ops.Ret(), "RET" );
+        private static readonly Instruction Ret = new Instruction( () => Ops.Ret(), "RET" );
   
         // RET cc
-        private static Builder RetCc( Ops.Condition cc, string flag ) => new Builder( () => Ops.Ret( cc ), "RET" ) + flag;
+        private static Instruction RetCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Ret( cc ), "RET" ) + flag;
 
         // PUSH r16
-        private static Builder Push( Reg16 src ) => new Builder( () => Ops.Push( src ), "PUSH" ) + Ops.operand( src );
+        private static Instruction Push( Reg16 src ) => new Instruction( () => Ops.Push( src ), "PUSH" ) + Ops.operand( src );
 
         // POP r16
-        private static Builder Pop( Reg16 dst ) => new Builder( () => Ops.Pop( dst ), "POP" ) + Ops.operand( dst );
+        private static Instruction Pop( Reg16 dst ) => new Instruction( () => Ops.Pop( dst ), "POP" ) + Ops.operand( dst );
 
         // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
-        private static Builder Rst( byte vec ) => new Builder( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
+        private static Instruction Rst( byte vec ) => new Instruction( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
 
         // CCF
-        private static readonly Builder Ccf = new Builder( Ops.Ccf, "CCF" );
+        private static readonly Instruction Ccf = new Instruction( Ops.Ccf, "CCF" );
         // SCF
-        private static readonly Builder Scf = new Builder( Ops.Scf, "SCF" );
+        private static readonly Instruction Scf = new Instruction( Ops.Scf, "SCF" );
         // SCF
-        private static readonly Builder Cpl = new Builder( Ops.Cpl, "CPL" );
+        private static readonly Instruction Cpl = new Instruction( Ops.Cpl, "CPL" );
         // DAA
-        private static readonly Builder Daa = new Builder( Ops.Daa, "DAA" );
+        private static readonly Instruction Daa = new Instruction( Ops.Daa, "DAA" );
 
         // RLC
-        private static Builder Rlc( RegX dst ) => new Builder( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
+        private static Instruction Rlc( RegX dst ) => new Instruction( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
         // RRC
-        private static Builder Rrc( RegX dst ) => new Builder( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
+        private static Instruction Rrc( RegX dst ) => new Instruction( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
 
         // RL
-        private static Builder Rl( RegX dst ) => new Builder( () => Ops.Rl( dst ), "RL" ) + Ops.operand( dst );
+        private static Instruction Rl( RegX dst ) => new Instruction( () => Ops.Rl( dst ), "RL" ) + Ops.operand( dst );
         // RR
-        private static Builder Rr( RegX dst ) => new Builder( () => Ops.Rr( dst ), "RR" ) + Ops.operand( dst );
+        private static Instruction Rr( RegX dst ) => new Instruction( () => Ops.Rr( dst ), "RR" ) + Ops.operand( dst );
+
+        // SLA
+        private static Instruction Sla( RegX dst ) => new Instruction( () => Ops.Sla( dst ), "SLA" ) + Ops.operand( dst );
+        // SRA
+        private static Instruction Sra( RegX dst ) => new Instruction( () => Ops.Sra( dst ), "SRA" ) + Ops.operand( dst );
+
+        // SWAP
+        private static Instruction Swap( RegX dst ) => new Instruction( () => Ops.Swap( dst ), "SWAP" ) + Ops.operand( dst );
+
+        // SRL
+        private static Instruction Srl( RegX dst ) => new Instruction( () => Ops.Srl( dst ), "SRL" ) + Ops.operand( dst );
     }
 }

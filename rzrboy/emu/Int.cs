@@ -29,7 +29,7 @@ namespace rzr
 		};
 
 		// Handle interrupt, 5 cycles
-		public /*static*/ IEnumerable<op> HandleInterrupts()
+		public /*static*/ IEnumerable<Op> HandleInterrupts()
         {
             byte IF = 0; byte IE = 0;
             yield return ( reg, mem ) => IF = mem[0xFF0F];
