@@ -38,7 +38,7 @@ namespace rzrboy
         private rzr.Boy boy;
 
         private Cpu cpu => boy.cpu;
-        private Reg reg => boy.cpu.reg;
+        private Reg reg => boy.reg;
         private Mem mem => boy.mem;
 
         List<Callback> m_beforeStep = new();

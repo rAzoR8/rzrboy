@@ -4,9 +4,7 @@ namespace rzr
 {
     public class Cpu
     {
-        public Reg reg { get => m_reg; }
-
-        private Reg m_reg = new();
+        private Reg m_reg;
         private Mem m_mem;
         private Isa m_isa;
         private Interrupt m_int = new();
@@ -20,8 +18,9 @@ namespace rzr
 
         IEnumerator<Op>? curOp = null;
 
-        public Cpu( Mem memory, Isa isa ) 
+        public Cpu( Reg reg, Mem memory, Isa isa ) 
         {
+            m_reg = reg;
             m_mem = memory;
             m_isa = isa;
         }
@@ -51,7 +50,7 @@ namespace rzr
                 curInstrPC = m_reg.PC;
 
                 // handle interrupts, if any
-                if( reg.IME == IMEState.Enabled ) 
+                if( m_reg.IME == IMEState.Enabled ) 
 				{
 					byte interrupts = (byte)( m_mem[0xFF0F] & m_mem[0xFFFF] );
 					if( interrupts != 0 )
@@ -61,10 +60,10 @@ namespace rzr
 						return false;
 					}
 				}
-				else if( reg.IME == IMEState.RequestEnabled )
-					reg.IME = IMEState.Enabled;
-				else if( reg.IME == IMEState.RequestDisabled )
-					reg.IME = IMEState.Disabled;
+				else if( m_reg.IME == IMEState.RequestEnabled )
+					m_reg.IME = IMEState.Enabled;
+				else if( m_reg.IME == IMEState.RequestDisabled )
+					m_reg.IME = IMEState.Disabled;
 
                 // TODO: handle HALT & STOP
 

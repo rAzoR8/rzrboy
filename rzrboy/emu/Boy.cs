@@ -5,14 +5,15 @@ namespace rzr
 {
     public class Boy
     {
-        public Isa isa { get; }
-        public Mem mem { get; }
-        public Ppu ppu{ get; }
-        public Cpu cpu{ get; }
+		public Isa isa { get; }
+		public Mem mem { get; }
+		public Ppu ppu { get; }
+		public Cpu cpu { get; }
+        public Reg reg { get; }
         public Apu apu { get; }
-        public Cartridge cart { get; }
+		public Cartridge cart { get; }
 
-        public bool IsRunning { get; private set; }
+		public bool IsRunning { get; private set; }
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
@@ -20,19 +21,20 @@ namespace rzr
 
         public List<Callback> StepCallbacks { get; } = new();
 
-        public Boy()
-        {
-            mem = new();
-            isa = new Isa();
+		public Boy()
+		{
+			reg = new Reg();
+			mem = new Mem();
+			isa = new Isa();
 
-            cpu = new Cpu( mem, isa );
-            ppu = new Ppu( mem );
-            apu = new Apu( mem );
+			cpu = new Cpu( reg, mem, isa );
+			ppu = new Ppu( mem );
+			apu = new Apu( mem );
 
-            cart = new( mem.rom, mem.eram, mem.io );
-        }
+			cart = new( mem.rom, mem.eram, mem.io );
+		}
 
-        public Boy(byte[] cart)  : this()
+		public Boy(byte[] cart)  : this()
         {
             LoadCart( cart );
         }
@@ -111,7 +113,7 @@ namespace rzr
 
             foreach ( Callback fun in StepCallbacks )
             {
-                fun( cpu.reg, mem );
+                fun( reg, mem );
             }
 
             return cycles;
