@@ -1,9 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Text;
 
 namespace rzr
 {
-    public class Isa
+    public class Isa : IEnumerable<Instruction>
     {
         private static readonly Instruction[] m_instructions = new Instruction[256];
         private static readonly Instruction[] m_extInstructions = new Instruction[256];
@@ -674,7 +675,17 @@ namespace rzr
 
         // SRL
         private static Instruction Srl( RegX dst ) => new Instruction( () => Ops.Srl( dst ), "SRL" ) + Ops.operand( dst );
-    }
+
+		public IEnumerator<Instruction> GetEnumerator()
+		{
+			return ( (IEnumerable<Instruction>)m_instructions ).GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return m_instructions.GetEnumerator();
+		}
+	}
 
     static class LoopExtensions
     {

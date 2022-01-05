@@ -6,8 +6,8 @@ namespace rzr
     {
         private Reg m_reg;
         private Mem m_mem;
-        private Isa m_isa;
-        private Interrupt m_int = new();
+        private IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
+        private Interrupt m_int = new(); // TODO: move to Boy
 
         public byte curOpCode { get; private set; } = 0; // opcode od the currenlty executed instruction
         public ushort curInstrPC { get; private set; } = 0; // start ProgramCounter of the currently executed instruction
@@ -22,7 +22,12 @@ namespace rzr
         {
             m_reg = reg;
             m_mem = memory;
-            m_isa = isa;
+
+            // cache instructions
+			foreach( (Instruction instr, int i) in isa.Indexed() )
+			{
+                m_instr[i] = instr.Make();
+            }
         }
 
         /// <summary>
@@ -68,12 +73,9 @@ namespace rzr
                 // TODO: handle HALT & STOP
 
 				curOpCode = m_mem[curInstrPC]; // fetch
-
-                Instruction instr = m_isa[curOpCode];
-
                 ++m_reg.PC;
 
-                curOp = instr.Make().GetEnumerator();
+                curOp = m_instr[curOpCode].GetEnumerator();
                 curOp.MoveNext();
             }
 
