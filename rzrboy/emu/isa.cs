@@ -70,6 +70,8 @@ namespace rzr
             this[0xFD] = Invalid;
 
             this[0x00] = Nop;
+            this[0x10] = Stop;
+            this[0x76] = Halt;
 
             // LD [BC DE HL SP], .DB16
 			FillY( m_instructions, 0x01, LdImm, BCDEHLSP );
@@ -352,7 +354,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 505 );
+            DebugReport( 507 );
         }
 
 		/// <summary>
@@ -470,6 +472,12 @@ namespace rzr
 
         // NOP
         private static readonly Instruction Nop = Ops.Nop.Get( "NOP" );
+
+        // HALT
+        private static readonly Instruction Halt = Ops.Halt.Get( "HALT" );
+
+        // STOP
+        private static readonly Instruction Stop = new Instruction( Ops.Stop, "STOP" );
 
         // INC r8
         private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );

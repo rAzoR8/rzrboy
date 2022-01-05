@@ -269,6 +269,8 @@
 
         public byte this[ushort address] { get => mem; set => mem = value; }
 
+        public static implicit operator byte( ByteSection sec ) { return sec.mem; }
+
         public string Name { get; }
 
         public ushort Start { get; }

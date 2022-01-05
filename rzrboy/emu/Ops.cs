@@ -2,6 +2,10 @@
 {
 	public static class Ops
 	{
+		/// <summary>
+		/// DISASSEMBLERS
+		/// </summary>
+
 		public static Dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
 		public static Dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
 		public static Dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
@@ -22,7 +26,43 @@
 
 		public readonly static Dis addrDB16 = ( ref ushort pc, ISection mem ) => $"({operandDB16( ref pc, mem )})";
 
-		public static Op Nop = ( reg, mem ) => { };
+		/// <summary>
+		/// OPERATIONS
+		/// </summary>
+
+		public static readonly Op Nop = ( reg, mem ) => { };
+
+		public static readonly Op Halt = ( reg, mem ) =>
+		{
+			byte IF = mem[0xFF0F];
+			byte IE = mem[0xFFFF];
+
+			bool haltBug = ( IF & IE & 0x1F ) != 0 && reg.IME != IMEState.Enabled;
+			if( haltBug )
+			{
+				reg.PC--;
+			}
+
+			reg.Halted = true;
+		};
+
+		public static IEnumerable<Op> Stop()
+		{
+			byte IE = 0; byte IF = 0; bool IME = false;
+
+			yield return ( reg, mem ) =>
+			{
+				reg.Halted = true;
+				IME = reg.IME == IMEState.Enabled;
+				IF = mem[0xFF0F];
+				IE = mem[0xFFFF];
+			};
+
+			// TODO:
+			// https://gbdev.io/pandocs/Reducing_Power_Consumption.html#using-the-stop-instruction
+			// ASSERT:
+			// On a DMG, disabling the LCD before invoking STOP leaves the LCD enabled, drawing a horizontal black line on the screen and very likely damaging the hardware.
+		}
 
 		// read next byte from mem[pc++], 2 m-cycles
 		private static IEnumerable<Op> LdImm8( Reg8 target )

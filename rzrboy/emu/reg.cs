@@ -33,7 +33,6 @@
     public enum IMEState
 	{
         Disabled,
-        RequestDisabled,
         Enabled,
         RequestEnabled
 	}
@@ -61,6 +60,9 @@
         public bool Carry { get => _flags.IsBitSet( 4 ); set { binutil.SetBit( ref _flags, 4, value); } }
 
         public IMEState IME = IMEState.Disabled;
+
+        public bool Halted = false;
+        //public bool Stopped = false;
 
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {

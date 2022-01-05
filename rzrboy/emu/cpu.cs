@@ -16,7 +16,7 @@ namespace rzr
         public byte prevInstrCycles { get; private set; } = 1; // number of non-fetch cycles spend on the previous instructions
         public byte curInstrCycle { get; private set; } = 1; // number of Non-fetch cycles already spent on executing the current instruction
 
-        IEnumerator<Op>? curOp = null;
+        private IEnumerator<Op>? curOp = null;
 
         public Cpu( Reg reg, Mem memory, Isa isa ) 
         {
@@ -60,6 +60,8 @@ namespace rzr
 					byte interrupts = (byte)( m_mem[0xFF0F] & m_mem[0xFFFF] );
 					if( interrupts != 0 )
 					{
+                        m_reg.Halted = false;
+
 						curOp = m_int.HandleInterrupts().GetEnumerator();
 						curOp.MoveNext();
 						return false;
@@ -67,10 +69,12 @@ namespace rzr
 				}
 				else if( m_reg.IME == IMEState.RequestEnabled )
 					m_reg.IME = IMEState.Enabled;
-				else if( m_reg.IME == IMEState.RequestDisabled )
-					m_reg.IME = IMEState.Disabled;
 
-                // TODO: handle HALT & STOP
+                // handle HALT & STOP
+                if( m_reg.Halted )
+                {
+                    return false;
+                }
 
 				curOpCode = m_mem[curInstrPC]; // fetch
                 ++m_reg.PC;
