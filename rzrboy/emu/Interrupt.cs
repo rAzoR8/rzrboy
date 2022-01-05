@@ -2,7 +2,7 @@
 
 namespace rzr
 {
-	public class Int
+	public class Interrupt
 	{
         public const ushort IFRegister = 0xFF0F;
         public const ushort IERegister = 0xFFFF;

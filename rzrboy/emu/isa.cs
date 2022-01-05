@@ -3,7 +3,7 @@ using System.Text;
 
 namespace rzr
 {
-    public partial class Isa
+    public class Isa
     {
         private static readonly Instruction[] m_instructions = new Instruction[256];
         private static readonly Instruction[] m_extInstructions = new Instruction[256];
@@ -18,19 +18,17 @@ namespace rzr
             }
         }
 
-        private class ExtBuilder : Instruction
+        private class ExtInstr : Instruction
         {
-            public ExtBuilder( ) : base( ExtOps ) {}
+            public ExtInstr( ) : base( ExtOps ) {}
 
             private static IEnumerable<Op> ExtOps()
             {
                 byte opcode = 0;
                 yield return ( reg, mem ) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
-                Instruction b = m_extInstructions[opcode];
 
-                if ( b == null ) yield break;
-
-                foreach ( var op in m_extInstructions[opcode].Make() )
+                Instruction ext = m_extInstructions[opcode];
+                foreach ( Op op in ext.Make() )
                 {
                     yield return op;
                 }
@@ -39,59 +37,14 @@ namespace rzr
             public override IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
             {
                 byte opcode = mem[pc.Value];
-                Instruction builder = m_extInstructions[opcode];
-                if ( builder == null )
-                {
-                    return Enumerable.Repeat( $"EXT 0x{opcode:X2} NOT IMPLEMENTED", 1) ;
-                }
-
+                Instruction ext = m_extInstructions[opcode];
                 pc.Value++;
-                return builder.Operands( pc, mem );
+                return ext.Operands( pc, mem );
             }
         }
 
         private delegate Instruction BuildFunc<Y, X>(Y y, X x);
         private delegate Instruction BuildFunc<X>( X x );
-
-
-		// returns next opcode for validation
-		private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
-		{
-			foreach( Y y in ys )
-			{
-				foreach( (X x, int i) in xs.Indexed() )
-				{
-					Debug.Assert( target[offsetX + i] == null );
-					target[offsetX + i] = builder( y, x );
-				}
-				offsetX += 0x10;
-			}
-		}
-		private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, Y y, IEnumerable<X> xs)
-        {
-            Fill(target, offsetX, builder, new[] { y }, xs);
-        }
-        private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, X x)
-        {
-            Fill(target, offsetX, builder, ys, new[] { x });
-        }
-        private static void FillX<X>( Instruction[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
-        {
-            foreach( (X x, int i) in xs.Indexed() )
-            {
-                Debug.Assert( target[offsetX + i] == null );
-                target[offsetX + i] = builder( x );
-            }
-        }
-        private static void FillY<Y>( Instruction[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
-        {
-            foreach( Y y in ys )
-            {
-                Debug.Assert( target[offsetX] == null );
-                target[offsetX] = builder( y );
-                offsetX += 0x10;
-            }
-        }
 
         public Isa() 
         {
@@ -101,7 +54,19 @@ namespace rzr
             RegX[] bdhHL = {RegX.B, RegX.D, RegX.H, RegX.HL };
             RegX[] BCDEHLSP = {RegX.BC, RegX.DE, RegX.HL, RegX.SP };
 
-            this[0xCB] = new ExtBuilder();
+            this[0xCB] = new ExtInstr();
+
+            this[0xD3] = Invalid;
+            this[0xE3] = Invalid;
+            this[0xE4] = Invalid;
+            this[0xF4] = Invalid;
+            this[0xDB] = Invalid;
+            this[0xDD] = Invalid;
+            this[0xEB] = Invalid;
+            this[0xEC] = Invalid;
+            this[0xED] = Invalid;
+            this[0xFC] = Invalid;
+            this[0xFD] = Invalid;
 
             this[0x00] = Nop;
 
@@ -265,7 +230,8 @@ namespace rzr
             // RET
             this[0xC9] = Ret;
 
-            // TODO RETI
+            // RETI
+            this[0xD9] = Reti;
 
             // POP r16
             this[0xC1] = Pop (Reg16.BC);
@@ -306,9 +272,6 @@ namespace rzr
 
             // EI
             this[0xFB] = Ei;
-
-            // RETI
-            this[0xD9] = Reti;
 
 			// RLCA
 			this[0x07] = Rlc( RegX.A );
@@ -388,7 +351,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 494 );
+            DebugReport( 505 );
         }
 
 		/// <summary>
@@ -428,6 +391,7 @@ namespace rzr
             }
         }
 
+        // TODO: remove
         private void DebugReport( ushort expected )
         {
             Mem mem = new();
@@ -461,9 +425,255 @@ namespace rzr
                 Print( 0xCB, (byte)j );
             }
 
-            Debug.WriteLine($"{count} out of 501 Instructions implemented: {100.0f*count/500.0f}%");
-            Debug.Assert(count == expected);
+			Debug.WriteLine( $"{count} out of 512 Instructions implemented: {100.0f * count / 512.0f}%" );
+			Debug.Assert( count == expected );
+		}
+        
+        // HELPERS
+        private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
+        {
+            foreach( Y y in ys )
+            {
+                foreach( (X x, int i) in xs.Indexed() )
+                {
+                    Debug.Assert( target[offsetX + i] == null );
+                    target[offsetX + i] = builder( y, x );
+                }
+                offsetX += 0x10;
+            }
         }
+        private static void FillX<X>( Instruction[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
+        {
+            foreach( (X x, int i) in xs.Indexed() )
+            {
+                Debug.Assert( target[offsetX + i] == null );
+                target[offsetX + i] = builder( x );
+            }
+        }
+        private static void FillY<Y>( Instruction[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
+        {
+            foreach( Y y in ys )
+            {
+                Debug.Assert( target[offsetX] == null );
+                target[offsetX] = builder( y );
+                offsetX += 0x10;
+            }
+        }
+
+        // ###################################################
+        // INSTRUCTIONS 
+        // ###################################################
+
+        // INVALID
+        private static readonly Instruction Invalid = Ops.Nop.Get( "INVALID" );
+
+        // NOP
+        private static readonly Instruction Nop = Ops.Nop.Get( "NOP" );
+
+        // INC r8
+        private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        // INC r16
+        private static Instruction Inc( Reg16 dst ) => new Instruction( () => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
+        // INC (HL)
+        private static readonly Instruction IncHl = new Instruction( Ops.IncHl, "INC" ) + "(HL)";
+
+        // INC r8
+        private static Instruction Dec( Reg8 dst ) => Ops.Dec( dst ).Get( "Dec" ) + Ops.operand( dst );
+        // INC r16
+        private static Instruction Dec( Reg16 dst ) => new Instruction( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
+        // INC (HL)
+        private static readonly Instruction DecHl = new Instruction( Ops.DecHl, "Dec" ) + "(HL)";
+
+        // BIT i, [r8, (HL)]
+        private static Instruction Bit( byte bit, RegX target ) => new Instruction( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+
+        // SET i, [r8, (HL)]
+        private static Instruction Set( byte bit, RegX target ) => new Instruction( () => Ops.Set( bit, target ), "SET" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+
+        // SET i, [r8, (HL)]
+        private static Instruction Res( byte bit, RegX target ) => new Instruction( () => Ops.Res( bit, target ), "RES" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+
+        // XOR A, [r8, (HL)]
+        private static Instruction Xor( RegX target ) => new Instruction( () => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
+
+        // XOR A, db8
+        private static readonly Instruction XorImm8 = new Instruction( Ops.XorImm8, "XOR" ) + "A" + Ops.operandDB8;
+
+        // LD r8, db8 LD r16, db16
+        private static Instruction LdImm( RegX dst ) => new Instruction( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
+
+        /// <summary>
+        /// LD r8, r8' 
+        /// LD r16, r16'
+        /// LD r, (r16)
+        /// LD (r16), r
+        /// </summary>
+        /// <param name="dst"></param>
+        /// <param name="src"></param>
+        /// <returns></returns>
+        private static Instruction Ld( RegX dst, RegX src )
+        {
+            Instruction builder = new( () => Ops.LdRegOrAddr( dst, src ), "LD" );
+
+            if( ( dst.Is8() && src.Is8() ) || ( dst.Is16() && src.Is16() ) )
+            {
+                return builder + Ops.operand( dst ) + Ops.operand( src );
+            }
+            else if( dst.Is16() && src.Is8() )
+            {
+                return builder + $"({dst})" + Ops.operand( src );
+            }
+            else
+            {
+                return builder + Ops.operand( dst ) + $"({src})";
+            }
+        }
+
+        // LD (HL+), A
+        private static readonly Instruction LdHlPlusA = new Instruction( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
+        // LD (HL-), A
+        private static readonly Instruction LdHlMinusA = new Instruction( Ops.LdHlMinusA, "LD" ) + $"(HL-)" + "A";
+
+        // LD A, (HL+)
+        private static readonly Instruction LdAHlPlus = new Instruction( Ops.LdAHlPlus, "LD" ) + "A" + $"(HL+)";
+        // LD A, (HL-)
+        private static readonly Instruction LdAHlMinus = new Instruction( Ops.LdAHlMinus, "LD" ) + "A" + $"(HL-)";
+
+        // LD A, (0xFF00+C)
+        private static readonly Instruction LdhAc = new Instruction( Ops.LdhAc, "LD" ) + "A" + "(0xFF00+C)";
+
+        // LD (0xFF00+C), A
+        private static readonly Instruction LdhCa = new Instruction( Ops.LdhCa, "LD" ) + "(0xFF00+C)" + "A";
+
+        // LD A, (0xFF00+db8)
+        private static readonly Instruction LdhAImm = new Instruction( Ops.LdhAImm, "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
+
+        // LD (0xFF00+db8), A
+        private static readonly Instruction LdhImmA = new Instruction( Ops.LdhImmA, "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
+
+        // LD (a16), SP
+        private static readonly Instruction LdImm16Sp = new Instruction( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
+
+        // ADD A, [r8 (HL)]
+        private static Instruction Add( RegX src ) => new Instruction( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // ADD HL, r16
+        private static Instruction AddHl( Reg16 src ) => new Instruction( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
+
+        // ADD A, db8
+        private static readonly Instruction AddImm8 = new Instruction( () => Ops.AddImm8( carry: 0 ), "ADD" ) + "A" + Ops.operandDB8;
+
+        // ADC A, db8
+        private static readonly Instruction AdcImm8 = new Instruction( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
+
+        // ADD A, [r8 (HL)]
+        private static Instruction Adc( RegX src ) => new Instruction( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
+
+
+        // SUB A, [r8 (HL)]
+        private static Instruction Sub( RegX src ) => new Instruction( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // SUB A, db8
+        private static readonly Instruction SubImm8 = new Instruction( () => Ops.SubImm8( carry: 0 ), "SUB" ) + "A" + Ops.operandDB8;
+
+        // SBC A, [r8 (HL)]
+        private static Instruction Sbc( RegX src ) => new Instruction( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // SBC A, db8
+        private static readonly Instruction SbcImm8 = new Instruction( () => Ops.SubImm8( carry: 1 ), "SBC" ) + "A" + Ops.operandDB8;
+
+        // AND A, [r8 (HL)]
+        private static Instruction And( RegX src ) => new Instruction( () => Ops.And( src ), "AND" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // AND A, db8
+        private static readonly Instruction AndImm8 = new Instruction( Ops.AndImm8, "AND" ) + "A" + Ops.operandDB8;
+
+        // OR A, [r8 (HL)]
+        private static Instruction Or( RegX src ) => new Instruction( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // OR A, db8
+        private static readonly Instruction OrImm8 = new Instruction( Ops.OrImm8, "OR" ) + "A" + Ops.operandDB8;
+
+        // CP A, [r8 (HL)]
+        private static Instruction Cp( RegX src ) => new Instruction( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
+
+        // CP A, db8
+        private static readonly Instruction CpImm8 = new Instruction( Ops.CpImm8, "CP" ) + "A" + Ops.operandDB8;
+
+        // JP HL
+        private static readonly Instruction JpHl = Ops.JpHl.Get( "JP" ) + "HL";
+
+        // JP a16
+        private static readonly Instruction JpImm16 = new Instruction( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
+
+        // JP cc, a16
+        private static Instruction JpCcImm16( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
+
+        // JR e8
+        private static readonly Instruction JrImm = new Instruction( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
+
+        // JR cc, e8
+        private static Instruction JrCcImm( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
+
+        // CALL nn
+        private static readonly Instruction Call = new Instruction( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
+
+        // CALL cc, nn
+        private static Instruction CallCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Call( cc ), "CALL" ) + flag + Ops.operandDB16;
+
+        // RETI
+        private static readonly Instruction Reti = new Instruction( Ops.Reti, "RETI" );
+
+        // EI
+        private static readonly Instruction Ei = new Instruction( Ops.Ei, "EI" );
+
+        // DI
+        private static readonly Instruction Di = new Instruction( Ops.Di, "DI" );
+
+        // RET
+        private static readonly Instruction Ret = new Instruction( () => Ops.Ret(), "RET" );
+
+        // RET cc
+        private static Instruction RetCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Ret( cc ), "RET" ) + flag;
+
+        // PUSH r16
+        private static Instruction Push( Reg16 src ) => new Instruction( () => Ops.Push( src ), "PUSH" ) + Ops.operand( src );
+
+        // POP r16
+        private static Instruction Pop( Reg16 dst ) => new Instruction( () => Ops.Pop( dst ), "POP" ) + Ops.operand( dst );
+
+        // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
+        private static Instruction Rst( byte vec ) => new Instruction( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
+
+        // CCF
+        private static readonly Instruction Ccf = new Instruction( Ops.Ccf, "CCF" );
+        // SCF
+        private static readonly Instruction Scf = new Instruction( Ops.Scf, "SCF" );
+        // SCF
+        private static readonly Instruction Cpl = new Instruction( Ops.Cpl, "CPL" );
+        // DAA
+        private static readonly Instruction Daa = new Instruction( Ops.Daa, "DAA" );
+
+        // RLC
+        private static Instruction Rlc( RegX dst ) => new Instruction( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
+        // RRC
+        private static Instruction Rrc( RegX dst ) => new Instruction( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
+
+        // RL
+        private static Instruction Rl( RegX dst ) => new Instruction( () => Ops.Rl( dst ), "RL" ) + Ops.operand( dst );
+        // RR
+        private static Instruction Rr( RegX dst ) => new Instruction( () => Ops.Rr( dst ), "RR" ) + Ops.operand( dst );
+
+        // SLA
+        private static Instruction Sla( RegX dst ) => new Instruction( () => Ops.Sla( dst ), "SLA" ) + Ops.operand( dst );
+        // SRA
+        private static Instruction Sra( RegX dst ) => new Instruction( () => Ops.Sra( dst ), "SRA" ) + Ops.operand( dst );
+
+        // SWAP
+        private static Instruction Swap( RegX dst ) => new Instruction( () => Ops.Swap( dst ), "SWAP" ) + Ops.operand( dst );
+
+        // SRL
+        private static Instruction Srl( RegX dst ) => new Instruction( () => Ops.Srl( dst ), "SRL" ) + Ops.operand( dst );
     }
 
     static class LoopExtensions
