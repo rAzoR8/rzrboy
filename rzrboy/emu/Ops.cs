@@ -14,6 +14,8 @@
 		public static Dis operand8OrAdd16( RegX reg ) => reg.Is8() ? operand( reg ) : addr( reg.To16() );
 
 		public static readonly Dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+		public static Dis operandE8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{(sbyte)mem[pc++]}";
+
 		public static readonly Dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
 		public static Dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
 
@@ -197,6 +199,15 @@
 			yield return ( reg, mem ) => mem[++nn] = reg.SP.GetMsb();
 		}
 
+		// LD HL,SP + r8 - 3 cycles
+		public static IEnumerable<Op> LdHlSpR8()
+		{
+			byte rhs = 0; ushort res = 0;
+			yield return ( reg, mem ) => rhs = mem[reg.PC++];
+			yield return ( reg, mem ) => res = SignedAddHelper( reg, reg.SP, (sbyte)rhs );
+			yield return ( reg, mem ) => reg.HL = res;
+		}
+
 		private static void AddHelper( Reg reg, byte rhs, byte carry = 0 )
 		{
 			carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
@@ -220,6 +231,28 @@
 				if( src.Is8() ) val = reg[src.To8()];
 				AddHelper( reg, val, carry );
 			};
+		}
+
+		private static ushort SignedAddHelper( Reg reg, ushort lhs, sbyte rhs )
+		{
+			var res = lhs + rhs;
+
+			reg.Sub = false;
+			reg.Zero = false; // Accumulator not used
+			reg.Carry = ( res & 0b1_0000_0000 ) != 0;
+			reg.HalfCarry = ( res & 0b1_0000 ) != 0;
+
+			return (ushort)( res );
+		} 
+
+		// ADD SP, R8 - 4 cycles
+		public static IEnumerable<Op> AddSpR8()
+		{
+			byte rhs = 0; ushort res = 0;
+			yield return ( reg, mem ) => rhs = mem[reg.PC++];
+			yield return ( reg, mem ) => res = SignedAddHelper( reg, reg.SP, (sbyte)rhs );
+			yield return Nop; // no idea why this is a 4 cycle op
+			yield return ( reg, mem ) => reg.SP = res;
 		}
 
 		// ADD A, db8 2-cycle

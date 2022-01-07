@@ -98,6 +98,9 @@ namespace rzr
             this[0x29] = AddHl( Reg16.HL );
             this[0x39] = AddHl( Reg16.SP );
 
+            // ADD HL, SP + r8
+            this[0xE8] = AddSpR8;
+
             // LD A, (BC DE)
             this[0x0A] = Ld( RegX.A, RegX.BC );
             this[0x1A] = Ld( RegX.A, RegX.DE );
@@ -159,6 +162,9 @@ namespace rzr
 
             // LD A, (0xFF00+C)
             this[0xF2] = LdhAc;
+
+            // LD HL, SP + r8
+            this[0xF8] = LdHlSpR8;
 
             // JP HL
             this[0xE9] = JpHl;
@@ -354,7 +360,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 507 );
+            DebugReport( 509 );
         }
 
 		/// <summary>
@@ -563,6 +569,10 @@ namespace rzr
         // LD (a16), SP
         private static readonly Instruction LdImm16Sp = new Instruction( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
 
+        // LD HL,SP + r8 - 3 cycles
+        private static readonly Instruction LdHlSpR8 = new Instruction( Ops.LdHlSpR8, "LD" ) + "HL" + Ops.operandE8x("SP+");
+
+
         // ADD A, [r8 (HL)]
         private static Instruction Add( RegX src ) => new Instruction( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
 
@@ -574,6 +584,9 @@ namespace rzr
 
         // ADC A, db8
         private static readonly Instruction AdcImm8 = new Instruction( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
+        
+        // ADD SP, R8
+        private static readonly Instruction AddSpR8 = new Instruction( Ops.AddSpR8, "ADD" ) + "SP" + Ops.operandE8;
 
         // ADD A, [r8 (HL)]
         private static Instruction Adc( RegX src ) => new Instruction( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
