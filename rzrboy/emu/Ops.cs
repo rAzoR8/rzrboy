@@ -208,6 +208,26 @@
 			yield return ( reg, mem ) => reg.HL = res;
 		}
 
+		// LD (a16), A - 4 cycles
+		public static IEnumerable<Op> LdImmAddrA( )
+		{
+			ushort nn = 0;
+			yield return ( reg, mem ) => nn = mem[reg.PC++];
+			yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
+			yield return Nop;
+			yield return ( reg, mem ) => mem[nn] = reg.A;
+		}
+
+		// LD A, (a16) - 4 cycles
+		public static IEnumerable<Op> LdAImmAddr()
+		{
+			ushort nn = 0;
+			yield return ( reg, mem ) => nn = mem[reg.PC++];
+			yield return ( reg, mem ) => nn |= (ushort)( mem[reg.PC++] << 8 );
+			yield return Nop;
+			yield return ( reg, mem ) => reg.A = mem[nn];
+		}
+
 		private static void AddHelper( Reg reg, byte rhs, byte carry = 0 )
 		{
 			carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );

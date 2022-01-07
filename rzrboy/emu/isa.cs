@@ -166,6 +166,12 @@ namespace rzr
             // LD HL, SP + r8
             this[0xF8] = LdHlSpR8;
 
+            // LD (a16), A
+            this[0xEA] = LdImmAddrA;
+
+            // LD A, (a16)
+            this[0xFA] = LdAImmAddr;
+
             // JP HL
             this[0xE9] = JpHl;
 
@@ -360,7 +366,7 @@ namespace rzr
             // BIT [1 3 5 7], [B C D E H L, HL, A]
             Fill( m_extInstructions, offsetX: 0xC8, Set, new byte[] { 1, 3, 5, 7 }, bcdehlHLa );
 
-            DebugReport( 509 );
+            DebugReport( 512 );
         }
 
 		/// <summary>
@@ -405,7 +411,7 @@ namespace rzr
         {
             Mem mem = new();
 
-            int count = 0;
+            int count = 1; // 0xCB
 
             void Print( byte pc, byte ext )
             {
@@ -568,6 +574,12 @@ namespace rzr
 
         // LD (a16), SP
         private static readonly Instruction LdImm16Sp = new Instruction( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
+
+        // LD (a16), A
+        private static readonly Instruction LdImmAddrA = new Instruction( Ops.LdImmAddrA, "LD" ) + Ops.addrDB16 + "A";
+
+        // LD A, (a16)
+        private static readonly Instruction LdAImmAddr = new Instruction( Ops.LdAImmAddr, "LD" ) + "A" + Ops.addrDB16;
 
         // LD HL,SP + r8 - 3 cycles
         private static readonly Instruction LdHlSpR8 = new Instruction( Ops.LdHlSpR8, "LD" ) + "HL" + Ops.operandE8x("SP+");
