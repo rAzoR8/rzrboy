@@ -212,8 +212,9 @@ namespace rzr
 
         public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
         {
+            int end = start + 25; // 0x19 length of header to validate
             byte checksum = 0;
-            for( int i = start; i < start + (int)Header.TitleLength; i++ )
+            for( int i = start; i < end; i++ )
             {
                 checksum -= header.ElementAt( i );
                 checksum--;
@@ -305,11 +306,11 @@ namespace rzr
             }
 
             Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{cart.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
-            Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum}|{RomChecksum} SGB support {SGBSupport}" );
+            Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
             var hCheck = ComputeHeaderChecksum( m_romBanks[0].mem );
-            var rCheck = ComputeRomChecksum(m_romBanks[0].mem );
+            var rCheck = ComputeRomChecksum( m_romBanks[0].mem );
 
             return true;
         }
