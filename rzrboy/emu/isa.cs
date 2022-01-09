@@ -378,22 +378,15 @@ namespace rzr
 		public string Disassemble( ref ushort pc, ISection bin )
         {
             byte opcode = bin[pc]; // fetch
-            Instruction builder = this[opcode];
+            Instruction instr = this[opcode];
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
 
-            if ( builder != null )
-            {
-                ++pc;
-                sb.Append( builder.ToString( ref pc, bin ) );
-            }
-            else
-            {
-                sb.Append( "NOT IMPLEMENTED" );
-            }
+			++pc;
+			sb.Append( instr.ToString( ref pc, bin ) );
 
-            return sb.ToString();
+			return sb.ToString();
         }
 
         public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection bin )
