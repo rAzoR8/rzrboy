@@ -3,7 +3,7 @@
     public interface ISection 
     {
         string Name { get; }
-        ushort Start { get; }
+        ushort StartAddr { get; }
         ushort Length { get; }
 
         byte this[ushort address]
@@ -17,7 +17,7 @@
     {
         public static bool Contains(this ISection section, ushort address)
         {
-            return address >= section.Start && address < (section.Start + section.Length);
+            return address >= section.StartAddr && address < (section.StartAddr + section.Length);
         }
 
         public static string ToString(this ISection sec) { return sec.Name; }
@@ -29,7 +29,7 @@
         public ProxySection(ISection src) { Source = src; }
 
         public string Name => $"({Source.Name})*";
-        public ushort Start => Source.Start;
+        public ushort StartAddr => Source.StartAddr;
         public ushort Length => Source.Length;
         public byte this[ushort address]
         {
@@ -46,10 +46,10 @@
         public CombiSection(ISection low, ISection high) { Low = low; High = high; }
 
         public string Name => $"({Low.Name})({High.Name})";
-        public ushort Start => Low.Start;
+        public ushort StartAddr => Low.StartAddr;
         public ushort Length => (ushort)(Low.Length + High.Length);
 
-        public ISection Select(ushort address) => address < High.Start ? Low : High;
+        public ISection Select(ushort address) => address < High.StartAddr ? Low : High;
 
         public byte this[ushort address]
         {
@@ -71,12 +71,12 @@
             Read = read;
             Write = write;
             Name = name;
-            Start = start;
+            StartAddr = start;
             Length = length;
         }
 
         public string Name { get; }
-        public ushort Start { get; }
+        public ushort StartAddr { get; }
         public ushort Length { get; }
         public byte this[ushort address]
         {
@@ -93,12 +93,12 @@
         {
             Read = read;
             Name = name;
-            Start = start;
+            StartAddr = start;
             Length = length;
         }
 
         public string Name { get; }
-        public ushort Start { get; }
+        public ushort StartAddr { get; }
         public ushort Length { get; }
         public byte this[ushort address]
         {
@@ -117,13 +117,13 @@
         {
             Write = write;
             Name = name;
-            Start = start;
+            StartAddr = start;
             Length = length;
             DefaultReadValue = defaultReadValue;
         }
 
         public string Name { get; }
-        public ushort Start { get; }
+        public ushort StartAddr { get; }
         public ushort Length { get; }
         public byte this[ushort address]
         {
@@ -143,12 +143,12 @@
         {
             Map = map;
             Source = src;
-            Start = start;
+            StartAddr = start;
             Length = len;
         }
 
-        public string Name => $"{Start}->{Map(Start)}:{Source.Name}";
-        public ushort Start { get; }
+        public string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
+        public ushort StartAddr { get; }
         public ushort Length { get; }
         public byte this[ushort address]
         {
@@ -162,7 +162,7 @@
         public int Compare(ISection? x, ISection? y)
         {
             if (x != null && y != null)
-                return x.Start.CompareTo(y.Start);
+                return x.StartAddr.CompareTo(y.StartAddr);
 
             if (x == null && y != null) return -1; // x is less
             else if (x != null && y == null) return 1; // x is more
@@ -173,10 +173,10 @@
     // used to reflect address
     public class EmptySection : ISection
     {
-        public EmptySection(ushort address) { Start = address; Length = 0; }
+        public EmptySection(ushort address) { StartAddr = address; Length = 0; }
 
-        public string Name => $"{Start}:Empty";
-        public ushort Start { get; }
+        public string Name => $"{StartAddr}:Empty";
+        public ushort StartAddr { get; }
         public ushort Length { get; }
         public byte this[ushort address]
         {
@@ -190,7 +190,7 @@
         private List<ISection> sections = new();
 
         public string Name => sections.Count != 0 ? $"{sections.First().Name}...{sections.Last().Name}" : "";
-        public ushort Start => sections.First().Start;
+        public ushort StartAddr => sections.First().StartAddr;
         public ushort Length => (ushort)sections.Sum( s => s.Length );
 
         public void Add(ISection section)
@@ -210,7 +210,7 @@
                 {
                     return sections[mid];
                 }
-                else if (address < sections[mid].Start)
+                else if (address < sections[mid].StartAddr)
                 {
                     max = mid - 1;
                 }
@@ -258,22 +258,36 @@
 
     public class ByteSection : ISection
     {
-        public byte mem { get; set; }
-        public ByteSection(ushort start, byte val, string name)
+        public OnReadByte? OnRead { get; set; }
+        public OnWriteByte? OnWrite { get; set; }
+
+        protected byte m_value;
+
+		public byte Value
         {
-            Start = start;
-            Length = 1;
-            mem = val;
-            Name = $"{start}:{name}";
+			get { OnRead?.Invoke( m_value ); return m_value; }
+            set { OnWrite?.Invoke( m_value, value ); m_value = value; }
         }
 
-        public byte this[ushort address] { get => mem; set => mem = value; }
+		public ByteSection( ushort start, byte val, string name )
+		{
+			StartAddr = start;
+			Length = 1;
+			Value = val;
+			Name = $"{start}:{name}";
+		}
 
-        public static implicit operator byte( ByteSection sec ) { return sec.mem; }
+        // value read
+        public delegate void OnReadByte ( byte val );
+        public delegate void OnWriteByte ( byte oldVal, byte newVal );
+
+		public byte this[ushort address] { get => Value; set => Value = value; }
+
+        public static implicit operator byte( ByteSection sec ) { return sec.Value; }
 
         public string Name { get; }
 
-        public ushort Start { get; }
+        public ushort StartAddr { get; }
 
         public ushort Length { get; }
     }
@@ -283,7 +297,7 @@
         public byte[] mem { get; }
         public RWSection(ushort start, ushort len, string name)
         {
-            Start = start;
+            StartAddr = start;
             Length = len;
             mem = new byte[len];
             Name = $"{start}:{name}";
@@ -295,10 +309,10 @@
             Array.Copy(init, mem, size);
         }
 
-        public byte this[ushort address] { get => mem[address - Start]; set => mem[address - Start] = value; }
+        public byte this[ushort address] { get => mem[address - StartAddr]; set => mem[address - StartAddr] = value; }
 
         public string Name { get; }
-        public ushort Start { get; }
+        public ushort StartAddr { get; }
         public ushort Length { get; }
 
         public void write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
@@ -314,7 +328,7 @@
 
         public RSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
 
-        public new byte this[ushort address] { get => base.mem[address - Start]; }
+        public new byte this[ushort address] { get => base.mem[address - StartAddr]; }
     }
 
     public class WSection : RWSection
@@ -323,6 +337,6 @@
 
         public WSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
 
-        public new byte this[ushort address] { set => base.mem[address - Start] = value; }
+        public new byte this[ushort address] { set => base.mem[address - StartAddr] = value; }
     }
 }
