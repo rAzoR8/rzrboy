@@ -140,53 +140,6 @@ namespace rzr
         }
     }
 
-    public class RInterceptSection : ISection
-    {
-        public ReadFunc Read { get; set; }
-
-        public RInterceptSection( ReadFunc read, string name, ushort start, ushort length )
-        {
-            Read = read;
-            Name = name;
-            StartAddr = start;
-            Length = length;
-        }
-
-        public string Name { get; }
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
-        {
-            get => Read( address );
-            set { }
-        }
-    }
-
-    public class WInterceptSection : ISection
-    {
-        public WriteFunc Write { get; set; }
-
-        public byte DefaultReadValue { get; set; } = 0xFF;
-
-        public WInterceptSection( WriteFunc write, byte defaultReadValue, string name, ushort start, ushort length )
-        {
-            Write = write;
-            Name = name;
-            StartAddr = start;
-            Length = length;
-            DefaultReadValue = defaultReadValue;
-        }
-
-        public string Name { get; }
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
-        {
-            get => DefaultReadValue;
-            set => Write( address, value );
-        }
-    }
-
     public class RemapSection : ISection
     {
         public delegate ushort MapFunc(ushort address);
@@ -222,21 +175,6 @@ namespace rzr
             if (x == null && y != null) return -1; // x is less
             else if (x != null && y == null) return 1; // x is more
             return 0;
-        }
-    }
-
-    // used to reflect address
-    public class EmptySection : ISection
-    {
-        public EmptySection(ushort address) { StartAddr = address; Length = 0; }
-
-        public string Name => $"{StartAddr}:Empty";
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
-        {
-            get => throw new AccessViolationException();
-            set => throw new AccessViolationException();
         }
     }
 
