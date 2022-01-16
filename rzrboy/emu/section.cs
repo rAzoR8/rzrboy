@@ -16,14 +16,26 @@
         ushort StartAddr { get; }
         ushort Length { get; }
 
-        IEnumerable<byte> Storage => Enumerable.Empty<byte>();
+        IList<byte>? Storage => null;
 
 		// direct access for debugger
-		byte Read( ushort address ) => throw new SectionReadAccessViolationException( address, this );
-        void Write( ushort address, byte value ) => throw new SectionWriteAccessViolationException( address, this );
+		byte Read( ushort address )
+		{
+			if( Storage == null )
+				throw new SectionReadAccessViolationException( address, this );
+			else
+				return Storage[address];
+		}
+		void Write( ushort address, byte value )
+		{
+			if( Storage == null )
+				throw new SectionWriteAccessViolationException( address, this );
+			else
+				Storage[address] = value;
+		}
 
-        // mapped access for emulator, default impl
-        byte this[ushort address]
+		// mapped access for emulator, default impl
+		byte this[ushort address]
         {
             get => Read( address );
             set => Write( address, value );
