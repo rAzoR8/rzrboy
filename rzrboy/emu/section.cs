@@ -1,15 +1,32 @@
 ﻿namespace rzr
 {
+    public class SectionReadAccessViolationException : System.AccessViolationException
+    {
+        public SectionReadAccessViolationException( ushort address, ISection section ) : base( $"0x{address.ToString( "X4" )} can not be read from section {section.Name}" ) { }
+    }
+
+    public class SectionWriteAccessViolationException : System.AccessViolationException
+    {
+        public SectionWriteAccessViolationException( ushort address, ISection section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
+    }
+
     public interface ISection 
     {
         string Name { get; }
         ushort StartAddr { get; }
         ushort Length { get; }
 
+        IEnumerable<byte> Storage => Enumerable.Empty<byte>();
+
+		// direct access for debugger
+		byte Read( ushort address ) => throw new SectionReadAccessViolationException( address, this );
+        void Write( ushort address, byte value ) => throw new SectionWriteAccessViolationException( address, this );
+
+        // mapped access for emulator, default impl
         byte this[ushort address]
         {
-            get;
-            set;
+            get => Read( address );
+            set => Write( address, value );
         }
     }
 
