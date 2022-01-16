@@ -20,15 +20,15 @@ namespace rzr
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
         
         public ProxySection rom { get; } = new(new RSection(0, RomBankSize * 2, "rom") ); // nonswitchable        
-        public ProxySection vram { get; } = new(new RWSection(0x8000, 0x2000, "vram")); // In CGB mode, switchable bank 0/1        
-        public ProxySection eram { get; } = new(new RWSection(0xA000, 0x2000, "eram")); // From cartridge, switchable bank if any
-        public RWSection wram0 { get; } = new (0xC000, 0x1000, "wram0");        
-        public ProxySection wramx { get; } = new(new RWSection(0xD000, 0x1000, "wramx")); //In CGB mode, switchable bank 1-7
+        public Section vram { get; } = new Section(0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
+        public ProxySection eram { get; } = new(new Section(0xA000, 0x2000, "eram")); // From cartridge, switchable bank if any
+        public Section wram0 { get; } = new (0xC000, 0x1000, "wram0");        
+        public Section wramx { get; } = new Section(0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
         public RemapSection echo { get; } = new((ushort address) => (ushort)(address - 0x2000), 0xE000, EchoRamSize);
-        public RWSection oam { get; } = new(0xFE00, OAMSize, "oam");
+        public Section oam { get; } = new(0xFE00, OAMSize, "oam");
         public RSection unused { get; } = new(0xFEA0, UnusedSize, "unused");
-        public RWSection io { get; } = new(0xFF00, IOSize, "io");
-        public RWSection hram { get; } = new(0xFF80, HRamSize, "ram");
+        public Section io { get; } = new(0xFF00, IOSize, "io");
+        public Section hram { get; } = new(0xFF80, HRamSize, "ram");
         public ByteSection IE { get; } = new(0xFFFF, val: 0, name: "IE");
 
         // helper sections:

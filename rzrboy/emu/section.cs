@@ -1,4 +1,6 @@
-﻿namespace rzr
+﻿using System.Collections;
+
+namespace rzr
 {
     public class SectionReadAccessViolationException : System.AccessViolationException
     {
@@ -10,7 +12,7 @@
         public SectionWriteAccessViolationException( ushort address, ISection section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
     }
 
-    public interface ISection 
+    public interface ISection
     {
         string Name { get; }
         ushort StartAddr { get; }
@@ -52,7 +54,31 @@
         public static string ToString(this ISection sec) { return sec.Name; }
     }
 
-    public class ProxySection : ISection
+	public class Section : ISection
+	{
+		public string Name { get; }
+		public ushort StartAddr { get; }
+        public ushort Length { get; }
+
+        public IList<byte>? Storage => mem;
+
+        private byte[] mem;
+        public Section( ushort start, ushort len, string name )
+        {
+            StartAddr = start;
+            Length = len;
+            mem = new byte[len];
+            Name = $"{start}:{name}";
+        }
+
+        public Section( ushort start, ushort len, string name, byte[] init ) : this( start, len, name )
+        {
+            var size = (ushort)Math.Min( init.Length, len );
+            Array.Copy( init, mem, size );
+        }
+    }
+
+	public class ProxySection : ISection
     {
         public ISection Source { get; set; }
         public ProxySection(ISection src) { Source = src; }
@@ -65,7 +91,7 @@
             get => Source[address];
             set => Source[address] = value;
         }
-    }
+	}
 
     public class CombiSection : ISection
     {
@@ -258,32 +284,32 @@
         public List<OnRead> ReadCallbacks { get; } = new();
         public List<OnWrite> WriteCallbacks { get; } = new();
 
-        private byte Read(ushort address ) 
-        {
-            ISection section = Find(address);
-            foreach ( OnRead onRead in ReadCallbacks )
-            {
-                onRead( section, address );
-            }
-            return section[address];
-        }
+		public byte Read( ushort address )
+		{
+			ISection section = Find( address );
+			foreach( OnRead onRead in ReadCallbacks )
+			{
+				onRead( section, address );
+			}
+			return section[address];
+		}
 
-        private void Write( ushort address, byte val )
-        {
-            ISection section = Find( address );
-            section[address] = val;
-            foreach ( OnWrite onWrite in WriteCallbacks )
-            {
-                onWrite( section, address, val );
-            }
-        }
+		public void Write( ushort address, byte val )
+		{
+			ISection section = Find( address );
+			section[address] = val;
+			foreach( OnWrite onWrite in WriteCallbacks )
+			{
+				onWrite( section, address, val );
+			}
+		}
 
-        public byte this[ushort address]
-        {
-            get => Read( address );
-            set => Write( address, value );
-        }
-    }
+		public byte this[ushort address]
+		{
+			get => Read( address );
+			set => Write( address, value );
+		}
+	}
 
     public class ByteSection : ISection
     {

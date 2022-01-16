@@ -31,7 +31,7 @@ namespace rzr
 			ppu = new Ppu( mem );
 			apu = new Apu( mem );
 
-			cart = new( mem.rom, mem.eram, mem.io );
+			cart = new Cartridge( mem.rom, mem.eram, mem.io );
 		}
 
 		public Boy(byte[] cart)  : this()
