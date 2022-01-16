@@ -24,14 +24,14 @@
 			if( Storage == null )
 				throw new SectionReadAccessViolationException( address, this );
 			else
-				return Storage[address];
+				return Storage[address-StartAddr];
 		}
 		void Write( ushort address, byte value )
 		{
 			if( Storage == null )
 				throw new SectionWriteAccessViolationException( address, this );
 			else
-				Storage[address] = value;
+				Storage[address-StartAddr] = value;
 		}
 
 		// mapped access for emulator, default impl
