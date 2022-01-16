@@ -230,20 +230,23 @@ namespace rzr
         /// <param name="header"></param>
         /// <param name="start"></param>
         /// <returns>Checksum lsb first, needs to be byte swapped!</returns>
-        public static ushort ComputeRomChecksum( IEnumerable<byte> header, int start = 0 )
+        public static ushort ComputeRomChecksum( IEnumerable<IEnumerable<byte>> banks )
         {
-            int len = start + (int)Header.RomChecksumStart;
-            byte checksum = 0;
-            for( int i = start; i < len; i++ )
-            {
-                checksum += header.ElementAt( i );
-            }
-            // skip global checksum, but accumulate everything else
-            len = header.Count();
-            for( int i = start + (int)Header.RomChecksumEnd + 1; i < len; ++i ) 
-            {
-                checksum += header.ElementAt( i );
-            }
+            ushort checksum = 0;
+
+            var bank0 = banks.ElementAt( 0 );
+
+			foreach( var bank in banks )
+			{
+				foreach( byte b in bank )
+				{
+                    checksum += b;
+                }
+			}
+
+            checksum -= bank0.ElementAt( (int)Header.RomChecksumStart );
+            checksum -= bank0.ElementAt( (int)Header.RomChecksumEnd);
+
             return checksum;
         }
 
@@ -310,9 +313,11 @@ namespace rzr
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
             var hCheck = ComputeHeaderChecksum( m_romBanks[0].mem );
-            var rCheck = ComputeRomChecksum( m_romBanks[0].mem );
+			var rCheck = ComputeRomChecksum( m_romBanks.Select( s => s.mem ) );
 
-            return true;
+            Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
+
+			return true;
         }
 
         private int m_selectedRomBank = 0;
