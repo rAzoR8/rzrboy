@@ -12,23 +12,37 @@ namespace rzr
         public SectionWriteAccessViolationException( ushort address, ISection section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
     }
 
-    public interface ISection
+    public class ISection
     {
-        string Name { get; }
-        ushort StartAddr { get; }
-        ushort Length { get; }
+        public string Name { get; }
+        public ushort StartAddr { get; }
+        public ushort Length { get; }
 
-        IList<byte>? Storage => null;
+        public IList<byte>? Storage { get; set; }
 
-		// direct access for debugger
-		byte Read( ushort address )
+        public ISection( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
+        {
+            StartAddr = start;
+            Length = len;
+            if( alloc ) Storage = new byte[len];
+            Name = $"{start}:{name}";
+        }
+
+        public ISection( ushort start, ushort len, string name, byte[] init ) : this( start, len, name, alloc: true )
+        {
+			var size = (ushort)Math.Min( init.Length, len );
+			if( Storage != null ) Array.Copy( init, Storage as byte[], size );
+		}
+
+        // direct access for debugger
+        public virtual byte Read( ushort address )
 		{
 			if( Storage == null )
 				throw new SectionReadAccessViolationException( address, this );
 			else
 				return Storage[address-StartAddr];
 		}
-		void Write( ushort address, byte value )
+		public virtual void Write( ushort address, byte value )
 		{
 			if( Storage == null )
 				throw new SectionWriteAccessViolationException( address, this );
@@ -37,7 +51,7 @@ namespace rzr
 		}
 
 		// mapped access for emulator, default impl
-		byte this[ushort address]
+		public virtual byte this[ushort address]
         {
             get => Read( address );
             set => Write( address, value );
@@ -52,30 +66,6 @@ namespace rzr
         }
 
         public static string ToString(this ISection sec) { return sec.Name; }
-    }
-
-	public class Section : ISection
-	{
-		public string Name { get; }
-		public ushort StartAddr { get; }
-        public ushort Length { get; }
-
-        public IList<byte>? Storage => mem;
-
-        private byte[] mem;
-        public Section( ushort start, ushort len, string name )
-        {
-            StartAddr = start;
-            Length = len;
-            mem = new byte[len];
-            Name = $"{start}:{name}";
-        }
-
-        public Section( ushort start, ushort len, string name, byte[] init ) : this( start, len, name )
-        {
-            var size = (ushort)Math.Min( init.Length, len );
-            Array.Copy( init, mem, size );
-        }
     }
 
 	public class ProxySection : ISection
