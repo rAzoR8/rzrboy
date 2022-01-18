@@ -6,7 +6,7 @@ namespace rzrboy
 {
     public class MemoryEditor : Grid
     {
-        private rzr.ISection m_section;
+        private rzr.Section m_section;
         private int m_offset;
         private int m_columns;
         private int m_rows;
@@ -15,12 +15,12 @@ namespace rzrboy
 
         private Entry[,] m_cells = null;
 
-        public rzr.ISection Section { get => m_section; set { if ( value != m_section ) { m_section = value; Rebuild(); } } }
+        public rzr.Section Section { get => m_section; set { if ( value != m_section ) { m_section = value; Rebuild(); } } }
         public int Offset { get => m_offset; set { if ( value != m_offset ) { m_offset = value; Rebuild(); } } }
         public int Columns { get => m_columns; set { if ( value != m_columns ) { m_columns = value; Rebuild(); } } }
         public int Rows { get => m_rows; set { if ( value != m_rows ) { m_rows = value; Rebuild(); } } }
 
-        public MemoryEditor( rzr.ISection section, int offset, int columns, int rows )
+        public MemoryEditor( rzr.Section section, int offset, int columns, int rows )
         {
             m_section = section;
             m_offset = offset;

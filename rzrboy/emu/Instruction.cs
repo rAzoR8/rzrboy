@@ -23,7 +23,7 @@ namespace rzr
 	/// </summary>
 	/// <param name="reg"></param>
 	/// <param name="mem"></param>
-	public delegate void Op( Reg reg, ISection mem );
+	public delegate void Op( Reg reg, Section mem );
 
 	/// <summary>
 	/// Mnemonic and operand name for this op
@@ -31,7 +31,7 @@ namespace rzr
 	/// <param name="pc"></param>
 	/// <param name="mem"></param>
 	/// <returns></returns>
-	public delegate string Dis( ref ushort pc, ISection mem );
+	public delegate string Dis( ref ushort pc, Section mem );
 
 	public delegate IEnumerable<Op> ProduceInstruction();
 
@@ -66,12 +66,12 @@ namespace rzr
 
 		public static implicit operator Instruction( ProduceInstruction ops ) { return new Instruction( ops ); }
 
-		public virtual IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
+		public virtual IEnumerable<string> Operands( Ref<ushort> pc, Section mem )
 		{
 			return m_dis.Select( dis => dis( ref pc.Value, mem ) );
 		}
 
-		public string ToString( ref ushort pc, ISection mem )
+		public string ToString( ref ushort pc, Section mem )
 		{
 			Ref<ushort> ref_pc = new( pc );
 			string[] seps = { " ", ", ", "" };

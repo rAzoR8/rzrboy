@@ -35,7 +35,7 @@ namespace rzr
                 }
             }
 
-            public override IEnumerable<string> Operands( Ref<ushort> pc, ISection mem )
+            public override IEnumerable<string> Operands( Ref<ushort> pc, Section mem )
             {
                 byte opcode = mem[pc.Value];
                 Instruction ext = m_extInstructions[opcode];
@@ -375,7 +375,7 @@ namespace rzr
 		/// <param name="pc"></param>
 		/// <param name="bin"></param>
 		/// <returns></returns>
-		public string Disassemble( ref ushort pc, ISection bin )
+		public string Disassemble( ref ushort pc, Section bin )
         {
             byte opcode = bin[pc]; // fetch
             Instruction instr = this[opcode];
@@ -389,7 +389,7 @@ namespace rzr
 			return sb.ToString();
         }
 
-        public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection bin )
+        public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, Section bin )
         {
             ushort prev = (ushort)( from_pc - 1 );
             while ( from_pc < to_pc && prev != from_pc )

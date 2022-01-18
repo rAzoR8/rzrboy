@@ -48,15 +48,15 @@ namespace rzr
         public const ushort RamBankSize = 0x2000; // 8KiB
 
         private const ushort BootRomReg = 0xFF50;
-        private ISection IO;
+        private Section IO;
 
         private bool Booting => IO[BootRomReg] == 0;
 
         private ProxySection m_romProxy;
         private ProxySection m_eramProxy;
 
-        private List<RWSection> m_romBanks = new();
-        private List<RWSection> m_ramBanks = new();
+        private List<Section> m_romBanks = new();
+        private List<Section> m_ramBanks = new();
 
         public enum Header : ushort
         {
@@ -136,14 +136,14 @@ namespace rzr
             get
             {
                 var len = Header.LogoEnd + 1 - Header.LogoStart;
-                return new Span<byte>( m_romBanks[0].mem, (int)Header.LogoStart, (int)len );
+                return new Span<byte>( m_romBanks[0], (int)Header.LogoStart, (int)len );
             }
             set
             {
                 if( value.Length != (int) Header.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)Header.LogoLength} bytes long" );
 
                 var src = value.ToArray();
-                m_romBanks[0].write(
+                m_romBanks[0].Write(
                     src: src,
                     src_offset: 0,
                     dst_offset: (ushort)Header.LogoStart,
@@ -167,7 +167,7 @@ namespace rzr
 
         private void SetHeaderString(Header start, Header len, string str )
         {
-            m_romBanks[0].write(
+            m_romBanks[0].Write(
                src: str.Select( c => (byte)c ).ToArray(),
                src_offset: 0,
                dst_offset: (ushort)start,
@@ -260,7 +260,7 @@ namespace rzr
 
         private Dictionary<CartridgeType, MBC> mbcs = new();
 
-        public Cartridge( ProxySection rom, ProxySection eram, ISection io )
+        public Cartridge( ProxySection rom, ProxySection eram, Section io )
         {
             m_romProxy = rom;
             m_eramProxy = eram;
@@ -285,13 +285,13 @@ namespace rzr
             for( int i = 0; i < cart.Length; i += RomBankSize )
             {
                 RSection bank = new( start: i < RomBankSize ? (ushort)0 : RomBankSize, RomBankSize, $"rom{m_romBanks.Count()}" );
-                bank.write(cart, src_offset: i, dst_offset: 0, RomBankSize);
+                bank.Write(cart, src_offset: i, dst_offset: 0, RomBankSize);
                 m_romBanks.Add( bank );
             }
 
             for ( int i = 0; i < RamBanks; i++ )
             {
-                m_ramBanks.Add( new RWSection( start: 0, RamBankSize, $"ram{m_ramBanks.Count()}" ) );
+                m_ramBanks.Add( new Section( start: 0, RamBankSize, $"ram{m_ramBanks.Count()}" ) );
             }
 
             // TODO: restore ram
@@ -312,8 +312,8 @@ namespace rzr
             Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
-            var hCheck = ComputeHeaderChecksum( m_romBanks[0].mem );
-			var rCheck = ComputeRomChecksum( m_romBanks.Select( s => s.mem ) );
+            var hCheck = ComputeHeaderChecksum( m_romBanks[0].Storage );
+			var rCheck = ComputeRomChecksum( m_romBanks.Select( s => s.Storage ) );
 
             Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
 
