@@ -44,19 +44,11 @@ namespace rzr
 
     public class Cartridge
     {
-        public const ushort RomBankSize = 0x4000; // 16KIB
-        public const ushort RamBankSize = 0x2000; // 8KiB
-
         private const ushort BootRomReg = 0xFF50;
-        private Section IO;
+        private Section IO; // TODO: replace with byte section
+        private Mbc mbc = new();
 
         private bool Booting => IO[BootRomReg] == 0;
-
-        private ProxySection m_romProxy;
-        private ProxySection m_eramProxy;
-
-        private List<Section> m_romBanks = new();
-        private List<Section> m_ramBanks = new();
 
         public enum Header : ushort
         {
@@ -90,16 +82,16 @@ namespace rzr
 
         public byte HeaderChecksum
         {
-            get => m_romBanks[0][(ushort)Header.HeaderChecksum];
-            set => m_romBanks[0][(ushort)Header.HeaderChecksum] = value;
+            get => mbc[(ushort)Header.HeaderChecksum];
+            set => mbc[(ushort)Header.HeaderChecksum] = value;
         }
         public ushort RomChecksum
         {
-            get => binutil.Combine( msb: m_romBanks[0][(ushort)Header.RomChecksumStart], lsb: m_romBanks[0][(ushort)Header.RomChecksumEnd] );
+            get => binutil.Combine( msb: mbc[(ushort)Header.RomChecksumStart], lsb: mbc[(ushort)Header.RomChecksumEnd] );
             set
             {
-                m_romBanks[0][(ushort)Header.RomChecksumStart] = value.GetMsb();
-                m_romBanks[0][(ushort)Header.RomChecksumEnd] = value.GetLsb();
+                mbc[(ushort)Header.RomChecksumStart] = value.GetMsb();
+                mbc[(ushort)Header.RomChecksumEnd] = value.GetLsb();
             }
         }
 
@@ -111,11 +103,11 @@ namespace rzr
 
         public bool Japan
         {
-            get => (byte)DestinationCode.Japan == m_romBanks[0][(ushort)Header.DestinationCode];
-            set => m_romBanks[0][(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
+            get => (byte)DestinationCode.Japan == mbc[(ushort)Header.DestinationCode];
+            set => mbc[(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
         }
 
-        public byte Version { get => m_romBanks[0][(ushort)Header.Version]; set => m_romBanks[0][(ushort)Header.Version] = value; }
+        public byte Version { get => mbc[(ushort)Header.Version]; set => mbc[(ushort)Header.Version] = value; }
 
         public enum SGBFlag
         {
@@ -125,25 +117,25 @@ namespace rzr
 
         public bool SGBSupport
         {
-            get => (byte)SGBFlag.SGBSupport == m_romBanks[0][(ushort)Header.DestinationCode];
-            set => m_romBanks[0][(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
+            get => (byte)SGBFlag.SGBSupport == mbc[(ushort)Header.DestinationCode];
+            set => mbc[(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
         }
 
-        public CartridgeType Type { get => (CartridgeType)m_romBanks[0][(ushort)Header.Type]; set => m_romBanks[0][(ushort)Header.Type] = (byte)value; }
+        public CartridgeType Type { get => (CartridgeType)mbc[(ushort)Header.Type]; set => mbc[(ushort)Header.Type] = (byte)value; }
 
         public Span<byte> Logo
         {
             get
             {
                 var len = Header.LogoEnd + 1 - Header.LogoStart;
-                return new Span<byte>( m_romBanks[0], (int)Header.LogoStart, (int)len );
+                return new Span<byte>( mbc, (int)Header.LogoStart, (int)len );
             }
             set
             {
                 if( value.Length != (int) Header.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)Header.LogoLength} bytes long" );
 
                 var src = value.ToArray();
-                m_romBanks[0].Write(
+                mbc.Write(
                     src: src,
                     src_offset: 0,
                     dst_offset: (ushort)Header.LogoStart,
@@ -157,7 +149,7 @@ namespace rzr
 
             for( var i = start; i <= end; i++ )
             {
-                char c = (char)m_romBanks[0][(ushort)i];
+                char c = (char)mbc[(ushort)i];
                 if( c == 0 ) break;
                 sb.Append( c );
             }
@@ -167,7 +159,7 @@ namespace rzr
 
         private void SetHeaderString(Header start, Header len, string str )
         {
-            m_romBanks[0].Write(
+            mbc.Write(
                src: str.Select( c => (byte)c ).ToArray(),
                src_offset: 0,
                dst_offset: (ushort)start,
@@ -186,29 +178,7 @@ namespace rzr
             set => SetHeaderString( Header.ManufacturerStart, Header.ManufacturerLength, value );
         }
 
-        public int RomBanks 
-        {
-            get => ( 2 << m_romBanks[0][(ushort)Header.RomBanks] );
-            set => m_romBanks[0][(ushort)Header.RomBanks] = (byte)( value >> 2 );
-        }
 
-        public int RamBanks
-        {
-            get
-            {
-                byte banks = m_romBanks[0][(ushort)Header.RamBanks];
-                switch ( banks )
-                {
-                    case 0: return 0;
-                    case 1: return 0; // unused
-                    case 2: return 1;
-                    case 3: return 4;
-                    case 4: return 16;
-                    case 5: return 8;
-                    default: throw new ArgumentOutOfRangeException("Unknown ram bank specifier");
-                }
-            }
-        }
 
         public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
         {
@@ -262,8 +232,6 @@ namespace rzr
 
         public Cartridge( ProxySection rom, ProxySection eram, Section io )
         {
-            m_romProxy = rom;
-            m_eramProxy = eram;
             IO = io;
 
             mbcs.Add( CartridgeType.ROM_ONLY, new MBC() { romRead = MBC0ReadRomOnly } );
@@ -271,20 +239,11 @@ namespace rzr
 
         public bool Load( byte[] cart )
         {
-            m_romBanks.Clear();
-            m_ramBanks.Clear();
-            m_selectedRamBank = 0;
-            m_selectedRomBank = 0;
-            m_ramEnabled = false;
-            m_bankingMode = default;
-
-            m_primaryRomBank = 0;
-            m_selectedRomBank = 0;
 
             // copy cartridge data
             for( int i = 0; i < cart.Length; i += RomBankSize )
             {
-                RSection bank = new( start: i < RomBankSize ? (ushort)0 : RomBankSize, RomBankSize, $"rom{m_romBanks.Count()}" );
+                Section bank = new( start: i < RomBankSize ? (ushort)0 : RomBankSize, RomBankSize, $"rom{m_romBanks.Count()}" );
                 bank.Write(cart, src_offset: i, dst_offset: 0, RomBankSize);
                 m_romBanks.Add( bank );
             }
@@ -312,7 +271,7 @@ namespace rzr
             Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
-            var hCheck = ComputeHeaderChecksum( m_romBanks[0].Storage );
+            var hCheck = ComputeHeaderChecksum( mbc.Storage );
 			var rCheck = ComputeRomChecksum( m_romBanks.Select( s => s.Storage ) );
 
             Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
@@ -320,62 +279,9 @@ namespace rzr
 			return true;
         }
 
-        private int m_selectedRomBank = 0;
-        private int m_selectedRamBank = 0;
-        private bool m_ramEnabled = false;
 
-        enum BankingMode : int
-        {
-            SimpleRomBanking = 0, 
-            RamBanking = 1
-        }
 
-        private BankingMode m_bankingMode = default;
 
-        private int m_primaryRomBank = 0;
-        private int m_secondaryRomBank = 0;
 
-        private byte MBC0ReadRomOnly( ushort address )
-        {
-            if ( Booting )
-            {
-                if ( address < 0x100 ) return boot.DMG[address];
-            }
-            return m_romBanks[m_selectedRomBank][address];
-        }
-
-        private byte MBC1ReadRam( ushort address )
-        {
-            return m_ramBanks[m_selectedRamBank][address];
-        }
-
-        private void MBC1WriteRam( ushort address, byte value )
-        {
-            m_ramBanks[m_selectedRamBank][address] = value;
-        }
-
-        private void MBC1RegWrite( ushort address, byte value )
-        {
-            if ( address >= 0x0000 && address <= 0x1FFF ) // enable ram
-            {
-                m_ramEnabled = ( value & 0b1111 ) == 0xA;
-                return;
-            }
-            else if ( address >= 0x2000 && address <= 0x3FFF ) // rom bank number lower 5 bits
-            {
-                m_primaryRomBank = (byte)( value & 0b11111 );
-            }
-            else if ( address >= 0x4000 && address <= 0x5FFF ) // rom bank number upper 2 bits
-            {
-                m_secondaryRomBank = (byte)( value & 0b11 );
-            }
-            else if ( address >= 0x6000 && address <= 0x7FFF ) // banking mode select
-            {
-                m_bankingMode = (BankingMode)( ( value & 0b1 ) );
-            }
-
-            m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % RomBanks;
-            Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{m_selectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
-        }
     }
 }

@@ -36,6 +36,13 @@ namespace rzr
 			if( Storage != null ) Array.Copy( init, Storage as byte[], size );
 		}
 
+        public virtual bool Contains(ushort address )
+        {
+            return address >= StartAddr && address < ( StartAddr + Length );
+        }
+
+        public override string ToString() { return Name; }
+
         // direct access for debugger
         public virtual byte Read( ushort address )
 		{
@@ -64,16 +71,6 @@ namespace rzr
             len = len != 0 ? Math.Min( len, (ushort)src.Length ) : (ushort)src.Length;
             Array.Copy( src, src_offset, this, dst_offset, len );
         }
-    }
-
-    public static class SectionExtensions
-    {
-        public static bool Contains(this Section section, ushort address)
-        {
-            return address >= section.StartAddr && address < (section.StartAddr + section.Length);
-        }
-
-        public static string ToString(this Section sec) { return sec.Name; }
     }
 
 	public class ProxySection : Section
@@ -265,23 +262,5 @@ namespace rzr
 		public  override byte this[ushort address] { get => Value; set => Value = value; }
 
         public static implicit operator byte( ByteSection sec ) { return sec.Value; }
-    }
-
-    public class RSection : Section
-    {
-        public RSection(ushort start, ushort len, string name) : base(start, len, name){}
-
-        public RSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
-
-        public override byte this[ushort address] { get => base[(ushort)(address - StartAddr)]; }
-    }
-
-    public class WSection : Section
-    {
-        public WSection(ushort start, ushort len, string name) : base(start, len, name) { }
-
-        public WSection(ushort start, ushort len, string name, byte[] init) : base(start, len, name, init) { }
-
-        public override byte this[ushort address] { set => base[(ushort)(address - StartAddr)] = value; }
     }
 }
