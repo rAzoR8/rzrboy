@@ -19,16 +19,18 @@ namespace rzr
 
         public override IList<byte>? Storage => m_rom;
 
+        protected HeaderView m_header;
+
         public Mbc( byte[] rom ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
 		{
-			int romBanks = 2 << rom[(ushort)Cartridge.Header.RomBanks];
+            m_header = new( rom );
 
-			m_rom = new byte[RomBankSize * romBanks];
+			m_rom = new byte[RomBankSize * m_header.RomBanks];
 
 			Debug.Assert( m_rom.Length != rom.Length );
 			Array.Copy( sourceArray: rom, destinationArray: m_rom, m_rom.Length );
 
-			m_ram = new byte[RamBankSize * RamBanks];
+			m_ram = new byte[RamBankSize * m_header.RamBanks];
 		}
 
 		public override bool Contains( ushort address )
@@ -47,12 +49,12 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
                 }
                 else // ram, TODO: m_ramEnabled
                 {
-                    var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRamBank * m_header.RamBanks ) + address - StartAddr;
                     return m_ram[bankAdr];
                 }
             }
@@ -60,37 +62,13 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
                     m_rom[bankAdr] = value;
                 }
                 else // ram, TODO: m_ramEnabled
                 {
-                    var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRamBank * m_header.RamBanks ) + address - StartAddr;
                     m_ram[bankAdr] = value;
-                }
-            }
-        }
-
-        public int RomBanks
-        {
-            get => ( 2 << this[(ushort)Cartridge.Header.RomBanks] );
-            set => this[(ushort)Cartridge.Header.RomBanks] = (byte)( value >> 2 );
-        }
-
-        public int RamBanks
-        {
-            get
-            {
-                byte banks = this[(ushort)Cartridge.Header.RamBanks];
-                switch( banks )
-                {
-                    case 0: return 0;
-                    case 1: return 0; // unused
-                    case 2: return 1;
-                    case 3: return 4;
-                    case 4: return 16;
-                    case 5: return 8;
-                    default: throw new ArgumentOutOfRangeException( "Unknown ram bank specifier" );
                 }
             }
         }
@@ -138,7 +116,7 @@ namespace rzr
                     base[address] = value;
                 }
 
-                m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % RomBanks;
+                m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % m_header.RomBanks;
                 Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{m_selectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
             }
         }
