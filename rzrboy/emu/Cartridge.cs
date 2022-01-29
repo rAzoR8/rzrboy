@@ -46,7 +46,7 @@ namespace rzr
     {
         private const ushort BootRomReg = 0xFF50;
         private Section IO; // TODO: replace with byte section
-        private Mbc mbc = new();
+        public Mbc Mbc { get; private set; }
 
         private bool Booting => IO[BootRomReg] == 0;
 
@@ -82,16 +82,16 @@ namespace rzr
 
         public byte HeaderChecksum
         {
-            get => mbc[(ushort)Header.HeaderChecksum];
-            set => mbc[(ushort)Header.HeaderChecksum] = value;
+            get => Mbc[(ushort)Header.HeaderChecksum];
+            set => Mbc[(ushort)Header.HeaderChecksum] = value;
         }
         public ushort RomChecksum
         {
-            get => binutil.Combine( msb: mbc[(ushort)Header.RomChecksumStart], lsb: mbc[(ushort)Header.RomChecksumEnd] );
+            get => binutil.Combine( msb: Mbc[(ushort)Header.RomChecksumStart], lsb: Mbc[(ushort)Header.RomChecksumEnd] );
             set
             {
-                mbc[(ushort)Header.RomChecksumStart] = value.GetMsb();
-                mbc[(ushort)Header.RomChecksumEnd] = value.GetLsb();
+                Mbc[(ushort)Header.RomChecksumStart] = value.GetMsb();
+                Mbc[(ushort)Header.RomChecksumEnd] = value.GetLsb();
             }
         }
 
@@ -103,11 +103,11 @@ namespace rzr
 
         public bool Japan
         {
-            get => (byte)DestinationCode.Japan == mbc[(ushort)Header.DestinationCode];
-            set => mbc[(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
+            get => (byte)DestinationCode.Japan == Mbc[(ushort)Header.DestinationCode];
+            set => Mbc[(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
         }
 
-        public byte Version { get => mbc[(ushort)Header.Version]; set => mbc[(ushort)Header.Version] = value; }
+        public byte Version { get => Mbc[(ushort)Header.Version]; set => Mbc[(ushort)Header.Version] = value; }
 
         public enum SGBFlag
         {
@@ -117,25 +117,25 @@ namespace rzr
 
         public bool SGBSupport
         {
-            get => (byte)SGBFlag.SGBSupport == mbc[(ushort)Header.DestinationCode];
-            set => mbc[(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
+            get => (byte)SGBFlag.SGBSupport == Mbc[(ushort)Header.DestinationCode];
+            set => Mbc[(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
         }
 
-        public CartridgeType Type { get => (CartridgeType)mbc[(ushort)Header.Type]; set => mbc[(ushort)Header.Type] = (byte)value; }
+        public CartridgeType Type { get => (CartridgeType)Mbc[(ushort)Header.Type]; set => Mbc[(ushort)Header.Type] = (byte)value; }
 
         public Span<byte> Logo
         {
             get
             {
                 var len = Header.LogoEnd + 1 - Header.LogoStart;
-                return new Span<byte>( mbc, (int)Header.LogoStart, (int)len );
+                return new Span<byte>( Mbc, (int)Header.LogoStart, (int)len );
             }
             set
             {
                 if( value.Length != (int) Header.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)Header.LogoLength} bytes long" );
 
                 var src = value.ToArray();
-                mbc.Write(
+                Mbc.Write(
                     src: src,
                     src_offset: 0,
                     dst_offset: (ushort)Header.LogoStart,
@@ -149,7 +149,7 @@ namespace rzr
 
             for( var i = start; i <= end; i++ )
             {
-                char c = (char)mbc[(ushort)i];
+                char c = (char)Mbc[(ushort)i];
                 if( c == 0 ) break;
                 sb.Append( c );
             }
@@ -159,7 +159,7 @@ namespace rzr
 
         private void SetHeaderString(Header start, Header len, string str )
         {
-            mbc.Write(
+            Mbc.Write(
                src: str.Select( c => (byte)c ).ToArray(),
                src_offset: 0,
                dst_offset: (ushort)start,
@@ -177,8 +177,6 @@ namespace rzr
             get => GetHeaderString( Header.ManufacturerStart, Header.ManufacturerEnd );
             set => SetHeaderString( Header.ManufacturerStart, Header.ManufacturerLength, value );
         }
-
-
 
         public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
         {
@@ -200,88 +198,53 @@ namespace rzr
         /// <param name="header"></param>
         /// <param name="start"></param>
         /// <returns>Checksum lsb first, needs to be byte swapped!</returns>
-        public static ushort ComputeRomChecksum( IEnumerable<IEnumerable<byte>> banks )
+        public static ushort ComputeRomChecksum( IEnumerable<byte> banks )
         {
             ushort checksum = 0;
 
-            var bank0 = banks.ElementAt( 0 );
-
-			foreach( var bank in banks )
+			foreach( byte b in banks )
 			{
-				foreach( byte b in bank )
-				{
-                    checksum += b;
-                }
+				checksum += b;
 			}
 
-            checksum -= bank0.ElementAt( (int)Header.RomChecksumStart );
-            checksum -= bank0.ElementAt( (int)Header.RomChecksumEnd);
+			checksum -= banks.ElementAt( (int)Header.RomChecksumStart );
+            checksum -= banks.ElementAt( (int)Header.RomChecksumEnd);
 
             return checksum;
         }
 
-        private struct MBC
+        public int RomBanks
         {
-            public ReadFunc romRead = ( ushort addr ) => 0xff;
-            public WriteFunc mbcRegWrite = ( ushort addr, byte value ) => { };
-            public ReadFunc ramRead = ( ushort addr ) => 0xff;
-            public WriteFunc ramWrite = ( ushort addr, byte value ) => { };
+            get => ( 2 << Mbc[(ushort)Header.RomBanks] );
+            set => Mbc[(ushort)Header.RomBanks] = (byte)( value >> 2 );
         }
 
-        private Dictionary<CartridgeType, MBC> mbcs = new();
+        public int RamBanks
+        {
+            get => Mbc.RamBanks;
+        }
 
-        public Cartridge( ProxySection rom, ProxySection eram, Section io )
+        public Cartridge( Section io )
         {
             IO = io;
-
-            mbcs.Add( CartridgeType.ROM_ONLY, new MBC() { romRead = MBC0ReadRomOnly } );
         }
 
         public bool Load( byte[] cart )
         {
-
-            // copy cartridge data
-            for( int i = 0; i < cart.Length; i += RomBankSize )
-            {
-                Section bank = new( start: i < RomBankSize ? (ushort)0 : RomBankSize, RomBankSize, $"rom{m_romBanks.Count()}" );
-                bank.Write(cart, src_offset: i, dst_offset: 0, RomBankSize);
-                m_romBanks.Add( bank );
-            }
-
-            for ( int i = 0; i < RamBanks; i++ )
-            {
-                m_ramBanks.Add( new Section( start: 0, RamBankSize, $"ram{m_ramBanks.Count()}" ) );
-            }
+			Mbc = new Mbc( cart );
 
             // TODO: restore ram
-
-            // switch MBC:
-
-            if ( mbcs.TryGetValue( Type, out var mbc ) )
-            {
-                m_romProxy.Source = new RWInterceptSection( mbc.romRead, mbc.mbcRegWrite, "rom", 0, RomBankSize * 2 );
-                m_eramProxy.Source = new RWInterceptSection( mbc.ramRead, mbc.ramWrite, "eram", 0xA000, RamBankSize );
-            }
-            else
-            {
-                return false;
-            }
 
             Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{cart.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
             Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
-            var hCheck = ComputeHeaderChecksum( mbc.Storage );
-			var rCheck = ComputeRomChecksum( m_romBanks.Select( s => s.Storage ) );
+            var hCheck = ComputeHeaderChecksum( Mbc.Rom() );
+			var rCheck = ComputeRomChecksum( Mbc.Rom() );
 
             Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
 
 			return true;
         }
-
-
-
-
-
     }
 }

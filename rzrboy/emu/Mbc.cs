@@ -14,7 +14,10 @@ namespace rzr
 		private int m_selectedRamBank = 0;
 		private bool m_ramEnabled = false;
 
-		public Mbc( byte[] rom ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
+        public byte[] Ram() => m_ram;
+        public byte[] Rom() => m_rom;
+
+        public Mbc( byte[] rom ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
 		{
 			int romBanks = 2 << rom[(ushort)Cartridge.Header.RomBanks];
 
