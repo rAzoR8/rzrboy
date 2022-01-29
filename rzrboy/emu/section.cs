@@ -43,27 +43,23 @@ namespace rzr
 
         public override string ToString() { return Name; }
 
-        // direct access for debugger
-        public virtual byte Read( ushort address )
-		{
-			if( Storage == null )
-				throw new SectionReadAccessViolationException( address, this );
-			else
-				return Storage[address-StartAddr];
-		}
-		public virtual void Write( ushort address, byte value )
-		{
-			if( Storage == null )
-				throw new SectionWriteAccessViolationException( address, this );
-			else
-				Storage[address-StartAddr] = value;
-		}
-
 		// mapped access for emulator, default impl
 		public virtual byte this[ushort address]
         {
-            get => Read( address );
-            set => Write( address, value );
+            get
+            {
+                if( Storage != null )
+                    return Storage[address - StartAddr];
+                else
+                    throw new SectionReadAccessViolationException( address, this );
+            }
+            set
+            {
+                if( Storage != null )
+                    Storage[address - StartAddr] = value;
+                else
+                    throw new SectionWriteAccessViolationException( address, this );
+            }
         }
 
         public void Write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
@@ -180,25 +176,27 @@ namespace rzr
         public List<OnRead> ReadCallbacks { get; } = new();
         public List<OnWrite> WriteCallbacks { get; } = new();
 
-		public override byte Read( ushort address )
-		{
-			Section section = Find( address );
-			foreach( OnRead onRead in ReadCallbacks )
-			{
-				onRead( section, address );
-			}
-			return section[address];
-		}
-
-		public override void Write( ushort address, byte val )
-		{
-			Section section = Find( address );
-			section[address] = val;
-			foreach( OnWrite onWrite in WriteCallbacks )
-			{
-				onWrite( section, address, val );
-			}
-		}
+        public override byte this[ushort address]
+        {
+            get
+            {
+                Section section = Find( address );
+                foreach( OnRead onRead in ReadCallbacks )
+                {
+                    onRead( section, address );
+                }
+                return section[address];
+            }
+            set
+            {
+                Section section = Find( address );
+                section[address] = value;
+                foreach( OnWrite onWrite in WriteCallbacks )
+                {
+                    onWrite( section, address, value );
+                }
+            }
+        }
 	}
 
     public class ByteSection : Section

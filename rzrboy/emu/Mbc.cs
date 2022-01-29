@@ -39,40 +39,36 @@ namespace rzr
                 address < 0xC000 ); // eram
         }
 
-		public override byte Read( ushort address )
-        {
-            if( address < 0x8000 )
-            {
-                var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
-                return m_rom[bankAdr];
-            }
-            else
-            {
-                var bankAdr = (m_selectedRamBank * RamBanks) + address - StartAddr;
-                return m_ram[bankAdr];
-            }
-        }
-        public override void Write( ushort address, byte value )
-        {
-            if( address < 0x8000 )
-            {
-                var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
-                m_rom[bankAdr] = value;
-            }
-            else
-            {
-                var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
-                m_ram[bankAdr] = value;
-            }
-        }
-
         // mapped access for emulator, default impl
         public override byte this[ushort address]
         {
-            get => Read( address );
-            set => Write( address, value );
+            get
+            {
+                if( address < 0x8000 ) // rom
+                {
+                    var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                    return m_rom[bankAdr];
+                }
+                else // ram
+                {
+                    var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
+                    return m_ram[bankAdr];
+                }
+            }
+            set
+            {
+                if( address < 0x8000 ) // rom
+                {
+                    var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                    m_rom[bankAdr] = value;
+                }
+                else // ram
+                {
+                    var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
+                    m_ram[bankAdr] = value;
+                }
+            }
         }
-
 
         enum BankingMode : int
 		{
