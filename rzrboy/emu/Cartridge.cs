@@ -44,11 +44,7 @@ namespace rzr
 
     public class Cartridge
     {
-        private const ushort BootRomReg = 0xFF50;
-        private Section IO; // TODO: replace with byte section
         public Mbc Mbc { get; private set; }
-
-        private bool Booting => IO[BootRomReg] == 0;
 
         public enum Header : ushort
         {
@@ -224,9 +220,11 @@ namespace rzr
             get => Mbc.RamBanks;
         }
 
-        public Cartridge( Section io )
+        public static implicit operator Section( Cartridge cart) { return cart.Mbc;  } 
+
+        public Cartridge( )
         {
-            IO = io;
+            Mbc = new Mbc( new byte[0x8000] );
         }
 
         public bool Load( byte[] cart )

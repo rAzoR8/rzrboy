@@ -17,6 +17,8 @@ namespace rzr
         public byte[] Ram() => m_ram;
         public byte[] Rom() => m_rom;
 
+        public override IList<byte>? Storage => m_rom;
+
         public Mbc( byte[] rom ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
 		{
 			int romBanks = 2 << rom[(ushort)Cartridge.Header.RomBanks];
@@ -34,16 +36,34 @@ namespace rzr
             return
                 address < 0x8000 || // roms
                 ( address > 0x9FFF && // 0x8000-0x9FFF vram
-                address < 0xC000 );
+                address < 0xC000 ); // eram
         }
 
 		public override byte Read( ushort address )
         {
-            return m_rom[address - StartAddr];
+            if( address < 0x8000 )
+            {
+                var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                return m_rom[bankAdr];
+            }
+            else
+            {
+                var bankAdr = (m_selectedRamBank * RamBanks) + address - StartAddr;
+                return m_ram[bankAdr];
+            }
         }
         public override void Write( ushort address, byte value )
         {
-            m_rom[address - StartAddr] = value;
+            if( address < 0x8000 )
+            {
+                var bankAdr = ( m_selectedRomBank * RomBanks ) + address - StartAddr;
+                m_rom[bankAdr] = value;
+            }
+            else
+            {
+                var bankAdr = ( m_selectedRamBank * RamBanks ) + address - StartAddr;
+                m_ram[bankAdr] = value;
+            }
         }
 
         // mapped access for emulator, default impl

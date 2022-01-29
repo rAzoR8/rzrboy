@@ -402,7 +402,7 @@ namespace rzr
         // TODO: remove
         private void DebugReport( ushort expected )
         {
-            Mem mem = new();
+            Mem mem = new( new Section(0, Mem.RomBankSize * 2 ) );
 
             int count = 1; // 0xCB
 

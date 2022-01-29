@@ -23,15 +23,15 @@ namespace rzr
 
 		public Boy()
 		{
-			reg = new Reg();
-			mem = new Mem();
+            cart = new Cartridge();
+
+            reg = new Reg();
+			mem = new Mem( cart );
 			isa = new Isa();
 
 			cpu = new Cpu( reg, mem, isa );
 			ppu = new Ppu( mem );
 			apu = new Apu( mem );
-
-			cart = new Cartridge( mem.rom, mem.eram, mem.io );
 		}
 
 		public Boy(byte[] cart)  : this()

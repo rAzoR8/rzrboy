@@ -73,21 +73,6 @@ namespace rzr
         }
     }
 
-	public class ProxySection : Section
-    {
-        public Section Source { get; set; }
-        public ProxySection(Section src) { Source = src; }
-
-        public string Name => $"({Source.Name})*";
-        public ushort StartAddr => Source.StartAddr;
-        public ushort Length => Source.Length;
-        public byte this[ushort address]
-        {
-            get => Source[address];
-            set => Source[address] = value;
-        }
-	}
-
     public class CombiSection : Section
     {
         public Section Low { get; set; }
@@ -111,30 +96,6 @@ namespace rzr
     public delegate byte ReadFunc( ushort address );
     public delegate void WriteFunc( ushort address, byte value );
 
-    public class RWInterceptSection : Section
-    {
-        public ReadFunc Read { get; set; }
-        public WriteFunc Write { get; set; }
-
-        public RWInterceptSection( ReadFunc read, WriteFunc write, string name, ushort start, ushort length )
-        {
-            Read = read;
-            Write = write;
-            Name = name;
-            StartAddr = start;
-            Length = length;
-        }
-
-        public string Name { get; }
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
-        {
-            get => Read(address);
-            set => Write(address,value);
-        }
-    }
-
     public class RemapSection : Section
     {
         public delegate ushort MapFunc(ushort address);
@@ -142,18 +103,18 @@ namespace rzr
 
         public MapFunc Map { get; set; } = Identity;
         public Section Source { get; set; }
-        public RemapSection(MapFunc map, ushort start, ushort len, Section src = null)
-        {
-            Map = map;
-            Source = src;
-            StartAddr = start;
-            Length = len;
-        }
+		public RemapSection( MapFunc map, ushort start, ushort len, Section src = null )
+		{
+			Map = map;
+			Source = src;
+			StartAddr = start;
+			Length = len;
+		}
 
-        public string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
+		public override string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
+        public override ushort StartAddr { get; }
+        public override ushort Length { get; }
+        public override byte this[ushort address]
         {
             get => Source[Map(address)];
             set => Source[Map(address)] = value;
@@ -175,29 +136,32 @@ namespace rzr
 
     public class ListSection : Section
     {
-        private List<Section> sections = new();
-
-        public override ushort StartAddr => sections.First().StartAddr;
-        public override ushort Length => (ushort)sections.Sum( s => s.Length );
-
-        public void Add(Section section)
+        private class Entry
         {
-            sections.Add(section);
+            public Entry( Section sec, ushort start ) { Section = sec; Start = start; }
+            public Section Section;
+            public ushort Start;
+        }
+        private List<Entry> m_sections = new();
+
+        protected void Add( Section section, ushort start )
+        {
+            m_sections.Add( new( section, start ) );
         }
 
-        private Section Find(ushort address)
+        private Section Find( ushort address )
         {
             int min = 0;
-            int max = sections.Count - 1;
+            int max = m_sections.Count - 1;
 
-            while (min <= max)
+            while( min <= max )
             {
-                int mid = (min + max) / 2;
-                if (sections[mid].Contains(address))
+                int mid = ( min + max ) / 2;
+                if( m_sections[mid].Section.Contains( address ) )
                 {
-                    return sections[mid];
+                    return m_sections[mid].Section;
                 }
-                else if (address < sections[mid].StartAddr)
+                else if( address < m_sections[mid].Start )
                 {
                     max = mid - 1;
                 }
@@ -207,7 +171,7 @@ namespace rzr
                 }
             }
 
-            throw new AddressNotMappedException(address);
+            throw new AddressNotMappedException( address );
         }
 
         public delegate void OnRead(Section section, ushort address);
