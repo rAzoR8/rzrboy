@@ -49,11 +49,13 @@ namespace rzr
         public static implicit operator Section( Cartridge cart) { return cart.Mbc; }
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 
-        public Cartridge( )
+        public Cartridge( ) // empty cart
         {
-        }
+			Mbc = new();
+			Header = new( Mbc );
+		}
 
-        public bool Load( byte[] cart, BootRom boot )
+        public bool Load( byte[] cart, BootRom? boot )
         {
             Header = new( cart );
 
@@ -120,7 +122,7 @@ namespace rzr
 			}
 
             // TODO: restore ram
-			return true;
+			return Header.Valid();
         }
     }
 }

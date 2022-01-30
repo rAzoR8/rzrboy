@@ -7,8 +7,7 @@ namespace rzrboy
 {
 	public class App : Application
 	{
-		//private emu.gb gb = new emu.gb( new byte[0x8000] /*"game.rom"*/);
-		private rzr.Boy gb = new rzr.Boy( "C:\\Users\\razor\\Desktop\\roms\\game.gb" );
+		private rzr.Boy gb = new rzr.Boy( "C:\\Users\\razor\\Desktop\\roms\\game.gb", "C:\\Users\\razor\\Desktop\\roms\\boot.bin" );
 
 		public App()
 		{

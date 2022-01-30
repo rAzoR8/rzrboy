@@ -44,15 +44,20 @@ namespace rzr
         public HeaderView( byte[] data )
         {
             m_data = data;
+        }
 
-            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{data.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
+        public bool Valid() 
+        {
+            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{m_data.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
             Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
             Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
 
-            var hCheck = ComputeHeaderChecksum( data );
-            var rCheck = ComputeRomChecksum( data );
+            var hCheck = ComputeHeaderChecksum( m_data );
+            var rCheck = ComputeRomChecksum( m_data );
 
             Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
+
+            return hCheck == HeaderChecksum && rCheck == RomChecksum;
         }
 
         public byte HeaderChecksum

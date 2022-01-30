@@ -34,29 +34,53 @@ namespace rzr
 			apu = new Apu( mem );
 		}
 
-		public Boy(byte[] cart)  : this()
+		public Boy(byte[] cart, byte[]? boot)  : this()
         {
-            LoadCart( cart );
+            LoadCart( cart, boot );
         }
 
-        public Boy( string cartPath ) : this()
+        public Boy( string cartPath, string bootRomPath ) : this()
         {
             byte[] data;
+            byte[]? boot = null;
             try
             {
                 data = File.ReadAllBytes( cartPath );
-            }
+
+				if( bootRomPath != null )
+				{
+					boot = File.ReadAllBytes( bootRomPath );
+				}
+			}
             catch ( Exception )
             {
                 data = new byte[0x8000];
             }
 
-            LoadCart( data );
+            LoadCart( data, boot );
         }
 
-        public bool LoadCart( byte[] cartData )
+        public bool LoadCart( byte[] cartData, byte[]? boot )
         {
-            return cart.Load( cartData, new BootRom( mem.io, Boot.DMG, (0, 0x100) ) );
+            BootRom ?brom = null;
+
+            if( boot != null )
+            {
+                if( boot.Length == 0x100 ) // dmg
+                {
+                    brom = new BootRom( mem.io, boot, (0, 0x100) );
+                }
+                else if (boot.Length == 0x800 ) // cgb
+                {
+                    brom = new BootRom( mem.io, boot, (0, 0x100), (0x200, 0x900) );
+				}
+				else // unknown,map everything and hope for the best
+                {
+                    brom = new BootRom( mem.io, boot, (0, (ushort)boot.Length) );
+                }
+            }
+
+            return cart.Load( cartData, brom );
         }
 
         public async Task<ulong> Execute( CancellationToken token = default )
