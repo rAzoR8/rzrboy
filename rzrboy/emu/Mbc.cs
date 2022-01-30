@@ -2,6 +2,33 @@
 
 namespace rzr
 {
+    public class BootRom 
+    {
+        public readonly byte[] Rom;
+        private (ushort start, ushort len)[] m_ranges;
+
+        private Section m_io;
+        private bool Booting => m_io[0xFF50] == 0;
+
+        public BootRom( Section io, byte[] data, params (ushort start, ushort len)[] ranges )
+        {
+            m_io = io;
+            Rom = data;
+            m_ranges = ranges;
+        }
+
+        public bool Accepts( ushort address ) 
+        {
+            if ( Booting == false ) return false;
+			foreach( (ushort start, ushort len) in m_ranges )
+			{
+                if(address >= start && address < start + len)
+                    return true;
+			}
+            return false;
+        }
+    }
+
 	public class Mbc : Section
 	{
         public const ushort RomBankSize = 0x4000; // 16KIB
@@ -20,12 +47,14 @@ namespace rzr
         public override IList<byte>? Storage => m_rom;
 
         protected HeaderView m_header;
+        private BootRom m_boot;
 
-        public Mbc( byte[] rom ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
+        public Mbc( byte[] rom, BootRom boot ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
 		{
             m_header = new( rom );
+            m_boot = boot;
 
-			m_rom = new byte[RomBankSize * m_header.RomBanks];
+            m_rom = new byte[RomBankSize * m_header.RomBanks];
 
 			Debug.Assert( m_rom.Length != rom.Length );
 			Array.Copy( sourceArray: rom, destinationArray: m_rom, m_rom.Length );
@@ -49,6 +78,9 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
+                    if( m_boot != null && m_boot.Accepts(address) )
+                        return m_boot.Rom[address];
+
                     var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
                 }
@@ -87,7 +119,7 @@ namespace rzr
         private int m_primaryRomBank = 0;
         private int m_secondaryRomBank = 0;
 
-        public Mbc1( byte[] rom ) : base( rom )
+        public Mbc1( byte[] rom, BootRom boot ) : base( rom, boot )
 		{
 		}
 

@@ -53,19 +53,19 @@ namespace rzr
         {
         }
 
-        public bool Load( byte[] cart )
+        public bool Load( byte[] cart, BootRom boot )
         {
             Header = new( cart );
 
 			switch( Header.Type )
 			{
 				case CartridgeType.ROM_ONLY:
-					Mbc = new( cart );
+					Mbc = new( cart, boot );
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_RAM:
 				case CartridgeType.MBC1_RAM_BATTERY:
-					Mbc = new Mbc1( cart );
+					Mbc = new Mbc1( cart, boot );
 					break;
 				case CartridgeType.MBC2:
 					break;

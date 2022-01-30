@@ -29,8 +29,6 @@ namespace rzr
         public Section hram { get; } = new(0xFF80, HRamSize, "ram");
         public ByteSection IE { get; } = new(0xFFFF, val: 0, name: "IE");
 
-        private bool Booting => io[0xFF50] == 0;
-
 
         // helper sections:
         public CombiSection wram { get; }

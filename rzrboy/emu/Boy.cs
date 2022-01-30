@@ -56,7 +56,7 @@ namespace rzr
 
         public bool LoadCart( byte[] cartData )
         {
-            return cart.Load( cartData );
+            return cart.Load( cartData, new BootRom( mem.io, Boot.DMG, (0, 0x100) ) );
         }
 
         public async Task<ulong> Execute( CancellationToken token = default )
