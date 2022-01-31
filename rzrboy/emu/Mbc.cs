@@ -7,19 +7,36 @@ namespace rzr
         public readonly byte[] Rom;
         private (ushort start, ushort len)[] m_ranges;
 
-        private Section m_io;
-        private bool Booting => m_io[0xFF50] == 0;
+        public delegate bool IsBooting();
 
-        public BootRom( Section io, byte[] data, params (ushort start, ushort len)[] ranges )
+        private IsBooting m_booting;
+
+        public BootRom( IsBooting booting, byte[] data, params (ushort start, ushort len)[] ranges )
         {
-            m_io = io;
+            m_booting = booting;
             Rom = data;
             m_ranges = ranges;
+
+            if( m_ranges == null || m_ranges.Count() == 0 )
+            {
+                if( data.Length == 0x100 ) // dmg
+                {
+                    m_ranges = new (ushort, ushort)[] { (0, 0x100) };
+                }
+                else if( data.Length == 0x800 ) // cgb
+                {
+                    m_ranges = new (ushort, ushort)[] { (0, 0x100), (0x200, 0x900) };
+                }
+                else // unknown,map everything and hope for the best
+                {
+                    m_ranges = new (ushort, ushort)[] { (0, (ushort)data.Length) };
+                }
+            }
         }
 
         public bool Accepts( ushort address ) 
         {
-            if ( Booting == false ) return false;
+            if ( m_booting() == false ) return false;
 			foreach( (ushort start, ushort len) in m_ranges )
 			{
                 if(address >= start && address < start + len)
@@ -47,7 +64,7 @@ namespace rzr
         public override IList<byte>? Storage => m_rom;
 
         protected HeaderView m_header;
-        private BootRom? m_boot;
+        public BootRom? BootRom { get; set; }
 
         public Mbc()
         {
@@ -56,14 +73,15 @@ namespace rzr
             m_header = new HeaderView( m_rom );
         }
 
-        public Mbc( byte[] rom, BootRom? boot ) : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
+        public Mbc( byte[] rom, BootRom? boot = null )
+            : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
 		{
-            m_header = new( rom );
-            m_boot = boot;
+            BootRom = boot;
 
-            m_rom = new byte[RomBankSize * m_header.RomBanks];
+            m_rom = new byte[rom.Length];
+            m_header = new( m_rom );
 
-			Debug.Assert( m_rom.Length == rom.Length );
+			Debug.Assert( m_rom.Length == RomBankSize * m_header.RomBanks );
 			Array.Copy( sourceArray: rom, destinationArray: m_rom, m_rom.Length );
 
 			m_ram = new byte[RamBankSize * m_header.RamBanks];
@@ -85,8 +103,8 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-					if( m_boot != null && m_boot.Accepts( address ) )
-						return m_boot.Rom[address];
+					if( BootRom != null && BootRom.Accepts( address ) )
+						return BootRom.Rom[address];
 
 					var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
@@ -126,7 +144,7 @@ namespace rzr
         private int m_primaryRomBank = 0;
         private int m_secondaryRomBank = 0;
 
-        public Mbc1( byte[] rom, BootRom? boot ) : base( rom, boot )
+        public Mbc1( byte[] rom ) : base( rom )
 		{
 		}
 

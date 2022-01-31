@@ -21,9 +21,9 @@ namespace rzr
 
         public List<Callback> StepCallbacks { get; } = new();
 
-		public Boy()
+		public Boy( byte[] cartData, byte[]? bootData )
 		{
-            cart = new Cartridge();
+            cart = new Cartridge( cartData );
 
             reg = new Reg();
 			mem = new Mem( cart );
@@ -34,12 +34,7 @@ namespace rzr
 			apu = new Apu( mem );
 		}
 
-		public Boy(byte[] cart, byte[]? boot)  : this()
-        {
-            LoadCart( cart, boot );
-        }
-
-        public Boy( string cartPath, string bootRomPath ) : this()
+        public Boy( string cartPath, string bootRomPath )
         {
             byte[] data;
             byte[]? boot = null;
@@ -62,23 +57,6 @@ namespace rzr
 
         public bool LoadCart( byte[] cartData, byte[]? boot )
         {
-            BootRom ?brom = null;
-
-            if( boot != null )
-            {
-                if( boot.Length == 0x100 ) // dmg
-                {
-                    brom = new BootRom( mem.io, boot, (0, 0x100) );
-                }
-                else if (boot.Length == 0x800 ) // cgb
-                {
-                    brom = new BootRom( mem.io, boot, (0, 0x100), (0x200, 0x900) );
-				}
-				else // unknown,map everything and hope for the best
-                {
-                    brom = new BootRom( mem.io, boot, (0, (ushort)boot.Length) );
-                }
-            }
 
             return cart.Load( cartData, brom );
         }

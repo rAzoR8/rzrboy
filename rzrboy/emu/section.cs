@@ -140,7 +140,23 @@ namespace rzr
         }
         private List<Entry> m_sections = new();
 
-        protected void Add( Section section, ushort start )
+        public ListSection( ushort start = 0, string? name = null ) : 
+            base( start: start, len: 0, name: name, alloc: false ) 
+        {
+        }
+
+		public override ushort Length
+		{
+			get
+			{
+               if( m_sections.Count == 0 )
+                    return 0;
+                Entry last = m_sections.Last();
+                return (ushort)(last.Start + last.Section.Length);
+            }
+		}
+
+		protected void Add( Section section, ushort start )
         {
             m_sections.Add( new( section, start ) );
         }

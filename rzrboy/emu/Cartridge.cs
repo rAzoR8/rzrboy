@@ -45,29 +45,24 @@ namespace rzr
     {
         public Mbc Mbc { get; private set; }
         public HeaderView Header { get; private set; }
+		public BootRom? BootRom => Mbc.BootRom;
 
-        public static implicit operator Section( Cartridge cart) { return cart.Mbc; }
+		public static implicit operator Section( Cartridge cart) { return cart.Mbc; }
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 
-        public Cartridge( ) // empty cart
+        public Cartridge( byte[] cart ) // empty cart
         {
-			Mbc = new();
-			Header = new( Mbc );
-		}
-
-        public bool Load( byte[] cart, BootRom? boot )
-        {
-            Header = new( cart );
+			Header = new( cart );
 
 			switch( Header.Type )
 			{
 				case CartridgeType.ROM_ONLY:
-					Mbc = new( cart, boot );
+					Mbc = new( cart );
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_RAM:
 				case CartridgeType.MBC1_RAM_BATTERY:
-					Mbc = new Mbc1( cart, boot );
+					Mbc = new Mbc1( cart );
 					break;
 				case CartridgeType.MBC2:
 					break;
@@ -121,8 +116,8 @@ namespace rzr
 					break;
 			}
 
-            // TODO: restore ram
-			return Header.Valid();
-        }
+			// TODO: restore ram
+			Header.Valid();
+		}
     }
 }

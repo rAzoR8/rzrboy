@@ -19,6 +19,7 @@ namespace rzr
         public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
         
+        public Section cart { get; }
         public Section vram { get; } = new Section(0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
         public Section wram0 { get; } = new (0xC000, 0x1000, "wram0");        
         public Section wramx { get; } = new Section(0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
@@ -33,13 +34,13 @@ namespace rzr
         // helper sections:
         public CombiSection wram { get; }
 
-        // TODO: boot rom overlay
+		public Mem( Section mbc ) : base( start: 0, name: "Mem" )
+		{
+            cart = mbc;
 
-        public Mem( Section mbc )
-        {
-            Add( mbc,    0x0000 ); // 0000-7FFF 32KiB switchable
+            Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
             Add( vram,   0x8000 ); // 8000-9FFF 8KiB
-            Add( mbc,    0xA000 ); // A000-BFFF 8KiB
+            Add( cart,   0xA000 ); // A000-BFFF 8KiB
             Add( wram0,  0xC000 ); // C000-CFFF 4KiB
             Add( wramx,  0xD000 ); // D000-DFFF 4KiB
             Add( echo,   0xE000 ); // E000-FE00 7680B
