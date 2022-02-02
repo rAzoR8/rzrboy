@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace rzr
 {
-    public enum Header : ushort
+    public enum HeaderOffsets : ushort
     {
         EntryPoint = 0x100,
         LogoStart = 0x104,
@@ -62,16 +62,16 @@ namespace rzr
 
         public byte HeaderChecksum
         {
-            get => m_data[(ushort)Header.HeaderChecksum];
-            set => m_data[(ushort)Header.HeaderChecksum] = value;
+            get => m_data[(ushort)HeaderOffsets.HeaderChecksum];
+            set => m_data[(ushort)HeaderOffsets.HeaderChecksum] = value;
         }
         public ushort RomChecksum
         {
-            get => binutil.Combine( msb: m_data[(ushort)Header.RomChecksumStart], lsb: m_data[(ushort)Header.RomChecksumEnd] );
+            get => binutil.Combine( msb: m_data[(ushort)HeaderOffsets.RomChecksumStart], lsb: m_data[(ushort)HeaderOffsets.RomChecksumEnd] );
             set
             {
-                m_data[(ushort)Header.RomChecksumStart] = value.GetMsb();
-                m_data[(ushort)Header.RomChecksumEnd] = value.GetLsb();
+                m_data[(ushort)HeaderOffsets.RomChecksumStart] = value.GetMsb();
+                m_data[(ushort)HeaderOffsets.RomChecksumEnd] = value.GetLsb();
             }
         }
 
@@ -83,11 +83,11 @@ namespace rzr
 
         public bool Japan
         {
-            get => (byte)DestinationCode.Japan == m_data[(ushort)Header.DestinationCode];
-            set => m_data[(ushort)( Header.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
+            get => (byte)DestinationCode.Japan == m_data[(ushort)HeaderOffsets.DestinationCode];
+            set => m_data[(ushort)( HeaderOffsets.DestinationCode )] = (byte)( value ? DestinationCode.Japan : DestinationCode.NotJapan );
         }
 
-        public byte Version { get => m_data[(ushort)Header.Version]; set => m_data[(ushort)Header.Version] = value; }
+        public byte Version { get => m_data[(ushort)HeaderOffsets.Version]; set => m_data[(ushort)HeaderOffsets.Version] = value; }
 
         public enum SGBFlag
         {
@@ -97,34 +97,34 @@ namespace rzr
 
         public bool SGBSupport
         {
-            get => (byte)SGBFlag.SGBSupport == m_data[(ushort)Header.DestinationCode];
-            set => m_data[(ushort)( Header.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
+            get => (byte)SGBFlag.SGBSupport == m_data[(ushort)HeaderOffsets.DestinationCode];
+            set => m_data[(ushort)( HeaderOffsets.SGBFlag )] = (byte)( value ? SGBFlag.SGBSupport : SGBFlag.None );
         }
 
-        public CartridgeType Type { get => (CartridgeType)m_data[(ushort)Header.Type]; set => m_data[(ushort)Header.Type] = (byte)value; }
+        public CartridgeType Type { get => (CartridgeType)m_data[(ushort)HeaderOffsets.Type]; set => m_data[(ushort)HeaderOffsets.Type] = (byte)value; }
 
         public Span<byte> Logo
         {
             get
             {
-                var len = Header.LogoEnd + 1 - Header.LogoStart;
-                return new Span<byte>( m_data, (int)Header.LogoStart, (int)len );
+                var len = HeaderOffsets.LogoEnd + 1 - HeaderOffsets.LogoStart;
+                return new Span<byte>( m_data, (int)HeaderOffsets.LogoStart, (int)len );
             }
             set
             {
-                if( value.Length != (int)Header.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)Header.LogoLength} bytes long" );
+                if( value.Length != (int)HeaderOffsets.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)HeaderOffsets.LogoLength} bytes long" );
 
                 var src = value.ToArray();
                 Array.Copy(
                     src,
                     sourceIndex: 0,
                     m_data,
-                    destinationIndex: (int)Header.LogoStart,
-                    (int)Header.LogoLength );
+                    destinationIndex: (int)HeaderOffsets.LogoStart,
+                    (int)HeaderOffsets.LogoLength );
             }
         }
 
-        private string GetHeaderString( Header start, Header end )
+        private string GetHeaderString( HeaderOffsets start, HeaderOffsets end )
         {
             StringBuilder sb = new();
 
@@ -138,7 +138,7 @@ namespace rzr
             return sb.ToString();
         }
 
-        private void SetHeaderString( Header start, Header len, string str )
+        private void SetHeaderString( HeaderOffsets start, HeaderOffsets len, string str )
         {
             Array.Copy(
                sourceArray: str.Select( c => (byte)c ).ToArray(),
@@ -150,17 +150,17 @@ namespace rzr
 
         public string Title
         {
-            get => GetHeaderString( Header.TitleStart, Header.TitleEnd );
-            set => SetHeaderString( Header.TitleStart, Header.TitleLength, value );
+            get => GetHeaderString( HeaderOffsets.TitleStart, HeaderOffsets.TitleEnd );
+            set => SetHeaderString( HeaderOffsets.TitleStart, HeaderOffsets.TitleLength, value );
         }
 
         public string Manufacturer
         {
-            get => GetHeaderString( Header.ManufacturerStart, Header.ManufacturerEnd );
-            set => SetHeaderString( Header.ManufacturerStart, Header.ManufacturerLength, value );
+            get => GetHeaderString( HeaderOffsets.ManufacturerStart, HeaderOffsets.ManufacturerEnd );
+            set => SetHeaderString( HeaderOffsets.ManufacturerStart, HeaderOffsets.ManufacturerLength, value );
         }
 
-        public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)Header.TitleStart )
+        public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)HeaderOffsets.TitleStart )
         {
             int end = start + 25; // 0x19 length of header to validate
             byte checksum = 0;
@@ -189,23 +189,23 @@ namespace rzr
                 checksum += b;
             }
 
-            checksum -= banks.ElementAt( (int)Header.RomChecksumStart );
-            checksum -= banks.ElementAt( (int)Header.RomChecksumEnd );
+            checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumStart );
+            checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumEnd );
 
             return checksum;
         }
 
         public int RomBanks
         {
-            get => ( 2 << m_data[(ushort)Header.RomBanks] );
-            set => m_data[(ushort)Header.RomBanks] = (byte)( value >> 2 );
+            get => ( 2 << m_data[(ushort)HeaderOffsets.RomBanks] );
+            set => m_data[(ushort)HeaderOffsets.RomBanks] = (byte)( value >> 2 );
         }
 
         public int RamBanks
         {
             get
             {
-                byte banks = m_data[(ushort)Header.RamBanks];
+                byte banks = m_data[(ushort)HeaderOffsets.RamBanks];
                 switch( banks )
                 {
                     case 0: return 0;
@@ -215,6 +215,28 @@ namespace rzr
                     case 4: return 16;
                     case 5: return 8;
                     default: throw new ArgumentOutOfRangeException( "Unknown ram bank specifier" );
+                }
+            }
+            set
+            {
+				switch( value )
+				{
+                    case 0:
+                        m_data[(ushort)HeaderOffsets.RamBanks] = 0;
+                        break;
+                    case 1:
+                        m_data[(ushort)HeaderOffsets.RamBanks] = 2;
+                        break;
+                    case 4:
+                        m_data[(ushort)HeaderOffsets.RamBanks] = 3;
+                        break;
+                    case 16:
+                        m_data[(ushort)HeaderOffsets.RamBanks] = 4;
+                        break;
+                    case 8:
+                        m_data[(ushort)HeaderOffsets.RamBanks] = 5;
+                        break;
+                    default: throw new ArgumentOutOfRangeException( "Unknown invalid ram bank count, must be [0, 1, 4, 8, 16]" );
                 }
             }
         }

@@ -41,22 +41,73 @@ namespace rzr
         HuC1_RAM_BATTERY = 0xFF
     }
 
+	public static class HeaderExtensions
+	{
+		public static bool HasRam( this CartridgeType type )
+		{
+			switch( type )
+			{
+				case CartridgeType.MBC1_RAM:
+				case CartridgeType.MBC1_RAM_BATTERY:
+				case CartridgeType.ROM_RAM:
+				case CartridgeType.ROM_RAM_BATTERY:
+				case CartridgeType.MMM01_RAM:
+				case CartridgeType.MMM01_RAM_BATTERY:
+				case CartridgeType.MBC3_TIMER_RAM_BATTERY:
+				case CartridgeType.MBC3_RAM:
+				case CartridgeType.MBC3_RAM_BATTERY:
+				case CartridgeType.MBC5_RAM:
+				case CartridgeType.MBC5_RAM_BATTERY:
+				case CartridgeType.MBC5_RUMBLE_RAM:
+				case CartridgeType.MBC5_RUMBLE_RAM_BATTERY:
+				case CartridgeType.MBC7_SENSOR_RUMBLE_RAM_BATTERY:
+				case CartridgeType.HuC1_RAM_BATTERY:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		public static bool HasBattery( this CartridgeType type )
+		{
+			switch( type )
+			{
+				case CartridgeType.MBC1_RAM_BATTERY:
+				case CartridgeType.MBC2_BATTERY:
+				case CartridgeType.ROM_RAM_BATTERY:
+				case CartridgeType.MMM01_RAM_BATTERY:
+				case CartridgeType.MBC3_TIMER_BATTERY:
+				case CartridgeType.MBC3_TIMER_RAM_BATTERY:
+				case CartridgeType.MBC3_RAM_BATTERY:
+				case CartridgeType.MBC5_RAM_BATTERY:
+				case CartridgeType.MBC5_RUMBLE_RAM_BATTERY:
+				case CartridgeType.MBC7_SENSOR_RUMBLE_RAM_BATTERY:
+				case CartridgeType.HuC1_RAM_BATTERY:
+					return true;
+				default:
+					return false;
+			}
+		}
+	}
+
     public class Cartridge
     {
         public Mbc Mbc { get; private set; }
-        public HeaderView Header { get; private set; }
+		public HeaderView Header => Mbc.Header;
 		public BootRom? BootRom => Mbc.BootRom;
 
-		public static implicit operator Section( Cartridge cart) { return cart.Mbc; }
+		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 
-        public Cartridge( byte[] cart ) // empty cart
+        public Cartridge( byte[] cart ) 
         {
-			Header = new( cart );
+			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 
-			switch( Header.Type )
+			switch( type )
 			{
 				case CartridgeType.ROM_ONLY:
+				case CartridgeType.ROM_RAM:
+				case CartridgeType.ROM_RAM_BATTERY:
 					Mbc = new( cart );
 					break;
 				case CartridgeType.MBC1:
@@ -65,39 +116,23 @@ namespace rzr
 					Mbc = new Mbc1( cart );
 					break;
 				case CartridgeType.MBC2:
-					break;
 				case CartridgeType.MBC2_BATTERY:
 					break;
-				case CartridgeType.ROM_RAM:
-					break;
-				case CartridgeType.ROM_RAM_BATTERY:
-					break;
 				case CartridgeType.MMM01:
-					break;
 				case CartridgeType.MMM01_RAM:
-					break;
 				case CartridgeType.MMM01_RAM_BATTERY:
 					break;
+				case CartridgeType.MBC3:
+				case CartridgeType.MBC3_RAM:
+				case CartridgeType.MBC3_RAM_BATTERY:
 				case CartridgeType.MBC3_TIMER_BATTERY:
-					break;
 				case CartridgeType.MBC3_TIMER_RAM_BATTERY:
 					break;
-				case CartridgeType.MBC3:
-					break;
-				case CartridgeType.MBC3_RAM:
-					break;
-				case CartridgeType.MBC3_RAM_BATTERY:
-					break;
 				case CartridgeType.MBC5:
-					break;
 				case CartridgeType.MBC5_RAM:
-					break;
 				case CartridgeType.MBC5_RAM_BATTERY:
-					break;
 				case CartridgeType.MBC5_RUMBLE:
-					break;
 				case CartridgeType.MBC5_RUMBLE_RAM:
-					break;
 				case CartridgeType.MBC5_RUMBLE_RAM_BATTERY:
 					break;
 				case CartridgeType.MBC6:
@@ -116,6 +151,12 @@ namespace rzr
 					break;
 			}
 
+			if( Mbc == null )
+			{
+				Mbc = new( cart ); // unkown cart type			
+			}
+
+			//Header = Mbc.head
 			// TODO: restore ram
 			Header.Valid();
 		}

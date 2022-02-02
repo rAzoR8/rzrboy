@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace rzr
 {
@@ -33,33 +32,6 @@ namespace rzr
 			ppu = new Ppu( mem );
 			apu = new Apu( mem );
 		}
-
-        public Boy( string cartPath, string bootRomPath )
-        {
-            byte[] data;
-            byte[]? boot = null;
-            try
-            {
-                data = File.ReadAllBytes( cartPath );
-
-				if( bootRomPath != null )
-				{
-					boot = File.ReadAllBytes( bootRomPath );
-				}
-			}
-            catch ( Exception )
-            {
-                data = new byte[0x8000];
-            }
-
-            LoadCart( data, boot );
-        }
-
-        public bool LoadCart( byte[] cartData, byte[]? boot )
-        {
-
-            return cart.Load( cartData, brom );
-        }
 
         public async Task<ulong> Execute( CancellationToken token = default )
         {

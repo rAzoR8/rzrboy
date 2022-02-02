@@ -63,31 +63,36 @@ namespace rzr
 
         public override IList<byte>? Storage => m_rom;
 
-        protected HeaderView m_header;
+        public HeaderView Header { get; }
         public BootRom? BootRom { get; set; }
 
-        public Mbc()
-        {
-            m_rom = new byte[0x8000];
-            m_ram = new byte[0x2000];
-            m_header = new HeaderView( m_rom );
-        }
+        public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Length != 0 && Header.Type.HasRam();
 
-        public Mbc( byte[] rom, BootRom? boot = null )
-            : base( start: 0, len: RomBankSize + 2 + RamBankSize, name: "MBC", alloc: false )
+		public Mbc()
+		{
+			m_rom = new byte[0x8000];
+			m_ram = new byte[0x2000];
+			Header = new HeaderView( m_rom );
+
+            Header.RomBanks = 2;
+            Header.RamBanks = 1;
+		}
+
+		public Mbc( byte[] rom, BootRom? boot = null )
+            : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
 		{
             BootRom = boot;
 
             m_rom = new byte[rom.Length];
-            m_header = new( m_rom );
-
-			Debug.Assert( m_rom.Length == RomBankSize * m_header.RomBanks );
 			Array.Copy( sourceArray: rom, destinationArray: m_rom, m_rom.Length );
+            Header = new( m_rom );
 
-			m_ram = new byte[RamBankSize * m_header.RamBanks];
+			Debug.Assert( m_rom.Length == RomBankSize * Header.RomBanks );
+
+			m_ram = new byte[RamBankSize * Header.RamBanks];
 		}
 
-		public override bool Contains( ushort address )
+        public override bool Contains( ushort address )
 		{
             return
                 address < 0x8000 ||     // roms banks
@@ -106,27 +111,33 @@ namespace rzr
 					if( BootRom != null && BootRom.Accepts( address ) )
 						return BootRom.Rom[address];
 
-					var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
+					var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
                 }
-                else // ram, TODO: m_ramEnabled
+                else if( RamEnabled )
                 {
-                    var bankAdr = ( m_selectedRamBank * m_header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
                     return m_ram[bankAdr];
                 }
+                return 0xFF;
             }
             set
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( m_selectedRomBank * m_header.RomBanks ) + address - StartAddr;
-                    m_rom[bankAdr] = value;
+                    var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
+                    throw new System.AccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
-                else // ram, TODO: m_ramEnabled
+                else if( RamEnabled )
                 {
-                    var bankAdr = ( m_selectedRamBank * m_header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
                     m_ram[bankAdr] = value;
                 }
+                //else
+                //{
+                //    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
+                //    throw new System.AccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+                //}
             }
         }
     }
@@ -173,7 +184,7 @@ namespace rzr
                     base[address] = value;
                 }
 
-                m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % m_header.RomBanks;
+                m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % Header.RomBanks;
                 Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{m_selectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
             }
         }
