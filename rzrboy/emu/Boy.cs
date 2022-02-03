@@ -23,9 +23,14 @@ namespace rzr
 		public Boy( byte[] cartData, byte[]? bootData )
 		{
             cart = new Cartridge( cartData );
+			mem = new Mem( cart );
+
+            if( bootData != null ) 
+            {
+                cart.Mbc.BootRom = new BootRom( () => mem.io[0xFF50] == 0, bootData );
+            }
 
             reg = new Reg();
-			mem = new Mem( cart );
 			isa = new Isa();
 
 			cpu = new Cpu( reg, mem, isa );

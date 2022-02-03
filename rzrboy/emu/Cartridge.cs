@@ -94,7 +94,6 @@ namespace rzr
     {
         public Mbc Mbc { get; private set; }
 		public HeaderView Header => Mbc.Header;
-		public BootRom? BootRom => Mbc.BootRom;
 
 		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
@@ -159,6 +158,13 @@ namespace rzr
 			//Header = Mbc.head
 			// TODO: restore ram
 			Header.Valid();
+		}
+
+		public void SaveRom( string path ) 
+		{
+			Mbc.FinalizeRom();
+
+			System.IO.File.WriteAllBytes( path, Mbc.Rom() );
 		}
     }
 }

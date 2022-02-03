@@ -166,7 +166,12 @@ namespace rzrboy
                             .Row(Row.ControlButtons)
                             .Font(bold: true, size: 20)
                             //.CenterHorizontal()
-                            .Invoke(button => button.Clicked += OnRunClicked)                            
+                            .Invoke(button => button.Clicked += OnRunClicked),
+                        new Button { Text = "Save Rom" }
+                            .Row(Row.ControlButtons)
+                            .Font(bold: true, size: 20)
+                            //.CenterHorizontal()
+                            .Invoke(button => button.Clicked += OnSaveRomClicked)
                     }.Row(Row.ControlButtons),
 
                     new HorizontalStackLayout{ Registers(), m_memEdit }.Row(Row.RegAndMem),
@@ -221,21 +226,29 @@ namespace rzrboy
             }
         }
 
-        private void OnStepClicked(object sender, EventArgs e)
+		private void OnStepClicked( object sender, EventArgs e )
+		{
+			foreach( Callback step in m_beforeStep )
+			{
+				step();
+			}
+
+			boy.Step( debugPrint: true );
+
+			foreach( Callback step in m_afterStep )
+			{
+				step();
+			}
+
+			//SemanticScreenReader.Announce(CounterLabel.Text);
+		}
+
+        private void OnSaveRomClicked( object sender, EventArgs e ) 
         {
-            foreach ( Callback step in m_beforeStep )
-            {
-                step();
-            }
+            if( boy.IsRunning )
+                cts.Cancel();
 
-            boy.Step(debugPrint: true);
-
-            foreach ( Callback step in m_afterStep )
-            {
-                step();
-            }
-
-            //SemanticScreenReader.Announce(CounterLabel.Text);
+            boy.cart.SaveRom( "myrom.gb" );
         }
-    }
+	}
 }

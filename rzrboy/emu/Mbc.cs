@@ -138,6 +138,13 @@ namespace rzr
                 //}
             }
         }
+
+        public bool FinalizeRom() 
+        {
+			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_rom );
+            Header.RomChecksum = HeaderView.ComputeRomChecksum( m_rom );
+            return Header.Valid();
+        }
     }
 
 	public class Mbc1 : Mbc
