@@ -23,7 +23,7 @@ namespace rzr
         public Section vram { get; } = new Section(0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
         public Section wram0 { get; } = new (0xC000, 0x1000, "wram0");        
         public Section wramx { get; } = new Section(0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
-        public RemapSection echo { get; } = new((ushort address) => (ushort)(address - 0x2000), 0xE000, EchoRamSize);
+        public RemapSection echo { get; }
         public Section oam { get; } = new(0xFE00, OAMSize, "oam");
         public Section unused { get; } = new(0xFEA0, UnusedSize, "unused");
         public Section io { get; } = new(0xFF00, IOSize, "io");
@@ -37,6 +37,8 @@ namespace rzr
 		public Mem( Section mbc ) : base( start: 0, name: "Mem" )
 		{
             cart = mbc;
+            wram = new(wram0, wramx);
+            echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
 
             Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
             Add( vram,   0x8000 ); // 8000-9FFF 8KiB
@@ -49,10 +51,6 @@ namespace rzr
             Add( io,     0xFF00 ); // FF00-FF80 128B
             Add( hram,   0xFF80 ); // FF80-FFFF 127B
             Add( IE,     0xFFFF ); // FFFF      1B
-
-            wram = new(wram0, wramx);
-
-            echo.Source = wram;
         }
 
         public void write(byte[] src, ushort address, ushort len = 0) 

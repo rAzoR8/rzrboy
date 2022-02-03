@@ -12,28 +12,58 @@ namespace rzr
         public SectionWriteAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
     }
 
-    public class Section
+    public interface ISection
+    {
+        byte this[ushort address] { get; set; }
+        public ushort StartAddr { get; }
+        public ushort Length { get; }
+    }
+
+    public class Storage : ISection
+    {
+        private IList<byte> m_storage;
+
+        public Storage( IList<byte> storage, ushort start = 0, ushort len = 0 )
+        {
+			m_storage = storage;
+			StartAddr = start;
+			Length = len > 0 ? len : (ushort)m_storage.Count;
+		}
+
+		public byte this[ushort address] { get => m_storage[address - StartAddr]; set => m_storage[address - StartAddr] = value; }
+        public ushort StartAddr { get; }
+        public ushort Length { get; }
+    }
+
+
+    public static class SectionExtensions
+    {
+		public static Storage AsStorage( this IList<byte> storage ) { return new Storage( storage ); }
+	}
+
+    public class Section : ISection
     {
         public virtual string Name { get; }
         public virtual ushort StartAddr { get; }
         public virtual ushort Length { get; }
 
-        public virtual IList<byte>? Storage { get; set; }
-
-        public static implicit operator byte[](Section sec) { return sec.Storage as byte[]; }
+        public byte[]? m_storage = null;
 
         public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
         {
             StartAddr = start;
             Length = len;
-            if( alloc ) Storage = new byte[len];
+            if( alloc ) m_storage = new byte[len];
             Name = $"{start}:{name}";
         }
 
         public Section( ushort start, ushort len, string name, byte[] init ) : this( start, len, name, alloc: true )
         {
 			var size = (ushort)Math.Min( init.Length, len );
-			if( Storage != null ) Array.Copy( init, Storage as byte[], size );
+            if( m_storage != null )
+            {
+                Array.Copy( init, m_storage, size );            
+            }
 		}
 
         public virtual bool Contains(ushort address )
@@ -48,15 +78,15 @@ namespace rzr
         {
             get
             {
-                if( Storage != null )
-                    return Storage[address - StartAddr];
+                if( m_storage != null )
+                    return m_storage[address - StartAddr];
                 else
                     throw new SectionReadAccessViolationException( address, this );
             }
             set
             {
-                if( Storage != null )
-                    Storage[address - StartAddr] = value;
+                if( m_storage != null )
+                    m_storage[address - StartAddr] = value;
                 else
                     throw new SectionWriteAccessViolationException( address, this );
             }
@@ -65,7 +95,10 @@ namespace rzr
         public void Write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {
             len = len != 0 ? Math.Min( len, (ushort)src.Length ) : (ushort)src.Length;
-            Array.Copy( src, src_offset, this, dst_offset, len );
+            if( m_storage != null )
+            {
+                Array.Copy( src, src_offset, m_storage, dst_offset, len );            
+            }
         }
     }
 
@@ -99,7 +132,7 @@ namespace rzr
 
         public MapFunc Map { get; set; } = Identity;
         public Section Source { get; set; }
-		public RemapSection( MapFunc map, ushort start, ushort len, Section src = null )
+		public RemapSection( MapFunc map, ushort start, ushort len, Section src )
 		{
 			Map = map;
 			Source = src;

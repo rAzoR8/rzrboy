@@ -61,8 +61,6 @@ namespace rzr
         public byte[] Ram() => m_ram;
         public byte[] Rom() => m_rom;
 
-        public override IList<byte>? Storage => m_rom;
-
         public HeaderView Header { get; }
         public BootRom? BootRom { get; set; }
 

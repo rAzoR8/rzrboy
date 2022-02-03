@@ -7,7 +7,7 @@ namespace rzrboy
 {
     public class MemoryEditor : Grid
     {
-        private IList<byte> m_data;
+        private rzr.ISection m_section;
         private int m_offset;
         private int m_columns;
         private int m_rows;
@@ -16,14 +16,14 @@ namespace rzrboy
 
         private Entry[,] m_cells = null;
 
-        public IList<byte> Section { get => m_data; set { if ( value != m_data ) { m_data = value; Rebuild(); } } }
+        public rzr.ISection Section { get => m_section; set { if ( value != m_section ) { m_section = value; Rebuild(); } } }
         public int Offset { get => m_offset; set { if ( value != m_offset ) { m_offset = value; Rebuild(); } } }
         public int Columns { get => m_columns; set { if ( value != m_columns ) { m_columns = value; Rebuild(); } } }
         public int Rows { get => m_rows; set { if ( value != m_rows ) { m_rows = value; Rebuild(); } } }
 
-        public MemoryEditor( IList<byte> section, int offset, int columns, int rows )
+        public MemoryEditor( rzr.ISection section, int offset, int columns, int rows )
         {
-            m_data = section;
+            m_section = section;
             m_offset = offset;
             m_columns = columns;
             m_rows = rows;
@@ -43,7 +43,7 @@ namespace rzrboy
                     for ( int c = 0; c < m_columns; c++ )
                     {
                         ushort addr = (ushort)( m_offset + r * m_columns + c );
-                        m_cells[r, c].Text = $"{m_data[addr]:X2}";
+                        m_cells[r, c].Text = $"{m_section[addr]:X2}";
                     }
                 }
                 return;
@@ -99,15 +99,15 @@ namespace rzrboy
                         var cell = sender as Entry;
                         if ( byte.TryParse( cell.Text, System.Globalization.NumberStyles.HexNumber, null, out var val ) )
                         {
-                            byte prev = m_data[addr];
+                            byte prev = m_section[addr];
                             if ( prev != val )
                             {
-                                m_data[addr] = val;
+                                m_section[addr] = val;
                             }
                         }
                     }
 
-                    byte initVal = m_data[addr];
+                    byte initVal = m_section[addr];
 
                     var editor = new Entry
                     { 
