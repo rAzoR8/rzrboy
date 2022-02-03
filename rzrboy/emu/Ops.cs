@@ -6,27 +6,27 @@
 		/// DISASSEMBLERS
 		/// </summary>
 
-		public static Dis mnemonic( string str ) => ( ref ushort pc, Section mem ) => str;
-		public static Dis operand( RegX reg ) => ( ref ushort pc, Section mem ) => reg.ToString();
-		public static Dis operand( Reg8 reg ) => ( ref ushort pc, Section mem ) => reg.ToString();
-		public static Dis operand( Reg16 reg ) => ( ref ushort pc, Section mem ) => reg.ToString();
-		public static Dis addr( Reg16 reg ) => ( ref ushort pc, Section mem ) => $"({reg})";
+		public static Dis mnemonic( string str ) => ( ref ushort pc, ISection mem ) => str;
+		public static Dis operand( RegX reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+		public static Dis operand( Reg8 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+		public static Dis operand( Reg16 reg ) => ( ref ushort pc, ISection mem ) => reg.ToString();
+		public static Dis addr( Reg16 reg ) => ( ref ushort pc, ISection mem ) => $"({reg})";
 		public static Dis operand8OrAdd16( RegX reg ) => reg.Is8() ? operand( reg ) : addr( reg.To16() );
 
-		public static readonly Dis operandE8 = ( ref ushort pc, Section mem ) => $"{(sbyte)mem[pc++]}";
-		public static Dis operandE8x( string prefix ) => ( ref ushort pc, Section mem ) => $"{prefix}{(sbyte)mem[pc++]}";
+		public static readonly Dis operandE8 = ( ref ushort pc, ISection mem ) => $"{(sbyte)mem[pc++]}";
+		public static Dis operandE8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{(sbyte)mem[pc++]}";
 
-		public static readonly Dis operandDB8 = ( ref ushort pc, Section mem ) => $"0x{mem[pc++]:X2}";
-		public static Dis operandDB8x( string prefix ) => ( ref ushort pc, Section mem ) => $"{prefix}{mem[pc++]:X2}";
+		public static readonly Dis operandDB8 = ( ref ushort pc, ISection mem ) => $"0x{mem[pc++]:X2}";
+		public static Dis operandDB8x( string prefix ) => ( ref ushort pc, ISection mem ) => $"{prefix}{mem[pc++]:X2}";
 
-		public static readonly Dis operandDB16 = ( ref ushort pc, Section mem ) =>
+		public static readonly Dis operandDB16 = ( ref ushort pc, ISection mem ) =>
 		{
 			string str = $"0x{mem[(ushort)( pc + 1 )]:X2}{mem[pc]:X2}";
 			pc += 2;
 			return str;
 		};
 
-		public readonly static Dis addrDB16 = ( ref ushort pc, Section mem ) => $"({operandDB16( ref pc, mem )})";
+		public readonly static Dis addrDB16 = ( ref ushort pc, ISection mem ) => $"({operandDB16( ref pc, mem )})";
 
 		/// <summary>
 		/// OPERATIONS
@@ -287,7 +287,7 @@
 		public static IEnumerable<Op> AddHl( Reg16 src )
 		{
 			yield return Nop;
-			yield return ( Reg reg, Section mem ) =>
+			yield return ( Reg reg, ISection mem ) =>
 			{
 				ushort l = reg.HL;
 				ushort r = reg[src];
@@ -337,7 +337,7 @@
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-			yield return ( Reg reg, Section mem ) =>
+			yield return ( Reg reg, ISection mem ) =>
 			{
 				if( src.Is8() ) val = reg[src.To8()];
 				reg.SetFlags( Z: ( reg.A &= val ) == 0, N: false, H: true, C: false );

@@ -23,7 +23,7 @@ namespace rzr
 	/// </summary>
 	/// <param name="reg"></param>
 	/// <param name="mem"></param>
-	public delegate void Op( Reg reg, Section mem );
+	public delegate void Op( Reg reg, ISection mem );
 
 	/// <summary>
 	/// Mnemonic and operand name for this op
@@ -31,7 +31,7 @@ namespace rzr
 	/// <param name="pc"></param>
 	/// <param name="mem"></param>
 	/// <returns></returns>
-	public delegate string Dis( ref ushort pc, Section mem );
+	public delegate string Dis( ref ushort pc, ISection mem );
 
 	public delegate IEnumerable<Op> ProduceInstruction();
 
