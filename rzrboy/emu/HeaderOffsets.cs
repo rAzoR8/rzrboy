@@ -198,6 +198,7 @@ namespace rzr
             set => m_data[(ushort)HeaderOffsets.RomBanks] = (byte)( value >> 2 );
         }
 
+        public static readonly byte[] RamBankSizes = { 0, 1, 4, 8, 16 };
         public int RamBanks
         {
             get

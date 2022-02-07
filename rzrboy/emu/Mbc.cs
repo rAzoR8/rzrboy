@@ -68,10 +68,10 @@ namespace rzr
 
         public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
-		public Mbc()
-		{
-			m_rom = new List<byte>( capacity: 0x8000);
-			m_ram = new List<byte>( capacity: 0x2000 );
+		public Mbc() : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
+        {
+			m_rom = new List<byte>( capacity: RomBankSize * 2 );
+			m_ram = new List<byte>( capacity: RamBankSize );
             Header = new HeaderView( m_rom );
 
             Header.RomBanks = 2;
@@ -95,9 +95,38 @@ namespace rzr
 
         public void ResizeRom( int bankCount )
         {
-            // todo: shrinking
-            m_rom.EnsureCapacity( RomBankSize * bankCount );
+            var size = RomBankSize * bankCount;
+
+            if( size > m_rom.Count )
+            {
+                m_rom.EnsureCapacity( size );
+                m_rom.AddRange( Enumerable.Repeat<byte>( 0, ( bankCount - Header.RomBanks ) * RomBankSize ) );
+			}
+			else
+			{
+                m_rom.RemoveRange( size, m_rom.Count - size );
+			}
+            
             Header.RomBanks = bankCount;
+        }
+
+        public void ResizeRam( int bankCount )
+        {
+            bankCount = HeaderView.RamBankSizes.SkipWhile( b => b < bankCount ).First();
+
+            var size = RamBankSize * bankCount;
+
+            if( size > m_ram.Count )
+            {
+                m_ram.EnsureCapacity( size );
+                m_ram.AddRange( Enumerable.Repeat<byte>( 0, ( bankCount - Header.RamBanks ) * RamBankSize ) );
+            }
+            else
+            {
+                m_ram.RemoveRange( size, m_ram.Count - size );
+            }
+
+            Header.RamBanks = bankCount;
         }
 
         public override bool Contains( ushort address )
