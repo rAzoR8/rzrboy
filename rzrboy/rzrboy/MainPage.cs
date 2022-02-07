@@ -132,7 +132,7 @@ namespace rzrboy
         public MainPage( rzr.Boy gb )
         {
             boy = gb;
-            m_memEdit = new MemoryEditor( boy.cart.Mbc , 0, 16, 16 );
+            m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
 
             mem.WriteCallbacks.Add( ( Section section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
 
@@ -243,12 +243,27 @@ namespace rzrboy
 			//SemanticScreenReader.Announce(CounterLabel.Text);
 		}
 
-        private void OnSaveRomClicked( object sender, EventArgs e ) 
+        private async void OnSaveRomClicked( object sender, EventArgs e ) 
         {
             if( boy.IsRunning )
                 cts.Cancel();
 
-            boy.cart.SaveRom( "myrom.gb" );
+			var options = new PickOptions
+			{
+				PickerTitle = "Please select a rom file to save to",
+			};
+
+			var result = await FilePicker.PickAsync( options );
+            if( result != null )
+            {
+                boy.cart.SaveRom( result.FullPath );
+            }
+            else
+            {
+                boy.cart.SaveRom( System.IO.Path.Combine( FileSystem.AppDataDirectory, boy.cart.GetFileName() ) );
+            }
+
+            boy.cart.Mbc.ResizeRom( 3 );
         }
 	}
 }

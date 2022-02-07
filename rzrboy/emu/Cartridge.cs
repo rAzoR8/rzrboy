@@ -1,8 +1,6 @@
-﻿using System.Diagnostics;
-
-namespace rzr
+﻿namespace rzr
 {
-    public enum CartridgeType : byte
+	public enum CartridgeType : byte
     {
         ROM_ONLY = 0x00,
 
@@ -100,6 +98,12 @@ namespace rzr
 
         public Cartridge( byte[] cart ) 
         {
+			Mbc = Load( cart, null );
+		}
+
+		private static Mbc Load( byte[] cart, BootRom? boot )
+		{
+			Mbc? mbc = null;
 			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 
 			switch( type )
@@ -107,12 +111,12 @@ namespace rzr
 				case CartridgeType.ROM_ONLY:
 				case CartridgeType.ROM_RAM:
 				case CartridgeType.ROM_RAM_BATTERY:
-					Mbc = new( cart );
+					mbc = new( cart );
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_RAM:
 				case CartridgeType.MBC1_RAM_BATTERY:
-					Mbc = new Mbc1( cart );
+					mbc = new Mbc1( cart );
 					break;
 				case CartridgeType.MBC2:
 				case CartridgeType.MBC2_BATTERY:
@@ -150,14 +154,15 @@ namespace rzr
 					break;
 			}
 
-			if( Mbc == null )
+			if( mbc == null )
 			{
-				Mbc = new( cart ); // unkown cart type			
+				mbc = new( cart ); // unkown cart type			
 			}
 
-			//Header = Mbc.head
 			// TODO: restore ram
-			Header.Valid();
+			mbc.Header.Valid();
+
+			return mbc;
 		}
 
 		public void SaveRom( string path ) 
@@ -166,5 +171,7 @@ namespace rzr
 
 			System.IO.File.WriteAllBytes( path, Mbc.Rom() );
 		}
+
+		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
     }
 }

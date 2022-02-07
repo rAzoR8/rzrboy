@@ -94,16 +94,11 @@ namespace rzrboy
                 {
                     ushort addr = (ushort)( m_offset + r * m_columns + c );
 
-                    void OnEdit( object sender, EventArgs e )
+                    void OnEdit( object sender, TextChangedEventArgs e )
                     {
-                        var cell = sender as Entry;
-                        if ( byte.TryParse( cell.Text, System.Globalization.NumberStyles.HexNumber, null, out var val ) )
+                        if ( byte.TryParse( e.NewTextValue, System.Globalization.NumberStyles.HexNumber, null, out var val ) )
                         {
-                            byte prev = m_section[addr];
-                            if ( prev != val )
-                            {
-                                m_section[addr] = val;
-                            }
+                            m_section[addr] = val;
                         }
                     }
 
@@ -119,7 +114,7 @@ namespace rzrboy
                         Keyboard = Microsoft.Maui.Keyboard.Numeric,
                         MaxLength = 2
                     }
-                    .Invoke( edit => edit.Completed += OnEdit )
+                    .Invoke( edit => edit.TextChanged += OnEdit )
                     .Column( c + 1 )
                     .Row( r + 1 );
 

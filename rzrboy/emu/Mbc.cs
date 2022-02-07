@@ -51,26 +51,28 @@ namespace rzr
         public const ushort RomBankSize = 0x4000; // 16KIB
         public const ushort RamBankSize = 0x2000; // 8KiB
 
-        private byte[] m_rom;
-		private byte[] m_ram;
+        private List<byte> m_rom;
+		private List<byte> m_ram;
 
 		protected int m_selectedRomBank = 0;
 		protected int m_selectedRamBank = 0;
 		protected bool m_ramEnabled = false;
 
-        public byte[] Ram() => m_ram;
-        public byte[] Rom() => m_rom;
+        public byte[] Ram() => m_ram.ToArray();
+        public byte[] Rom() => m_rom.ToArray();
+
+        public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
 
         public HeaderView Header { get; }
         public BootRom? BootRom { get; set; }
 
-        public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Length != 0 && Header.Type.HasRam();
+        public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
 		public Mbc()
 		{
-			m_rom = new byte[0x8000];
-			m_ram = new byte[0x2000];
-			Header = new HeaderView( m_rom );
+			m_rom = new List<byte>( capacity: 0x8000);
+			m_ram = new List<byte>( capacity: 0x2000 );
+            Header = new HeaderView( m_rom );
 
             Header.RomBanks = 2;
             Header.RamBanks = 1;
@@ -81,14 +83,22 @@ namespace rzr
 		{
             BootRom = boot;
 
-            m_rom = new byte[rom.Length];
-			Array.Copy( sourceArray: rom, destinationArray: m_rom, m_rom.Length );
+            m_rom = new( capacity: rom.Length );
+            m_rom.AddRange( rom );
+
             Header = new( m_rom );
 
-			Debug.Assert( m_rom.Length == RomBankSize * Header.RomBanks );
+			Debug.Assert( m_rom.Count == RomBankSize * Header.RomBanks );
+           
+            m_ram = new( capacity: RamBankSize * Header.RamBanks );
+        }
 
-			m_ram = new byte[RamBankSize * Header.RamBanks];
-		}
+        public void ResizeRom( int bankCount )
+        {
+            // todo: shrinking
+            m_rom.EnsureCapacity( RomBankSize * bankCount );
+            Header.RomBanks = bankCount;
+        }
 
         public override bool Contains( ushort address )
 		{

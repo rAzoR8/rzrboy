@@ -23,14 +23,27 @@ namespace rzr
     {
         private IList<byte> m_storage;
 
-        public Storage( IList<byte> storage, ushort start = 0, ushort len = 0 )
+        /// <summary>
+        /// Wrapper over some storage to allow Section like access
+        /// </summary>
+        /// <param name="storage"></param>
+        /// <param name="storageOffset"></param>
+        /// <param name="startAddr"></param>
+        /// <param name="len"></param>
+        public Storage( IList<byte> storage, int storageOffset = 0, ushort startAddr = 0, ushort len = 0 )
         {
 			m_storage = storage;
-			StartAddr = start;
-			Length = len > 0 ? len : (ushort)m_storage.Count;
+            BufferOffset = storageOffset;
+            StartAddr = startAddr;
+			Length = len > 0 ? len : (ushort)( storageOffset - m_storage.Count );
 		}
 
-		public byte this[ushort address] { get => m_storage[address - StartAddr]; set => m_storage[address - StartAddr] = value; }
+        public int BufferOffset { get; }
+		public byte this[ushort address]
+        {
+			get => m_storage[BufferOffset + ( address - StartAddr )];
+			set => m_storage[BufferOffset + ( address - StartAddr )] = value;
+		}
         public ushort StartAddr { get; }
         public ushort Length { get; }
     }

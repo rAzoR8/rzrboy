@@ -39,9 +39,9 @@ namespace rzr
 
     public class HeaderView
 	{
-        private byte[] m_data;
+        private IList<byte> m_data;
 
-        public HeaderView( byte[] data )
+        public HeaderView( IList<byte> data )
         {
             m_data = data;
         }
@@ -103,24 +103,22 @@ namespace rzr
 
         public CartridgeType Type { get => (CartridgeType)m_data[(ushort)HeaderOffsets.Type]; set => m_data[(ushort)HeaderOffsets.Type] = (byte)value; }
 
-        public Span<byte> Logo
+        public IEnumerable<byte> Logo
         {
             get
             {
                 var len = HeaderOffsets.LogoEnd + 1 - HeaderOffsets.LogoStart;
-                return new Span<byte>( m_data, (int)HeaderOffsets.LogoStart, (int)len );
+                return m_data.Skip( (int) HeaderOffsets.LogoStart ).Take( len );
             }
             set
             {
-                if( value.Length != (int)HeaderOffsets.LogoLength ) throw new ArgumentException( $"Logo must be exaclty {(int)HeaderOffsets.LogoLength} bytes long" );
+                if( value.Count() != (int)HeaderOffsets.LogoLength )
+                    throw new ArgumentException( $"Logo must be exaclty {(int)HeaderOffsets.LogoLength} bytes long" );
 
-                var src = value.ToArray();
-                Array.Copy(
-                    src,
-                    sourceIndex: 0,
-                    m_data,
-                    destinationIndex: (int)HeaderOffsets.LogoStart,
-                    (int)HeaderOffsets.LogoLength );
+				for( int i = 0; i < (int)HeaderOffsets.LogoLength; i++ )
+				{
+                    m_data[(int)HeaderOffsets.LogoStart + i] = value.ElementAt(i);
+                }
             }
         }
 
@@ -140,12 +138,11 @@ namespace rzr
 
         private void SetHeaderString( HeaderOffsets start, HeaderOffsets len, string str )
         {
-            Array.Copy(
-               sourceArray: str.Select( c => (byte)c ).ToArray(),
-               sourceIndex: 0,
-               destinationArray: m_data,
-               destinationIndex: (int)start,
-               length: (int)len );
+            var strLen = Math.Min( (int)len, str.Length );
+            for( int i = 0; i < strLen; i++ )
+            {
+                m_data[(int)start + i] = (byte)str[i];
+            }
         }
 
         public string Title
