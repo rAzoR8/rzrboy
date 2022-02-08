@@ -99,6 +99,7 @@ namespace rzrboy
                         if ( byte.TryParse( e.NewTextValue, System.Globalization.NumberStyles.HexNumber, null, out var val ) )
                         {
                             m_section[addr] = val;
+                            // TODO: callback on write
                         }
                     }
 

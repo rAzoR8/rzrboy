@@ -19,10 +19,10 @@ namespace rzr
         public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
         
-        public Section cart { get; }
-        public Section vram { get; } = new Section(0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
+        public Section cart { get; private set; }
+        public Section vram { get; } = new (0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
         public Section wram0 { get; } = new (0xC000, 0x1000, "wram0");        
-        public Section wramx { get; } = new Section(0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
+        public Section wramx { get; } = new (0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
         public RemapSection echo { get; }
         public Section oam { get; } = new(0xFE00, OAMSize, "oam");
         public Section unused { get; } = new(0xFEA0, UnusedSize, "unused");
@@ -30,15 +30,14 @@ namespace rzr
         public Section hram { get; } = new(0xFF80, HRamSize, "ram");
         public ByteSection IE { get; } = new(0xFFFF, val: 0, name: "IE");
 
-
         // helper sections:
         public CombiSection wram { get; }
 
-		public Mem( Section mbc ) : base( start: 0, name: "Mem" )
+        public Mem( Section mbc ) : base( start: 0, name: "Mem" )
 		{
             cart = mbc;
-            wram = new(wram0, wramx);
-            echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
+			wram = new( wram0, wramx );
+			echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
 
             Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
             Add( vram,   0x8000 ); // 8000-9FFF 8KiB
@@ -53,14 +52,13 @@ namespace rzr
             Add( IE,     0xFFFF ); // FFFF      1B
         }
 
-        public void write(byte[] src, ushort address, ushort len = 0) 
-        {
-            len = len != 0 ? Math.Min(len, (ushort)src.Length) : (ushort)src.Length;
+        public Mem() : this( new Mbc() ) { }
 
-            for (ushort i = 0; i < len; i++)
-            {
-                this[(ushort)(address+i)] = src[i];
-            }
+        public void SwitchCart( Section mbc )
+        {
+            cart = mbc;
+            Exchange( 0, cart );
+            Exchange( 2, cart );
         }
     }
 }

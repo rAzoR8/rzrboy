@@ -20,23 +20,29 @@ namespace rzr
 
         public List<Callback> StepCallbacks { get; } = new();
 
-		public Boy( byte[] cartData, byte[]? bootData )
-		{
-            cart = new Cartridge( cartData );
-			mem = new Mem( cart );
-
-            if( bootData != null ) 
-            {
-                cart.Mbc.BootRom = new BootRom( () => mem.io[0xFF50] == 0, bootData );
-            }
+        public Boy()
+        {
+            cart = new Cartridge();
+            mem = new Mem();
 
             reg = new Reg();
-			isa = new Isa();
+            isa = new Isa();
 
-			cpu = new Cpu( reg, mem, isa );
-			ppu = new Ppu( mem );
-			apu = new Apu( mem );
-		}
+            cpu = new Cpu( reg, mem, isa );
+            ppu = new Ppu( mem );
+            apu = new Apu( mem );
+        }
+
+        public void LoadBootRom( byte[] boot )
+        {
+            cart.Mbc.BootRom = new BootRom( () => mem.io[0xFF50] == 0, boot );
+        }
+
+        public void LoadRom( byte[] rom )
+        {
+            cart.Load( rom, cart.Mbc.BootRom );
+            mem.SwitchCart( cart );
+        }
 
         public async Task<ulong> Execute( CancellationToken token = default )
         {

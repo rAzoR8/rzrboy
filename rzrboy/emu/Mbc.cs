@@ -70,27 +70,48 @@ namespace rzr
 
 		public Mbc() : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
         {
-			m_rom = new List<byte>( capacity: RomBankSize * 2 );
-			m_ram = new List<byte>( capacity: RamBankSize );
+			m_rom = new List<byte>( Enumerable.Repeat<byte>( 0, RomBankSize * 2 ) );
+			m_ram = new List<byte>( Enumerable.Repeat<byte>( 0, RamBankSize ) );
             Header = new HeaderView( m_rom );
 
             Header.RomBanks = 2;
             Header.RamBanks = 1;
 		}
 
-		public Mbc( byte[] rom, BootRom? boot = null )
+		public Mbc( byte[] rom, byte[]? ram = null )
             : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
 		{
-            BootRom = boot;
-
-            m_rom = new( capacity: rom.Length );
-            m_rom.AddRange( rom );
-
+            m_rom = new( rom );
             Header = new( m_rom );
 
 			Debug.Assert( m_rom.Count == RomBankSize * Header.RomBanks );
-           
-            m_ram = new( capacity: RamBankSize * Header.RamBanks );
+
+            if( ram != null )
+            {
+                Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
+                m_ram = new( ram );
+            }
+            else
+            {
+                m_ram = new( Enumerable.Repeat<byte>( 0, RamBankSize * Header.RamBanks ) );
+            }
+        }
+
+        public void LoadRam( byte[] ram )
+        {
+            Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
+            m_ram.Clear();
+            m_ram.AddRange( ram );
+        }
+
+        // Load rom of identical MBC type
+        public void LoadRom( byte[] rom )
+        {
+            var type = (CartridgeType)rom[(ushort)HeaderOffsets.Type];
+            Debug.Assert( type == Header.Type && rom.Length == RomBankSize * Header.RomBanks );
+
+            m_rom.Clear();
+            m_rom.AddRange( rom );
         }
 
         public void ResizeRom( int bankCount )

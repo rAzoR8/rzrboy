@@ -202,12 +202,18 @@ namespace rzr
             }
 		}
 
-		protected void Add( Section section, ushort start )
+		protected int Add( Section section, ushort start )
         {
             m_sections.Add( new( section, start ) );
+            return m_sections.Count - 1;
         }
 
-        private Section Find( ushort address )
+		protected void Exchange( int index, Section section )
+		{
+			m_sections[index].Section = section;
+		}
+
+		private Section Find( ushort address )
         {
             int min = 0;
             int max = m_sections.Count - 1;

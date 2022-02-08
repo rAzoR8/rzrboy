@@ -95,16 +95,60 @@
 
 		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
+		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
 
-        public Cartridge( byte[] cart ) 
+		public Cartridge( byte[] cart, BootRom? boot = null ) 
         {
-			Mbc = Load( cart, null );
+			Mbc = CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
+			Mbc.BootRom = boot;
 		}
 
-		private static Mbc Load( byte[] cart, BootRom? boot )
+		public Cartridge( )
+		{
+			Mbc = new();
+		}
+
+		public void Load( byte[] cart, BootRom? boot = null )
+		{
+			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
+			if( type == Header.Type )
+			{
+				Mbc.LoadRom( cart );
+			}
+			else
+			{
+				Mbc = CreateMbc( type, cart );			
+			}
+
+			if( boot != null )
+			{
+				Mbc.BootRom = boot;
+			}
+		}
+
+		public void ChangeType( CartridgeType type )
+		{
+			var boot = Mbc.BootRom;
+			Mbc = CreateMbc( type, Mbc.Rom() );
+			Mbc.BootRom = boot;
+			Header.Type = type;
+		}
+
+		public void SaveRom( string path ) 
+		{
+			Mbc.FinalizeRom();
+
+			System.IO.File.WriteAllBytes( path, Mbc.Rom() );
+		}
+
+		public void SaveRam( string path )
+		{
+			System.IO.File.WriteAllBytes( path, Mbc.Ram() );
+		}
+
+		private static Mbc CreateMbc( CartridgeType type, byte[] cart )
 		{
 			Mbc? mbc = null;
-			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 
 			switch( type )
 			{
@@ -164,14 +208,5 @@
 
 			return mbc;
 		}
-
-		public void SaveRom( string path ) 
-		{
-			Mbc.FinalizeRom();
-
-			System.IO.File.WriteAllBytes( path, Mbc.Rom() );
-		}
-
-		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
     }
 }

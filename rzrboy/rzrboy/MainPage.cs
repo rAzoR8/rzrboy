@@ -17,19 +17,19 @@ namespace rzrboy
 
     public static class Extensions 
     {
-        public delegate void OnUpateLabel( Label label );
-        public delegate void OnUpdateGrid( Grid label );
+        public delegate void OnUpdate<T>( T view );
 
-        public static Label Update( this Label label, Callbacks callbacks, OnUpateLabel func )
+        public static T Update<T>( this T view, Callbacks callbacks, OnUpdate<T> func  )
         {
-            callbacks.Add(() => func( label ) );
-            return label;
+            callbacks.Add(() => func( view ) );
+            return view;
         }
 
-        public static Grid Update( this Grid grid, Callbacks callbacks, OnUpdateGrid func )
+        public static T Update<T>( this T view, Callbacks callbacks, OnUpdate<T> func, out Callback callback )
         {
-            callbacks.Add( () => func( grid ) );
-            return grid;
+            callback = () => func( view );
+            callbacks.Add( callback );
+            return view;
         }
     }
 
@@ -41,8 +41,10 @@ namespace rzrboy
         private Reg reg => boy.reg;
         private Mem mem => boy.mem;
 
-        List<Callback> m_beforeStep = new();
-        List<Callback> m_afterStep = new();
+        private List<Callback> m_beforeStep = new();
+        private List<Callback> m_afterStep = new();
+
+        private Callback m_updateDissassembly;
 
         private MemoryEditor m_memEdit;
 
@@ -126,7 +128,7 @@ namespace rzrboy
                 }
 
                 lbl.Text = sb.ToString();
-            } );
+            }, out m_updateDissassembly );
         }
 
         public MainPage( rzr.Boy gb )
@@ -135,14 +137,15 @@ namespace rzrboy
             m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
 
             mem.WriteCallbacks.Add( ( Section section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
+            mem.WriteCallbacks.Add( ( Section section, ushort address, byte value ) => { if( address < 0x8000 ) m_updateDissassembly(); } );
 
-            boy.StepCallbacks.Add( ( reg, mem ) =>
-            {
-                bool stop = reg.PC > 7 && reg.HL == 0;
-                Debug.Assert( !stop );
+            //boy.StepCallbacks.Add( ( reg, mem ) =>
+            //{
+            //    bool stop = reg.PC > 7 && reg.HL == 0;
+            //    Debug.Assert( !stop );
 
-                return true;
-            } );
+            //    return true;
+            //} );
 
             Content = new Grid
             {
@@ -157,20 +160,20 @@ namespace rzrboy
                 Children =
                 {
                     new HorizontalStackLayout {
+                        new Button { Text = "Load Boot" }
+                            .Font(bold: true, size: 20)
+                            .Invoke(button => button.Clicked += OnLoadBootClicked),
+                        new Button { Text = "Load Rom" }
+                            .Font(bold: true, size: 20)
+                            .Invoke(button => button.Clicked += OnLoadRomClicked),
                         new Button { Text = "Step" }
                             .Font(bold: true, size: 20)
-                            //.CenterHorizontal()
                             .Invoke(button => button.Clicked += OnStepClicked),
-
                         new Button { Text = "Run" }
-                            .Row(Row.ControlButtons)
                             .Font(bold: true, size: 20)
-                            //.CenterHorizontal()
                             .Invoke(button => button.Clicked += OnRunClicked),
                         new Button { Text = "Save Rom" }
-                            .Row(Row.ControlButtons)
                             .Font(bold: true, size: 20)
-                            //.CenterHorizontal()
                             .Invoke(button => button.Clicked += OnSaveRomClicked)
                     }.Row(Row.ControlButtons),
 
@@ -262,8 +265,57 @@ namespace rzrboy
             {
                 boy.cart.SaveRom( System.IO.Path.Combine( FileSystem.AppDataDirectory, boy.cart.GetFileName() ) );
             }
-
-            boy.cart.Mbc.ResizeRom( 3 );
         }
-	}
+
+        private async void OnLoadRomClicked( object sender, EventArgs e )
+        {
+            if( boy.IsRunning )
+                cts.Cancel();
+
+            var extensions = new[] { ".gb", ".gbc", ".rom", ".bin" };
+            var options = new PickOptions
+            {
+                PickerTitle = "Please select a rom file to load",
+				FileTypes = new ( new Dictionary<DevicePlatform, IEnumerable<string>>{
+				    { DevicePlatform.macOS, extensions },
+				    { DevicePlatform.iOS, extensions },
+				    { DevicePlatform.Android, extensions },
+				    { DevicePlatform.UWP, extensions },
+				} )
+			};
+
+            var result = await FilePicker.PickAsync( options );
+			if( result != null )
+			{
+				boy.LoadRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
+				m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
+                m_updateDissassembly();
+			}
+		}
+
+        private async void OnLoadBootClicked( object sender, EventArgs e )
+        {
+            if( boy.IsRunning )
+                cts.Cancel();
+
+            var extensions = new[] { ".bin" };
+            var options = new PickOptions
+            {
+                PickerTitle = "Please select a rom file to load",
+                FileTypes = new( new Dictionary<DevicePlatform, IEnumerable<string>>{
+                    { DevicePlatform.macOS, extensions },
+                    { DevicePlatform.iOS, extensions },
+                    { DevicePlatform.Android, extensions },
+                    { DevicePlatform.UWP, extensions },
+                } )
+            };
+
+            var result = await FilePicker.PickAsync( options );
+            if( result != null )
+            {
+                boy.LoadBootRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
+                m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
+            }
+        }
+    }
 }
