@@ -53,7 +53,7 @@ namespace rzrboy
             RowDefinitions.Clear();
             ColumnDefinitions.Clear();
 
-            const double CellHeight = 26;
+            const double CellHeight = 36;
 
             m_cells = new Entry[m_rows, m_columns];
 
@@ -73,6 +73,7 @@ namespace rzrboy
                     MinimumHeightRequest = CellHeight,
                     MaximumHeightRequest = CellHeight,
                     FontFamily = Font.Regular,
+                    FontSize = 12,
                     Keyboard = Microsoft.Maui.Keyboard.Numeric
                 }
                 .Row( 0 ).Column( 0 )
@@ -83,12 +84,12 @@ namespace rzrboy
 
             for ( int c = 0; c < m_columns; c++ )
             {
-                Add( new Label { Text = $"0x{c:X2}", FontFamily = Font.Regular }.Row( 0 ).Column( c + 1 ) );
+                Add( new Label { Text = $"0x{c:X2}", FontFamily = Font.Regular, FontSize = 12 }.Row( 0 ).Column( c + 1 ) );
             }
 
             for ( int r = 0; r < m_rows; r++ )
             {
-                Add( new Label { Text = $"0x{( m_offset + r * m_columns ):X4}", FontFamily = Font.Regular }.Row( r + 1 ).Column( 0 ) );
+                Add( new Label { Text = $"0x{( m_offset + r * m_columns ):X4}", FontFamily = Font.Regular, FontSize = 12 }.Row( r + 1 ).Column( 0 ) );
 
                 for ( int c = 0; c < m_columns; c++ )
                 {
@@ -109,9 +110,9 @@ namespace rzrboy
                     { 
                         Text = $"{initVal:X2}",
                         MinimumHeightRequest = CellHeight,
-                        MaximumHeightRequest = CellHeight,
-                        //AutoSize = EditorAutoSizeOption.Disabled,
+                        MaximumHeightRequest = CellHeight,                        
                         FontFamily = Font.Regular,
+                        FontSize = 12,
                         Keyboard = Microsoft.Maui.Keyboard.Numeric,
                         MaxLength = 2
                     }

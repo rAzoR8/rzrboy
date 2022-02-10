@@ -44,12 +44,13 @@ namespace rzrboy
 								.OnActivated((window, e) =>
 									Microsoft.Maui.Essentials.Platform.OnActivated(window, e));
 						});
-elif ANDROID
-					lifecycle.AddAndroid(d => {
-						d.OnBackPressed(activity => {
-							System.Diagnostics.Debug.WriteLine("Back button pressed!");
-						});
-					});
+#elif ANDROID
+					//lifecycle.AddAndroid(d => {
+					//	d.OnBackPressed(activity => {
+					//		System.Diagnostics.Debug.WriteLine("Back button pressed!");
+					//		return true;
+					//	});
+					//});
 #endif
 				} );
 

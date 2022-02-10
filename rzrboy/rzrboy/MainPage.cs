@@ -164,9 +164,9 @@ namespace rzrboy
                 Children =
                 {
                     new HorizontalStackLayout {
-                        new Label{ FontFamily = Font.Light, FontSize = 14, Text = $"rzr" },
-                        new Label{ FontFamily = Font.Bold, FontSize = 14, Text = $"Boy" },
-                        new Label{ FontFamily = Font.Regular, FontSize = 14, Text = $"Studio" },
+                        new Label{ FontFamily = Font.Light, FontSize = 40, Text = $"rzr" },
+                        new Label{ FontFamily = Font.Bold, FontSize = 40, Text = $"Boy" },
+                        new Label{ FontFamily = Font.Regular, FontSize = 40, Text = $"Studio" },
                     }.Row(Row.Title),
 
                     new HorizontalStackLayout {
@@ -297,12 +297,6 @@ namespace rzrboy
             var options = new PickOptions
             {
                 PickerTitle = "Please select a rom file to load",
-				FileTypes = new ( new Dictionary<DevicePlatform, IEnumerable<string>>{
-				    { DevicePlatform.macOS, extensions },
-				    { DevicePlatform.iOS, extensions },
-				    { DevicePlatform.Android, extensions },
-				    { DevicePlatform.UWP, extensions },
-				} )
 			};
 
             var result = await FilePicker.PickAsync( options );
@@ -323,12 +317,6 @@ namespace rzrboy
             var options = new PickOptions
             {
                 PickerTitle = "Please select a rom file to load",
-                FileTypes = new( new Dictionary<DevicePlatform, IEnumerable<string>>{
-                    { DevicePlatform.macOS, extensions },
-                    { DevicePlatform.iOS, extensions },
-                    { DevicePlatform.Android, extensions },
-                    { DevicePlatform.UWP, extensions },
-                } )
             };
 
             var result = await FilePicker.PickAsync( options );
