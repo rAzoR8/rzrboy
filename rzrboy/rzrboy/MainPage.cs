@@ -133,6 +133,8 @@ namespace rzrboy
 
         public MainPage( rzr.Boy gb )
         {
+            Title = "rzrBoy Studio";
+
             boy = gb;
             m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
 
@@ -152,13 +154,21 @@ namespace rzrboy
                 RowSpacing = 10,
 
                 RowDefinitions = Rows.Define(
-                    (Row.ControlButtons, Auto),
-                    (Row.RegAndMem, Auto),
-                    (Row.Disassembly, Auto)
+                    (Row.Title, Auto),
+                    (Row.LoadAndSaveButtons, Auto),
+                    (Row.RegAndDis, Auto),
+                    (Row.Memory, Auto),
+                    (Row.StepAndRunButtons, Auto)
                     ),
 
                 Children =
                 {
+                    new HorizontalStackLayout {
+                        new Label{ FontFamily = Font.Light, FontSize = 14, Text = $"rzr" },
+                        new Label{ FontFamily = Font.Bold, FontSize = 14, Text = $"Boy" },
+                        new Label{ FontFamily = Font.Regular, FontSize = 14, Text = $"Studio" },
+                    }.Row(Row.Title),
+
                     new HorizontalStackLayout {
                         new Button { Text = "Load Boot" }
                             .Font(bold: true, size: 20)
@@ -166,19 +176,23 @@ namespace rzrboy
                         new Button { Text = "Load Rom" }
                             .Font(bold: true, size: 20)
                             .Invoke(button => button.Clicked += OnLoadRomClicked),
+                        new Button { Text = "Save Rom" }
+                            .Font(bold: true, size: 20)
+                            .Invoke(button => button.Clicked += OnSaveRomClicked)
+                    }.Row(Row.LoadAndSaveButtons),
+
+                    new HorizontalStackLayout{ Registers(), Disassembly(10) }.Row(Row.RegAndDis),
+
+                    m_memEdit.Row(Row.Memory),
+
+                    new HorizontalStackLayout {
                         new Button { Text = "Step" }
                             .Font(bold: true, size: 20)
                             .Invoke(button => button.Clicked += OnStepClicked),
                         new Button { Text = "Run" }
                             .Font(bold: true, size: 20)
                             .Invoke(button => button.Clicked += OnRunClicked),
-                        new Button { Text = "Save Rom" }
-                            .Font(bold: true, size: 20)
-                            .Invoke(button => button.Clicked += OnSaveRomClicked)
-                    }.Row(Row.ControlButtons),
-
-                    new HorizontalStackLayout{ Registers(), m_memEdit }.Row(Row.RegAndMem),
-                    Disassembly(10).Row(Row.Disassembly)
+                    }.Row(Row.StepAndRunButtons),
                 }
             };
 
@@ -195,7 +209,14 @@ namespace rzrboy
         }
 
 
-        enum Row { ControlButtons, RegAndMem, Disassembly }
+        enum Row
+        {
+            Title,
+            LoadAndSaveButtons,
+            RegAndDis,
+            Memory,
+            StepAndRunButtons
+        }
 
         private CancellationTokenSource cts = new();
 
