@@ -260,7 +260,7 @@ namespace rzr
             this[0xF5] = Push( Reg16.AF );
 
             // RST vec
-            this[0xC7] = Rst( 0x00);
+            this[0xC7] = Rst( 0x00 );
             this[0xD7] = Rst( 0x10 );
             this[0xE7] = Rst( 0x20 );
             this[0xF7] = Rst( 0x30 );

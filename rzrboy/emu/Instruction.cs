@@ -2,6 +2,140 @@
 
 namespace rzr
 {
+	public enum InstrType 
+	{
+		Db, //just data, not and actual instruction
+
+		Nop,
+		Stop,
+		Halt,
+
+		Di,
+		Ei,
+
+		Ld,
+		Ldh,
+
+		Inc,
+		Dec,
+
+		Add,
+		Adc,
+		Sub,
+		Sbc,
+
+		And,
+		Or,
+		Xor,
+		Cp,
+
+		Jp,
+		Jr,
+		Ret,
+		Reti,
+		Call,
+
+		Rst,
+
+		Push,
+		Pop,
+
+		Rla,
+		Rlca,
+		Rra,
+		Rrca,
+
+		Daa,
+		Scf,
+
+		Cpl,
+		Ccf,
+
+		// Ext / Prefix
+		Rlc,
+		Rrc,
+		Rl,
+		Rr,
+		Sla,
+		Sra,
+		Swap,
+		Srl,
+		Bit,
+		Res,
+		Set
+	}
+
+	public enum OperandType 
+	{
+		d8, // data / unsigned
+		r8, // relative addr / signed
+		d16, // unsigned / addr
+		io8, // 0xFF00 + d8
+		
+		A,F,
+		B,C,
+		D,E,
+		H,L,
+
+		AF,
+		BC,
+		DE,
+		HL,
+		PC,
+		SP,
+		SPr8, // SP + r8
+
+		AdrHL, // (HL)
+		AdrHLI, // (HL+)
+		AdrHLD, // (HL-)
+
+		Rst00,
+		Rst10,
+		Rst20,
+		Rst30,
+
+		Rst08,
+		Rst18,
+		Rst28,
+		Rst38,
+
+		condZ,
+		condNZ,
+		condC,
+		condNC
+	}
+
+	public class Operand 
+	{
+		public Operand( OperandType type ) { Type = type; }
+		public Operand( OperandType type, byte io8 ) { Type = type; d16 = io8; }
+		public Operand( byte d8 ) { Type = OperandType.d8; d16 = d8; }
+		public Operand( sbyte r8 ) { Type = OperandType.r8; d16 = (byte)r8; }
+		public Operand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
+
+		public OperandType Type { get; }
+		public ushort d16 { get; } = 0;
+		public sbyte r8 => (sbyte)d16.GetLsb();
+		public byte d8 => d16.GetLsb();
+	}
+
+	public class InstrAsm : List<Operand> 
+	{
+		public InstrAsm( InstrType type ) { Type = type; }
+		public InstrAsm( InstrType type, params Operand[] operands ) : base(operands) { Type = type; }
+		public InstrType Type { get; }
+
+		// todo:
+		public void Assemble( ref ushort pc, ISection mem ) { }
+
+		public override string ToString()
+		{
+			return $"{Type}";
+		}
+	}
+
+	public delegate InstrAsm DisAsm( ref ushort pc, ISection mem );
+
 	public class Ref<T> where T : struct
 	{
 		public Ref( T val )
