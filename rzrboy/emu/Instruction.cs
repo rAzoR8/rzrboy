@@ -89,15 +89,7 @@ namespace rzr
 		AdrHLI, // (HL+)
 		AdrHLD, // (HL-)
 
-		Rst00,
-		Rst10,
-		Rst20,
-		Rst30,
-
-		Rst08,
-		Rst18,
-		Rst28,
-		Rst38,
+		RstAddr,
 
 		condZ,
 		condNZ,
@@ -117,24 +109,74 @@ namespace rzr
 		public ushort d16 { get; } = 0;
 		public sbyte r8 => (sbyte)d16.GetLsb();
 		public byte d8 => d16.GetLsb();
-	}
-
-	public class InstrAsm : List<Operand> 
-	{
-		public InstrAsm( InstrType type ) { Type = type; }
-		public InstrAsm( InstrType type, params Operand[] operands ) : base(operands) { Type = type; }
-		public InstrType Type { get; }
-
-		// todo:
-		public void Assemble( ref ushort pc, ISection mem ) { }
 
 		public override string ToString()
 		{
-			return $"{Type}";
+			switch( Type )
+			{
+				case OperandType.RstAddr:
+				case OperandType.d8: return $"{d8:X2}";
+				case OperandType.r8: return $"{r8:X2}";
+				case OperandType.d16: return $"{d16:X4}";
+				case OperandType.io8: return $"0xFF00+{d8:X2}";
+				case OperandType.A:
+				case OperandType.F:
+				case OperandType.B:
+				case OperandType.C:
+				case OperandType.D:
+				case OperandType.E:
+				case OperandType.H:
+				case OperandType.L:
+				case OperandType.AF:
+				case OperandType.BC:
+				case OperandType.DE:
+				case OperandType.HL:
+				case OperandType.PC:
+				case OperandType.SP:
+					return Type.ToString();
+				case OperandType.SPr8: return $"SP+{r8:X2}";
+				case OperandType.AdrHL: return "(HL)";
+				case OperandType.AdrHLI: return "(HL+)";
+				case OperandType.AdrHLD: return "(HL-)";
+				case OperandType.condZ: return "Z";
+				case OperandType.condNZ: return "NZ";
+				case OperandType.condC: return "C";
+				case OperandType.condNC: return "NC";
+				default: return "?";
+			}
 		}
 	}
 
-	public delegate InstrAsm DisAsm( ref ushort pc, ISection mem );
+	public class AsmInstr : List<Operand> 
+	{
+		public AsmInstr( InstrType type ) { Type = type; }
+		public AsmInstr( InstrType type, params Operand[] operands ) : base(operands) { Type = type; }
+		public AsmInstr( InstrType type, OperandType lhs ) { Type = type; Add( new( lhs ) ); }
+		public AsmInstr( InstrType type, OperandType lhs, OperandType rhs ) { Type = type; Add( new( lhs ) ); Add( new( rhs ) ); }
+
+
+		public InstrType Type { get; }
+
+		/// <summary>
+		/// Assemble to machine code
+		/// </summary>
+		/// <param name="pc"></param>
+		/// <param name="mem"></param>
+		/// <returns>Opcode</returns>
+		public byte Assemble( ref ushort pc, ISection mem ) { return 0; }
+
+		public override string ToString()
+		{
+			switch( Count )
+			{
+				case 2: return $"{Type} {this[0]}, {this[1]}";
+				case 1: return $"{Type} {this[0]}";
+				case 0: default: return Type.ToString();
+			}
+		}
+	}
+
+	public delegate AsmInstr DisAsm( ref ushort pc, ISection mem );
 
 	public class Ref<T> where T : struct
 	{
