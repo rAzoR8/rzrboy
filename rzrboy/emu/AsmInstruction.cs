@@ -155,22 +155,34 @@
 
 		public InstrType Type { get; }
 
+		public OperandType Lhs => this[0].Type;
+		public OperandType Rhs => this[1].Type;
+
+
 		/// <summary>
 		/// Assemble to machine code
 		/// </summary>
 		/// <param name="pc"></param>
 		/// <param name="mem"></param>
 		/// <returns>Opcode</returns>
-		public void Assemble( ref ushort pc, ISection mem )
+		public void Assemble( ref ushort _pc, ISection mem )
 		{
+			ushort pc = _pc;
+
+			void Set( byte val ) { mem[pc++] = val; }
+			void Set16( ushort val ) { mem[pc++] = val.GetLsb(); mem[pc++] = val.GetMsb(); }
+
+			void Op1Db8() { if( Count > 0 ) mem[pc++] = this[0].d8; }
+			void Op2Db8() { if( Count > 1 ) mem[pc++] = this[1].d8; }
+
 			switch( Type )
 			{
-				case InstrType.Db:		mem[pc++] = this[0].d8; break;
-				case InstrType.Nop:		mem[pc++] = 0x00; break;
-				case InstrType.Stop:	mem[pc++] = 0x10; break; // TODO: 2nd operand
-				case InstrType.Halt:	mem[pc++] = 0x76; break;
-				case InstrType.Di:		mem[pc++] = 0xF3; break;
-				case InstrType.Ei:		mem[pc++] = 0xFB; break;
+				case InstrType.Db:		Op1Db8(); break;
+				case InstrType.Nop:		Set(0x00); break;
+				case InstrType.Stop:	Set(0x10); Op1Db8(); break;
+				case InstrType.Halt:	Set(0x76); break;
+				case InstrType.Di:		Set(0xF3); break;
+				case InstrType.Ei:		Set(0xFB); break;
 				case InstrType.Ld:
 					break;
 				case InstrType.Ldh:
@@ -223,10 +235,8 @@
 					break;
 				case InstrType.Scf:
 					break;
-				case InstrType.Cpl:
-					break;
-				case InstrType.Ccf:
-					break;
+				case InstrType.Cpl: Set( 0x2F ); break;
+				case InstrType.Ccf: Set( 0X3F ); break;
 				case InstrType.Rlc:
 					break;
 				case InstrType.Rrc:
@@ -252,6 +262,7 @@
 				default:
 					break;
 			}
+			_pc = pc;
 		}
 
 		public override string ToString()
