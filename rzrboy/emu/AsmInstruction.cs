@@ -161,7 +161,98 @@
 		/// <param name="pc"></param>
 		/// <param name="mem"></param>
 		/// <returns>Opcode</returns>
-		public byte Assemble( ref ushort pc, ISection mem ) { return 0; }
+		public void Assemble( ref ushort pc, ISection mem )
+		{
+			switch( Type )
+			{
+				case InstrType.Db:		mem[pc++] = this[0].d8; break;
+				case InstrType.Nop:		mem[pc++] = 0x00; break;
+				case InstrType.Stop:	mem[pc++] = 0x10; break; // TODO: 2nd operand
+				case InstrType.Halt:	mem[pc++] = 0x76; break;
+				case InstrType.Di:		mem[pc++] = 0xF3; break;
+				case InstrType.Ei:		mem[pc++] = 0xFB; break;
+				case InstrType.Ld:
+					break;
+				case InstrType.Ldh:
+					break;
+				case InstrType.Inc:
+					break;
+				case InstrType.Dec:
+					break;
+				case InstrType.Add:
+					break;
+				case InstrType.Adc:
+					break;
+				case InstrType.Sub:
+					break;
+				case InstrType.Sbc:
+					break;
+				case InstrType.And:
+					break;
+				case InstrType.Or:
+					break;
+				case InstrType.Xor:
+					break;
+				case InstrType.Cp:
+					break;
+				case InstrType.Jp:
+					break;
+				case InstrType.Jr:
+					break;
+				case InstrType.Ret:
+					break;
+				case InstrType.Reti:
+					break;
+				case InstrType.Call:
+					break;
+				case InstrType.Rst:
+					break;
+				case InstrType.Push:
+					break;
+				case InstrType.Pop:
+					break;
+				case InstrType.Rla:
+					break;
+				case InstrType.Rlca:
+					break;
+				case InstrType.Rra:
+					break;
+				case InstrType.Rrca:
+					break;
+				case InstrType.Daa:
+					break;
+				case InstrType.Scf:
+					break;
+				case InstrType.Cpl:
+					break;
+				case InstrType.Ccf:
+					break;
+				case InstrType.Rlc:
+					break;
+				case InstrType.Rrc:
+					break;
+				case InstrType.Rl:
+					break;
+				case InstrType.Rr:
+					break;
+				case InstrType.Sla:
+					break;
+				case InstrType.Sra:
+					break;
+				case InstrType.Swap:
+					break;
+				case InstrType.Srl:
+					break;
+				case InstrType.Bit:
+					break;
+				case InstrType.Res:
+					break;
+				case InstrType.Set:
+					break;
+				default:
+					break;
+			}
+		}
 
 		public override string ToString()
 		{
