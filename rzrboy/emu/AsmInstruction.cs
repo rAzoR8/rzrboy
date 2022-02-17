@@ -63,17 +63,23 @@
 		Set
 	}
 
-	public enum OperandType
+	public enum OperandType : byte
 	{
 		d8, // data / unsigned
 		r8, // relative addr / signed
 		d16, // unsigned / addr
 		io8, // 0xFF00 + d8
 
-		A, F,
 		B, C,
 		D, E,
 		H, L,
+		AdrHL, // (HL)
+		A, F,
+
+		AdrHLI, // (HL+)
+		AdrHLD, // (HL-)
+		AdrBC, // (BC)
+		AdrDE, // (DE)
 
 		AF,
 		BC,
@@ -83,16 +89,19 @@
 		SP,
 		SPr8, // SP + r8
 
-		AdrHL, // (HL)
-		AdrHLI, // (HL+)
-		AdrHLD, // (HL-)
-
 		RstAddr,
 
 		condZ,
 		condNZ,
 		condC,
 		condNC
+	}
+
+	public static class OperandExtensions 
+	{
+		public static byte Reg8Offset( this OperandType type, byte offset ) { return (byte)(offset + ( byte )type - (byte)OperandType.B); }
+		// is B C D E H L (HL) A
+		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type < OperandType.F; }
 	}
 
 	public class Operand
@@ -136,6 +145,8 @@
 				case OperandType.AdrHL: return "(HL)";
 				case OperandType.AdrHLI: return "(HL+)";
 				case OperandType.AdrHLD: return "(HL-)";
+				case OperandType.AdrBC: return "(BC)";
+				case OperandType.AdrDE: return "(DE)";
 				case OperandType.condZ: return "Z";
 				case OperandType.condNZ: return "NZ";
 				case OperandType.condC: return "C";
@@ -184,6 +195,22 @@
 				case InstrType.Di:		Set(0xF3); break;
 				case InstrType.Ei:		Set(0xFB); break;
 				case InstrType.Ld:
+
+					switch( Lhs )
+					{
+						case OperandType.B when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x40 ) ); break;
+						case OperandType.C when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x48 ) ); break;
+						case OperandType.D when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x50 ) ); break;
+						case OperandType.E when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x58 ) ); break;
+						case OperandType.H when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x60 ) ); break;
+						case OperandType.L when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x68 ) ); break;
+
+						case OperandType.AdrHL when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x70 ) ); break;
+						case OperandType.A when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x78 ) ); break;
+						default:
+							break;
+					}
+
 					break;
 				case InstrType.Ldh:
 					break;
