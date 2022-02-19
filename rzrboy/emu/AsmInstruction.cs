@@ -102,6 +102,13 @@
 		public static byte Reg8Offset( this OperandType type, byte offset ) { return (byte)(offset + ( byte )type - (byte)OperandType.B); }
 		// is B C D E H L (HL) A
 		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type < OperandType.F; }
+
+		public static bool IsD8( this OperandType type ) => type == OperandType.d8;
+		public static bool IsD16( this OperandType type ) => type == OperandType.d16;
+		public static bool IsR8( this OperandType type ) => type == OperandType.r8;
+		public static bool IsIo8( this OperandType type ) => type == OperandType.io8;
+
+
 	}
 
 	public class Operand
@@ -181,16 +188,16 @@
 			ushort pc = _pc;
 
 			void Set( byte val ) { mem[pc++] = val; }
-			void Set16( ushort val ) { mem[pc++] = val.GetLsb(); mem[pc++] = val.GetMsb(); }
-
-			void Op1Db8() { if( Count > 0 ) mem[pc++] = this[0].d8; }
-			void Op2Db8() { if( Count > 1 ) mem[pc++] = this[1].d8; }
+			void Op1D8() { mem[pc++] = this[0].d8; }
+			void Op2D8() { mem[pc++] = this[1].d8; }
+			void Op1D16() { mem[pc++] = this[0].d16.GetLsb(); mem[pc++] = this[0].d16.GetMsb(); }
+			void Op2D16() { mem[pc++] = this[1].d16.GetLsb(); mem[pc++] = this[1].d16.GetMsb(); }
 
 			switch( Type )
 			{
-				case InstrType.Db:		Op1Db8(); break;
+				case InstrType.Db:		Op1D8(); break;
 				case InstrType.Nop:		Set(0x00); break;
-				case InstrType.Stop:	Set(0x10); Op1Db8(); break;
+				case InstrType.Stop:	Set(0x10); Op1D8(); break;
 				case InstrType.Halt:	Set(0x76); break;
 				case InstrType.Di:		Set(0xF3); break;
 				case InstrType.Ei:		Set(0xFB); break;
@@ -198,15 +205,44 @@
 
 					switch( Lhs )
 					{
+						// LD r8, r8
 						case OperandType.B when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x40 ) ); break;
 						case OperandType.C when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x48 ) ); break;
 						case OperandType.D when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x50 ) ); break;
 						case OperandType.E when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x58 ) ); break;
 						case OperandType.H when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x60 ) ); break;
 						case OperandType.L when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x68 ) ); break;
-
+						// LD (HL), r8
 						case OperandType.AdrHL when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x70 ) ); break;
+						// LD A, r8
 						case OperandType.A when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x78 ) ); break;
+						// LD BC, d16
+						case OperandType.BC when Rhs.IsD16(): Set( 0x01 ); Op2D16(); break;
+						case OperandType.DE when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
+						case OperandType.HL when Rhs.IsD16(): Set( 0x21 ); Op2D16(); break;
+						case OperandType.SP when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
+						// LD (BC), A
+						case OperandType.AdrBC when Rhs == OperandType.A: Set( 0x02 ); break;
+						case OperandType.AdrDE when Rhs == OperandType.A: Set( 0x12 ); break;
+						case OperandType.AdrHLI when Rhs == OperandType.A: Set( 0x22 ); break;
+						case OperandType.AdrHLD when Rhs == OperandType.A: Set( 0x32 ); break;
+						// LD B, d8
+						case OperandType.B when Rhs.IsD8(): Set( 0x06 ); Op2D8(); break;
+						case OperandType.D when Rhs.IsD8(): Set( 0x16 ); Op2D8(); break;
+						case OperandType.H when Rhs.IsD8(): Set( 0x26 ); Op2D8(); break;
+						case OperandType.AdrHL when Rhs.IsD8(): Set( 0x36 ); Op2D8(); break;
+						// LD A, (BC)
+						case OperandType.A when Rhs == OperandType.AdrBC: Set( 0x0A ); break;
+						case OperandType.A when Rhs == OperandType.AdrDE: Set( 0x1A ); break;
+						case OperandType.A when Rhs == OperandType.AdrHLI: Set( 0x2A ); break;
+						case OperandType.A when Rhs == OperandType.AdrHLD: Set( 0x3A ); break;
+						// LD C, d8
+						case OperandType.C when Rhs.IsD8(): Set( 0x0E ); Op2D8(); break;
+						case OperandType.E when Rhs.IsD8(): Set( 0x1E ); Op2D8(); break;
+						case OperandType.L when Rhs.IsD8(): Set( 0x2E ); Op2D8(); break;
+						case OperandType.A when Rhs.IsD8(): Set( 0x3E ); Op2D8(); break;
+						// LD (a16) sp
+						case OperandType.d16 when Rhs == OperandType.SP: Set( 0x08 ); Op1D16(); break;
 						default:
 							break;
 					}
