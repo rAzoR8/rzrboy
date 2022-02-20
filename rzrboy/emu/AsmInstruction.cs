@@ -74,19 +74,18 @@
 		D, E,
 		H, L,
 		AdrHL, // (HL)
-		A, F,
+		A,
 
-		AdrHLI, // (HL+)
-		AdrHLD, // (HL-)
 		AdrBC, // (BC)
 		AdrDE, // (DE)
+		AdrHLI, // (HL+)
+		AdrHLD, // (HL-)
 
-		AF,
 		BC,
 		DE,
 		HL,
-		PC,
 		SP,
+
 		SPr8, // SP + r8
 
 		RstAddr,
@@ -99,16 +98,29 @@
 
 	public static class OperandExtensions 
 	{
+		// X offset
 		public static byte Reg8Offset( this OperandType type, byte offset ) { return (byte)(offset + ( byte )type - (byte)OperandType.B); }
 		// is B C D E H L (HL) A
-		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type < OperandType.F; }
+		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
+		// is BC DE HL SP
+		public static bool IsReg16( this OperandType type ) { return type >= OperandType.BC && type <= OperandType.SP; }
+		// Y offset
+		public static byte Reg16Offset( this OperandType type, byte offset ) { return (byte)( offset + ( (byte)type - (byte)OperandType.BC ) * 0x10 ); }
+		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLD; }
+		// Y offset
+		public static byte Reg16AdrOffset( this OperandType type, byte offset ) { return (byte)( offset + ( (byte)type - (byte)OperandType.AdrBC ) * 0x10 ); }
+		// is B D H (HL)
+		public static bool IsBCDHHl( this OperandType type ) {
+			return
+				type == OperandType.B ||
+				type == OperandType.D ||
+				type == OperandType.H ||
+				type == OperandType.AdrHL; }
 
 		public static bool IsD8( this OperandType type ) => type == OperandType.d8;
 		public static bool IsD16( this OperandType type ) => type == OperandType.d16;
 		public static bool IsR8( this OperandType type ) => type == OperandType.r8;
 		public static bool IsIo8( this OperandType type ) => type == OperandType.io8;
-
-
 	}
 
 	public class Operand
@@ -135,18 +147,15 @@
 				case OperandType.io8: return $"0xFF00+{d8:X2}";
 				case OperandType.ioC: return $"0xFF00+C";
 				case OperandType.A:
-				case OperandType.F:
 				case OperandType.B:
 				case OperandType.C:
 				case OperandType.D:
 				case OperandType.E:
 				case OperandType.H:
 				case OperandType.L:
-				case OperandType.AF:
 				case OperandType.BC:
 				case OperandType.DE:
 				case OperandType.HL:
-				case OperandType.PC:
 				case OperandType.SP:
 					return Type.ToString();
 				case OperandType.SPr8: return $"SP+{r8:X2}";
@@ -205,7 +214,6 @@
 				case InstrType.Di:		Set(0xF3); break;
 				case InstrType.Ei:		Set(0xFB); break;
 				case InstrType.Ld:
-
 					switch( Lhs )
 					{
 						// LD r8, r8
@@ -268,6 +276,21 @@
 
 					break;
 				case InstrType.Inc:
+					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x04 ) );
+					else {
+						switch( Lhs )
+						{
+							case OperandType.B: Set( 0x04 ); break;
+							case OperandType.D: Set( 0x14 ); break;
+							case OperandType.H: Set( 0x24 ); break;
+							case OperandType.AdrHL: Set( 0x34 ); break;
+							case OperandType.C: Set( 0x0C ); break;
+							case OperandType.E: Set( 0x1C ); break;
+							case OperandType.L: Set( 0x2C ); break;
+							case OperandType.A: Set( 0x3C ); break;
+							default: break;
+						}
+					}
 					break;
 				case InstrType.Dec:
 					break;
