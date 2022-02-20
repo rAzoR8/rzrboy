@@ -288,6 +288,17 @@
 				case InstrType.Cp:
 					break;
 				case InstrType.Jp:
+					switch( Lhs )
+					{
+						case OperandType.condNZ when Rhs.IsD16(): Set( 0xC2 ); Op2D16(); break;
+						case OperandType.condNC when Rhs.IsD16(): Set( 0xD2 ); Op2D16(); break;
+						case OperandType.d16: Set( 0xC3 ); Op2D16(); break;
+						case OperandType.condZ when Rhs.IsD16(): Set( 0x2A ); Op2D8(); break;
+						case OperandType.condC when Rhs.IsD16(): Set( 0x3A ); Op2D8(); break;
+						case OperandType.HL: Set( 0xE9 ); break;
+						default: break;
+					}
+
 					break;
 				case InstrType.Jr:
 					switch( Lhs )
