@@ -104,11 +104,8 @@
 		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
 		// is BC DE HL SP
 		public static bool IsReg16( this OperandType type ) { return type >= OperandType.BC && type <= OperandType.SP; }
-		// Y offset
-		public static byte Reg16Offset( this OperandType type, byte offset ) { return (byte)( offset + ( (byte)type - (byte)OperandType.BC ) * 0x10 ); }
+		// is (BC) (DE) (HL+) (HL-)
 		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLD; }
-		// Y offset
-		public static byte Reg16AdrOffset( this OperandType type, byte offset ) { return (byte)( offset + ( (byte)type - (byte)OperandType.AdrBC ) * 0x10 ); }
 		// is B D H (HL)
 		public static bool IsBCDHHl( this OperandType type ) {
 			return
@@ -116,6 +113,42 @@
 				type == OperandType.D ||
 				type == OperandType.H ||
 				type == OperandType.AdrHL; }
+		// is C E L A
+		public static bool IsCELA( this OperandType type )
+		{
+			return
+				type == OperandType.C ||
+				type == OperandType.E ||
+				type == OperandType.L ||
+				type == OperandType.A;
+		}
+
+		public static byte YOffset( this OperandType type, byte offset )
+		{
+			switch( type )
+			{
+				case OperandType.AdrBC:
+				case OperandType.BC:
+				case OperandType.B:
+				case OperandType.C:
+				default: return offset;
+
+				case OperandType.AdrDE:
+				case OperandType.DE:
+				case OperandType.D:
+				case OperandType.E: return (byte)( offset + 0x10 );
+
+				case OperandType.AdrHLI:
+				case OperandType.HL:
+				case OperandType.H:
+				case OperandType.L: return (byte)( offset + 0x20 );
+
+				case OperandType.AdrHLD:
+				case OperandType.AdrHL:
+				case OperandType.SP:
+				case OperandType.A: return (byte)( offset + 0x30 );
+			}
+		}
 
 		public static bool IsD8( this OperandType type ) => type == OperandType.d8;
 		public static bool IsD16( this OperandType type ) => type == OperandType.d16;
@@ -276,39 +309,14 @@
 
 					break;
 				case InstrType.Inc:
-					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x03 ) );
-					else {
-						switch( Lhs )
-						{
-							case OperandType.B: Set( 0x04 ); break;
-							case OperandType.D: Set( 0x14 ); break;
-							case OperandType.H: Set( 0x24 ); break;
-							case OperandType.AdrHL: Set( 0x34 ); break;
-							case OperandType.C: Set( 0x0C ); break;
-							case OperandType.E: Set( 0x1C ); break;
-							case OperandType.L: Set( 0x2C ); break;
-							case OperandType.A: Set( 0x3C ); break;
-							default: break;
-						}
-					}
+					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x03 ) );
+					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x04 ) );
+					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0C ) );
 					break;
 				case InstrType.Dec:
-					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x0B ) );
-					else
-					{
-						switch( Lhs )
-						{
-							case OperandType.B: Set( 0x05 ); break;
-							case OperandType.D: Set( 0x15 ); break;
-							case OperandType.H: Set( 0x25 ); break;
-							case OperandType.AdrHL: Set( 0x35 ); break;
-							case OperandType.C: Set( 0x0D ); break;
-							case OperandType.E: Set( 0x1D ); break;
-							case OperandType.L: Set( 0x2D ); break;
-							case OperandType.A: Set( 0x3D ); break;
-							default: break;
-						}
-					}
+					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x0B ) );
+					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x05 ) );
+					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
 					break;
 				case InstrType.Add:
 					break;
@@ -371,10 +379,8 @@
 					break;
 				case InstrType.Rrca:
 					break;
-				case InstrType.Daa:
-					break;
-				case InstrType.Scf:
-					break;
+				case InstrType.Daa: Set( 0x27 ); break;
+				case InstrType.Scf: Set( 0x37 ); break;
 				case InstrType.Cpl: Set( 0x2F ); break;
 				case InstrType.Ccf: Set( 0X3F ); break;
 				case InstrType.Rlc:
