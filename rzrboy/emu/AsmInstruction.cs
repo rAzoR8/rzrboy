@@ -290,6 +290,16 @@
 				case InstrType.Jp:
 					break;
 				case InstrType.Jr:
+					switch( Lhs )
+					{
+						case OperandType.condNZ when Rhs.IsR8(): Set( 0x20 ); Op2D8(); break;
+						case OperandType.condNC when Rhs.IsR8(): Set( 0x30 ); Op2D8(); break;
+						case OperandType.r8: Set( 0x18 ); Op1D8(); break;
+						case OperandType.condZ when Rhs.IsR8(): Set( 0x28 ); Op2D8(); break;
+						case OperandType.condC when Rhs.IsR8(): Set( 0x38 ); Op2D8(); break;
+						default: break;
+					}
+
 					break;
 				case InstrType.Ret:
 					break;
