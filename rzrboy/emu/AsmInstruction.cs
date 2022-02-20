@@ -276,7 +276,7 @@
 
 					break;
 				case InstrType.Inc:
-					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x04 ) );
+					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x03 ) );
 					else {
 						switch( Lhs )
 						{
@@ -293,6 +293,22 @@
 					}
 					break;
 				case InstrType.Dec:
+					if( Lhs.IsReg16Adr() ) Set( Lhs.Reg16Offset( 0x0B ) );
+					else
+					{
+						switch( Lhs )
+						{
+							case OperandType.B: Set( 0x05 ); break;
+							case OperandType.D: Set( 0x15 ); break;
+							case OperandType.H: Set( 0x25 ); break;
+							case OperandType.AdrHL: Set( 0x35 ); break;
+							case OperandType.C: Set( 0x0D ); break;
+							case OperandType.E: Set( 0x1D ); break;
+							case OperandType.L: Set( 0x2D ); break;
+							case OperandType.A: Set( 0x3D ); break;
+							default: break;
+						}
+					}
 					break;
 				case InstrType.Add:
 					break;
