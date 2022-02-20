@@ -12,7 +12,6 @@
 		Ei,
 
 		Ld,
-		Ldh,
 
 		Inc,
 		Dec,
@@ -69,6 +68,7 @@
 		r8, // relative addr / signed
 		d16, // unsigned / addr
 		io8, // 0xFF00 + d8
+		ioC, // 0xFF00 + C
 
 		B, C,
 		D, E,
@@ -133,6 +133,7 @@
 				case OperandType.r8: return $"{r8:X2}";
 				case OperandType.d16: return $"{d16:X4}";
 				case OperandType.io8: return $"0xFF00+{d8:X2}";
+				case OperandType.ioC: return $"0xFF00+C";
 				case OperandType.A:
 				case OperandType.F:
 				case OperandType.B:
@@ -188,6 +189,8 @@
 			ushort pc = _pc;
 
 			void Set( byte val ) { mem[pc++] = val; }
+			void Ext( byte val ) { mem[pc++] = 0xCB; mem[pc++] = val; }
+
 			void Op1D8() { mem[pc++] = this[0].d8; }
 			void Op2D8() { mem[pc++] = this[1].d8; }
 			void Op1D16() { mem[pc++] = this[0].d16.GetLsb(); mem[pc++] = this[0].d16.GetMsb(); }
@@ -243,12 +246,26 @@
 						case OperandType.A when Rhs.IsD8(): Set( 0x3E ); Op2D8(); break;
 						// LD (a16) sp
 						case OperandType.d16 when Rhs == OperandType.SP: Set( 0x08 ); Op1D16(); break;
+						// LD 0xFF00+r8, A
+						case OperandType.io8 when Rhs == OperandType.A: Set( 0xE0 ); Op1D8(); break;
+						// LD A, 0xFF00+r8
+						case OperandType.A when Rhs == OperandType.io8: Set( 0xF0 ); Op2D8(); break;
+						// LD (C), A
+						case OperandType.ioC when Rhs == OperandType.A: Set( 0xE2 ); break;
+						// LD A, (C)
+						case OperandType.A when Rhs == OperandType.ioC: Set( 0xF2 ); break;
+						// LD HL, SP+r8
+						case OperandType.HL when Rhs == OperandType.SPr8: Set( 0xF8 ); Op2D8(); break;
+						// LD SP, HL
+						case OperandType.SP when Rhs == OperandType.HL: Set( 0xF9 ); break;
+						// LD (a16), A
+						case OperandType.d16 when Rhs == OperandType.A: Set( 0xEA ); Op1D16(); break;
+						// LD A, (a16)
+						case OperandType.A when Rhs.IsD16(): Set( 0xFA ); Op2D16(); break;
 						default:
 							break;
 					}
 
-					break;
-				case InstrType.Ldh:
 					break;
 				case InstrType.Inc:
 					break;
