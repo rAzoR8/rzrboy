@@ -366,6 +366,10 @@
 				case InstrType.Call:
 					break;
 				case InstrType.Rst:
+					if( ( this[0].d8 & 0x08 ) == 0x08 )
+						Set( (byte)( 0xCF + this[0].d8 - 0x08 ) );
+					else
+						Set( (byte)( 0xC7 + this[0].d8 ));
 					break;
 				case InstrType.Push:
 					break;
