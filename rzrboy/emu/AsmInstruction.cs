@@ -360,6 +360,15 @@
 
 					break;
 				case InstrType.Ret:
+					switch( Lhs )
+					{
+						case OperandType.condZ: Set( 0xC8 ); break;
+						case OperandType.condC: Set( 0xD8 ); break;
+						case OperandType.condNZ: Set( 0xC0 ); break;
+						case OperandType.condNC: Set( 0xD0 ); break;
+						default:
+							break;
+					}
 					break;
 				case InstrType.Reti:
 					break;
