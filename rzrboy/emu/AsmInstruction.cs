@@ -205,6 +205,7 @@
 				case OperandType.DE:
 				case OperandType.HL:
 				case OperandType.SP:
+				case OperandType.AF:
 					return Type.ToString();
 				case OperandType.SPr8: return $"SP+{r8:X2}";
 				case OperandType.AdrHL: return "(HL)";
@@ -437,14 +438,10 @@
 							break;
 					}
 					break;
-				case InstrType.Rla:
-					break;
-				case InstrType.Rlca:
-					break;
-				case InstrType.Rra:
-					break;
-				case InstrType.Rrca:
-					break;
+				case InstrType.Rlca:Set( 0x07 ); break;
+				case InstrType.Rla: Set( 0x17 ); break;
+				case InstrType.Rrca:Set( 0x0F ); break;
+				case InstrType.Rra: Set( 0x1F ); break;
 				case InstrType.Daa: Set( 0x27 ); break;
 				case InstrType.Scf: Set( 0x37 ); break;
 				case InstrType.Cpl: Set( 0x2F ); break;
