@@ -334,22 +334,25 @@
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x05 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
 					break;
-				case InstrType.Add:
-					break;
-				case InstrType.Adc:
-					break;
-				case InstrType.Sub:
-					break;
-				case InstrType.Sbc:
-					break;
-				case InstrType.And:
-					break;
-				case InstrType.Or:
-					break;
-				case InstrType.Xor:
-					break;
-				case InstrType.Cp:
-					break;
+					// ADD [B C D E H L (HL) A]
+				case InstrType.Add when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
+				case InstrType.Adc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x88 ) ); break;
+				case InstrType.Sub when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x90 ) ); break;
+				case InstrType.Sbc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x98 ) ); break;
+				case InstrType.And when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA0 ) ); break;
+				case InstrType.Xor when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA8 ) ); break;
+				case InstrType.Or when Lhs.IsReg8HlA():	Set( Lhs.Reg8XOffset( 0xB0 ) ); break;
+				case InstrType.Cp when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xB8 ) ); break;
+				// ADD db8
+				case InstrType.Add when Lhs.IsD8(): Set( 0xC6 ); Op1D8(); break;
+				case InstrType.Sub when Lhs.IsD8(): Set( 0xD6 ); Op1D8(); break;
+				case InstrType.And when Lhs.IsD8(): Set( 0xE6 ); Op1D8(); break;
+				case InstrType.Or when Lhs.IsD8(): Set( 0xF6 ); Op1D8(); break;
+				case InstrType.Adc when Lhs.IsD8(): Set( 0xCE ); Op1D8(); break;
+				case InstrType.Sbc when Lhs.IsD8(): Set( 0xDE ); Op1D8(); break;
+				case InstrType.Xor when Lhs.IsD8(): Set( 0xEE ); Op1D8(); break;
+				case InstrType.Cp when Lhs.IsD8(): Set( 0xFE ); Op1D8(); break;
+				
 				case InstrType.Jp:
 					switch( Lhs )
 					{
