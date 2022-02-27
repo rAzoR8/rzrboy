@@ -74,7 +74,7 @@
 		D, E,
 		H, L,
 		AdrHL, // (HL)
-		A,
+		A, // F not direclty accessible
 
 		AdrBC, // (BC)
 		AdrDE, // (DE)
@@ -85,10 +85,11 @@
 		DE,
 		HL,
 		SP,
+		AF, // only for Push & Pop
 
 		SPr8, // SP + r8
 
-		RstAddr,
+		RstAddr, // RST vec operand
 
 		condZ,
 		condNZ,
@@ -98,12 +99,25 @@
 
 	public static class OperandExtensions 
 	{
-		// X offset
-		public static byte Reg8Offset( this OperandType type, byte offset ) { return (byte)(offset + ( byte )type - (byte)OperandType.B); }
+		// X offset for B C D E H L (HL) A
+		public static byte Reg8XOffset( this OperandType type, byte offset )
+		{
+			switch( type )
+			{
+
+				case OperandType.B:
+				default: return offset;
+				case OperandType.C: return (byte)( offset + 0x01 );
+				case OperandType.D: return (byte)( offset + 0x02 );
+				case OperandType.E: return (byte)( offset + 0x03 );
+				case OperandType.H: return (byte)( offset + 0x04 );
+				case OperandType.L: return (byte)( offset + 0x05 );
+				case OperandType.AdrHL: return (byte)( offset + 0x06 );
+				case OperandType.A: return (byte)( offset + 0x07 );
+			}
+		}
 		// is B C D E H L (HL) A
 		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
-		// is BC DE HL SP
-		public static bool IsReg16( this OperandType type ) { return type >= OperandType.BC && type <= OperandType.SP; }
 		// is (BC) (DE) (HL+) (HL-)
 		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLD; }
 		// is B D H (HL)
@@ -146,6 +160,7 @@
 				case OperandType.AdrHLD:
 				case OperandType.AdrHL:
 				case OperandType.SP:
+				case OperandType.AF:
 				case OperandType.A: return (byte)( offset + 0x30 );
 			}
 		}
@@ -250,16 +265,16 @@
 					switch( Lhs )
 					{
 						// LD r8, r8
-						case OperandType.B when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x40 ) ); break;
-						case OperandType.C when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x48 ) ); break;
-						case OperandType.D when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x50 ) ); break;
-						case OperandType.E when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x58 ) ); break;
-						case OperandType.H when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x60 ) ); break;
-						case OperandType.L when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x68 ) ); break;
+						case OperandType.B when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x40 ) ); break;
+						case OperandType.C when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x48 ) ); break;
+						case OperandType.D when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x50 ) ); break;
+						case OperandType.E when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x58 ) ); break;
+						case OperandType.H when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x60 ) ); break;
+						case OperandType.L when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x68 ) ); break;
 						// LD (HL), r8
-						case OperandType.AdrHL when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x70 ) ); break;
+						case OperandType.AdrHL when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x70 ) ); break;
 						// LD A, r8
-						case OperandType.A when Rhs.IsReg8HlA(): Set( Rhs.Reg8Offset( 0x78 ) ); break;
+						case OperandType.A when Rhs.IsReg8HlA(): Set( Rhs.Reg8XOffset( 0x78 ) ); break;
 						// LD BC, d16
 						case OperandType.BC when Rhs.IsD16(): Set( 0x01 ); Op2D16(); break;
 						case OperandType.DE when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
@@ -401,8 +416,26 @@
 					}
 					break;
 				case InstrType.Push:
+					switch( Lhs )
+					{
+						case OperandType.BC: Set( 0xC1 ); break;
+						case OperandType.DE: Set( 0xD1 ); break;
+						case OperandType.HL: Set( 0xE1 ); break;
+						case OperandType.AF: Set( 0xF1 ); break;
+						default:
+							break;
+					}
 					break;
 				case InstrType.Pop:
+					switch( Lhs )
+					{
+						case OperandType.BC: Set( 0xC5 ); break;
+						case OperandType.DE: Set( 0xD5 ); break;
+						case OperandType.HL: Set( 0xE5 ); break;
+						case OperandType.AF: Set( 0xF5 ); break;
+						default:
+							break;
+					}
 					break;
 				case InstrType.Rla:
 					break;
