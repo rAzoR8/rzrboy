@@ -449,23 +449,16 @@
 				case InstrType.Scf: Set( 0x37 ); break;
 				case InstrType.Cpl: Set( 0x2F ); break;
 				case InstrType.Ccf: Set( 0X3F ); break;
-				case InstrType.Rlc:
-					break;
-				case InstrType.Rrc:
-					break;
-				case InstrType.Rl:
-					break;
-				case InstrType.Rr:
-					break;
-				case InstrType.Sla:
-					break;
-				case InstrType.Sra:
-					break;
-				case InstrType.Swap:
-					break;
-				case InstrType.Srl:
-					break;
-				case InstrType.Bit:
+				case InstrType.Rlc when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x00 ) ); break;
+				case InstrType.Rrc when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x08 ) ); break;
+				case InstrType.Rl when Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x10 ) ); break;
+				case InstrType.Rr when Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x18 ) ); break;
+				case InstrType.Sla when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x20 ) ); break;
+				case InstrType.Sra when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x28 ) ); break;
+				case InstrType.Swap when Lhs.IsReg8HlA():Ext( Lhs.Reg8XOffset( 0x30 ) ); break;
+				case InstrType.Srl when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x38 ) ); break;
+				case InstrType.Bit when Lhs.IsD8(): // TODO add Bit OperandType.Bit0 etc? 
+
 					break;
 				case InstrType.Res:
 					break;
