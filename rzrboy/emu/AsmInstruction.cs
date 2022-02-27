@@ -363,17 +363,26 @@
 					if( Count == 0 ) Set( 0xC9 ); 
 					else switch( Lhs )
 					{
-						case OperandType.condZ: Set( 0xC8 ); break;
-						case OperandType.condC: Set( 0xD8 ); break;
 						case OperandType.condNZ: Set( 0xC0 ); break;
 						case OperandType.condNC: Set( 0xD0 ); break;
+						case OperandType.condZ: Set( 0xC8 ); break;
+						case OperandType.condC: Set( 0xD8 ); break;
 						default:
 							break;
 					}
 					break;
 				case InstrType.Reti: Set( 0xD9 ); break;
-					break;
 				case InstrType.Call:
+					if( Count == 1 ) { Set( 0xCD ); Op2D16(); }
+					else if( Count == 2 ) switch( Lhs )
+					{
+						case OperandType.condNZ: Set( 0xC4 ); Op2D16(); break;
+						case OperandType.condNC: Set( 0xD4 ); Op2D16(); break;
+						case OperandType.condZ: Set( 0xCC ); Op2D16(); break;
+						case OperandType.condC: Set( 0xDC ); Op2D16(); break;
+						default:
+							break;
+					}
 					break;
 				case InstrType.Rst:
 					switch( this[0].d8 )
