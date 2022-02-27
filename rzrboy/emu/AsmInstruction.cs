@@ -360,7 +360,8 @@
 
 					break;
 				case InstrType.Ret:
-					switch( Lhs )
+					if( Count == 0 ) Set( 0xC9 ); 
+					else switch( Lhs )
 					{
 						case OperandType.condZ: Set( 0xC8 ); break;
 						case OperandType.condC: Set( 0xD8 ); break;
@@ -370,7 +371,7 @@
 							break;
 					}
 					break;
-				case InstrType.Reti:
+				case InstrType.Reti: Set( 0xD9 ); break;
 					break;
 				case InstrType.Call:
 					break;
