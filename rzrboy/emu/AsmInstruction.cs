@@ -90,7 +90,7 @@
 		SPr8, // SP + r8
 
 		RstAddr, // RST vec operand, stored d8
-		BitIdx, // BIT index operand, stored d8
+		BitIdx, // BIT, RES, SET index operand, stored d8
 
 		condZ,
 		condNZ,
@@ -475,9 +475,37 @@
 							break;
 					}
 					break;
-				case InstrType.Res:
+				case InstrType.Res when	Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+					switch( this[0].d8 )
+					{
+						case 0: Ext( Rhs.Reg8XOffset( 0x80 ) ); break;
+						case 2: Ext( Rhs.Reg8XOffset( 0x90 ) ); break;
+						case 4: Ext( Rhs.Reg8XOffset( 0xA0 ) ); break;
+						case 6: Ext( Rhs.Reg8XOffset( 0xB0 ) ); break;
+
+						case 1: Ext( Rhs.Reg8XOffset( 0x88 ) ); break;
+						case 3: Ext( Rhs.Reg8XOffset( 0x98 ) ); break;
+						case 5: Ext( Rhs.Reg8XOffset( 0xA8 ) ); break;
+						case 7: Ext( Rhs.Reg8XOffset( 0xB8 ) ); break;
+						default:
+							break;
+					}
 					break;
-				case InstrType.Set:
+				case InstrType.Set when Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+					switch( this[0].d8 )
+					{
+						case 0: Ext( Rhs.Reg8XOffset( 0xC0 ) ); break;
+						case 2: Ext( Rhs.Reg8XOffset( 0xD0 ) ); break;
+						case 4: Ext( Rhs.Reg8XOffset( 0xE0 ) ); break;
+						case 6: Ext( Rhs.Reg8XOffset( 0xF0 ) ); break;
+
+						case 1: Ext( Rhs.Reg8XOffset( 0xC8 ) ); break;
+						case 3: Ext( Rhs.Reg8XOffset( 0xD8 ) ); break;
+						case 5: Ext( Rhs.Reg8XOffset( 0xE8 ) ); break;
+						case 7: Ext( Rhs.Reg8XOffset( 0xF8 ) ); break;
+						default:
+							break;
+					}
 					break;
 				default:
 					break;
