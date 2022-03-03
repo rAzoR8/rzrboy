@@ -89,7 +89,8 @@
 
 		SPr8, // SP + r8
 
-		RstAddr, // RST vec operand
+		RstAddr, // RST vec operand, stored d8
+		BitIdx, // BIT index operand, stored d8
 
 		condZ,
 		condNZ,
@@ -188,6 +189,7 @@
 		{
 			switch( Type )
 			{
+				case OperandType.BitIdx:
 				case OperandType.RstAddr:
 				case OperandType.d8: return $"{d8:X2}";
 				case OperandType.r8: return $"{r8:X2}";
@@ -403,7 +405,7 @@
 							break;
 					}
 					break;
-				case InstrType.Rst:
+				case InstrType.Rst when Lhs == OperandType.RstAddr:
 					switch( this[0].d8 )
 					{
 						case 0x00: Set( 0xC7 ); break;
@@ -457,8 +459,21 @@
 				case InstrType.Sra when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x28 ) ); break;
 				case InstrType.Swap when Lhs.IsReg8HlA():Ext( Lhs.Reg8XOffset( 0x30 ) ); break;
 				case InstrType.Srl when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x38 ) ); break;
-				case InstrType.Bit when Lhs.IsD8(): // TODO add Bit OperandType.Bit0 etc? 
+				case InstrType.Bit when Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+					switch( this[0].d8 )
+					{
+						case 0: Ext( Rhs.Reg8XOffset( 0x40 ) ); break;
+						case 2: Ext( Rhs.Reg8XOffset( 0x50 ) ); break;
+						case 4: Ext( Rhs.Reg8XOffset( 0x60 ) ); break;
+						case 6: Ext( Rhs.Reg8XOffset( 0x70 ) ); break;
 
+						case 1: Ext( Rhs.Reg8XOffset( 0x48 ) ); break;
+						case 3: Ext( Rhs.Reg8XOffset( 0x58 ) ); break;
+						case 5: Ext( Rhs.Reg8XOffset( 0x68 ) ); break;
+						case 7: Ext( Rhs.Reg8XOffset( 0x78 ) ); break;
+						default:
+							break;
+					}
 					break;
 				case InstrType.Res:
 					break;
