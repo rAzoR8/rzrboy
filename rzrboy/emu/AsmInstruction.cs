@@ -184,6 +184,8 @@
 		public Operand( sbyte r8 ) { Type = OperandType.r8; d16 = (byte)r8; }
 		public Operand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
 
+		public static implicit operator Operand( OperandType type ) { return new Operand( type ); }
+
 		public OperandType Type { get; }
 		public ushort d16 { get; } = 0;
 		public sbyte r8 => (sbyte)d16.GetLsb();

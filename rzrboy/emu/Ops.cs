@@ -2,9 +2,10 @@
 {
 	public static class Asm
 	{
-		public static Operand D8 (byte val) => new Operand ( OperandType.d8, val );
+		public static Operand D8( byte val ) => new Operand( OperandType.d8, val );
 		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );
 		public static Operand D16( ushort val ) => new Operand( OperandType.d16, val );
+		public static Operand D16( byte msb, byte lsb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
 		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 
 
@@ -14,10 +15,35 @@
 		public static AsmInstr Di( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Di );
 		public static AsmInstr Ei( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Ei );
 
+		private static readonly OperandType[] BCDEHLSP = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
+		private static readonly OperandType[] adrBCDEHLID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD };
+
+		// split into nibbles
+		private static (byte x, byte y) Split( byte val ) => ((byte)(val & 0xF), (byte)(val >> 4));
+
+		private const OperandType A = OperandType.A;
+		private const OperandType B = OperandType.B;
+
+
+		public static AsmInstr Ld (ref ushort pc, ISection mem ) 
+		{
+			( byte x, byte y ) = Split( mem[pc++] );
+			return (x, y) switch
+			{
+				// 0x01, 0x11, 0x21, 0x 31 -> LD BC, d16
+				(1, _) when y < 4 => new AsmInstr( InstrType.Ld, BCDEHLSP[y], D16( mem[pc]++, mem[pc]++ ) ),
+				(2, _) when y < 4 => new AsmInstr( InstrType.Ld, adrBCDEHLID[y], A ),
+
+
+				_ => AsmInstr.Invalid
+			};
+		}
+
 		// ...
 		public static AsmInstr Rst( ref ushort pc, ISection mem )
 		{
-			switch( mem[pc] )
+			byte op = mem[pc++];
+			switch( op )
 			{
 				case 0xC7:
 				case 0xD7:
@@ -27,7 +53,7 @@
 				case 0xDF:
 				case 0xEF:
 				case 0xFF:
-					return new AsmInstr( InstrType.Rst, D8( mem[pc++] ) );
+					return new AsmInstr( InstrType.Rst, D8( op ) );
 				default: return AsmInstr.Invalid;
 			}
 		}
