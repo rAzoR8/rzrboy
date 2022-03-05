@@ -2,6 +2,7 @@
 {
 	public enum InstrType
 	{
+		Invalid,
 		Db, //just data, not and actual instruction
 
 		Nop,
@@ -175,7 +176,10 @@
 	public class Operand
 	{
 		public Operand( OperandType type ) { Type = type; }
-		public Operand( OperandType type, byte io8 ) { Type = type; d16 = io8; }
+		public Operand( OperandType type, byte val ) { Type = type; d16 = val; }
+		public Operand( OperandType type, sbyte val ) { Type = type; d16 = (byte)val; }
+		public Operand( OperandType type, ushort val ) { Type = type; d16 = val; }
+
 		public Operand( byte d8 ) { Type = OperandType.d8; d16 = d8; }
 		public Operand( sbyte r8 ) { Type = OperandType.r8; d16 = (byte)r8; }
 		public Operand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
@@ -226,6 +230,7 @@
 
 	public class AsmInstr : List<Operand>
 	{
+		public static readonly AsmInstr Invalid = new AsmInstr( InstrType.Invalid );
 		public AsmInstr( InstrType type ) { Type = type; }
 		public AsmInstr( InstrType type, params Operand[] operands ) : base( operands ) { Type = type; }
 		public AsmInstr( InstrType type, OperandType lhs ) { Type = type; Add( new( lhs ) ); }

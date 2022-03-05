@@ -1,5 +1,38 @@
 ﻿namespace rzr
 {
+	public static class Asm
+	{
+		public static Operand D8 (byte val) => new Operand ( OperandType.d8, val );
+		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );
+		public static Operand D16( ushort val ) => new Operand( OperandType.d16, val );
+		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
+
+
+		public static AsmInstr Nop( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Nop );
+		public static AsmInstr Stop( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Stop );
+		public static AsmInstr Halt( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Halt );
+		public static AsmInstr Di( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Di );
+		public static AsmInstr Ei( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Ei );
+
+		// ...
+		public static AsmInstr Rst( ref ushort pc, ISection mem )
+		{
+			switch( mem[pc] )
+			{
+				case 0xC7:
+				case 0xD7:
+				case 0xE7:
+				case 0xF7:
+				case 0xCF:
+				case 0xDF:
+				case 0xEF:
+				case 0xFF:
+					return new AsmInstr( InstrType.Rst, D8( mem[pc++] ) );
+				default: return AsmInstr.Invalid;
+			}
+		}
+	}
+
 	public static class Ops
 	{
 		/// <summary>
