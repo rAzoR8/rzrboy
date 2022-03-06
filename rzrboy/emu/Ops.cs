@@ -255,7 +255,30 @@
 			};
 		}
 
-		private static AsmInstr Ext( ref ushort pc, ISection mem ) { ++pc; return AsmInstr.Invalid; }
+		public static AsmInstr Rlc( Operand rhs ) => new AsmInstr( InstrType.Rlc, rhs );
+		public static AsmInstr Rrc( Operand rhs ) => new AsmInstr( InstrType.Rrc, rhs );
+		public static AsmInstr Rl( Operand rhs ) => new AsmInstr( InstrType.Rl, rhs );
+		public static AsmInstr Rr( Operand rhs ) => new AsmInstr( InstrType.Rr, rhs );
+		public static AsmInstr Sla( Operand rhs ) => new AsmInstr( InstrType.Sla, rhs );
+		public static AsmInstr Sra( Operand rhs ) => new AsmInstr( InstrType.Sra, rhs );
+
+		public static AsmInstr Swap( Operand rhs ) => new AsmInstr( InstrType.Swap, rhs );
+		public static AsmInstr Srl( Operand rhs ) => new AsmInstr( InstrType.Srl, rhs );
+
+		public static AsmInstr Bit( Operand idx, Operand reg ) => new AsmInstr( InstrType.Bit, idx, reg );
+		public static AsmInstr Bit( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, D8(idx), reg );
+		public static AsmInstr Bit( byte idx, Operand reg ) => new AsmInstr( InstrType.Bit, D8( idx ), reg );
+
+		private static AsmInstr Ext( ref ushort pc, ISection mem )
+		{ 
+			++pc; // caller cant modify ref param, so we need to do it here
+
+			(byte x, byte y) = mem[pc++].Nibbles();
+			return (x, y) switch
+			{
+				_ => AsmInstr.Invalid
+			};
+		}
 	} // !Asm
 
 	public static class Ops
