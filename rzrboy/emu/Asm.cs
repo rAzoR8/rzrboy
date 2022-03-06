@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace rzr
+﻿namespace rzr
 {
 	public static class Asm
 	{
@@ -12,7 +6,7 @@ namespace rzr
 		public static Operand D8( byte val ) => new Operand( OperandType.d8, val );
 		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );
 		public static Operand R8( byte val ) => new Operand( OperandType.r8, val );
-		public static Operand D16( byte msb, byte lsb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
+		public static Operand D16( byte lsb, byte msb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
 		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 		public static Operand RstAdr( byte val ) => new Operand( OperandType.RstAddr, val );
 		public static Operand BitIdx( byte idx ) => new Operand( OperandType.BitIdx, idx );
@@ -50,7 +44,6 @@ namespace rzr
 		public static AsmInstr Cpl() => new AsmInstr( InstrType.Cpl );
 		public static AsmInstr Ccf() => new AsmInstr( InstrType.Ccf );
 		public static AsmInstr Rst( Operand vec ) => new AsmInstr( InstrType.Rst, vec );
-
 
 		private static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
 		private static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD };
@@ -93,7 +86,7 @@ namespace rzr
 				// 0x30 JR NC, r8
 				(0, 3 ) => Jr( condNC, R8( mem[pc++] ) ),
 				// 0x01->0x31 -> LD BC, d16
-				(1, _ ) when y < 4 => Ld( BcDeHlSp[y], D16( mem[pc]++, mem[pc]++ ) ),
+				(1, _ ) when y < 4 => Ld( BcDeHlSp[y], D16( mem[pc++], mem[pc++] ) ),
 				// 0x02->0x32 LD (BC), A
 				(2, _ ) when y < 4 => Ld( adrBcDeHlID[y], A ),
 				// 0x03->0x33 INC [BC DE HL SP]
@@ -288,7 +281,7 @@ namespace rzr
 
 		private static AsmInstr Ext( ref ushort pc, ISection mem )
 		{
-			++pc; // caller cant modify ref param, so we need to do it here
+			//++pc; // caller cant modify ref param, so we need to do it here
 
 			byte op = mem[pc++];
 			(byte x, byte y) = op.Nibbles();
@@ -314,5 +307,4 @@ namespace rzr
 			};
 		}
 	} // !Asm
-
 }

@@ -313,18 +313,24 @@ namespace rzrboy
             if( boy.IsRunning )
                 cts.Cancel();
 
-            var extensions = new[] { ".bin" };
             var options = new PickOptions
             {
                 PickerTitle = "Please select a rom file to load",
             };
 
-            var result = await FilePicker.PickAsync( options );
-            if( result != null )
-            {
-                boy.LoadBootRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
-                m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
+			try
+			{
+                var result = await FilePicker.PickAsync( options );
+                if( result != null )
+                {
+                    boy.LoadBootRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
+                    m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
+                }
             }
+			catch( Exception )
+			{
+                // TODO: log
+			}
         }
     }
 }

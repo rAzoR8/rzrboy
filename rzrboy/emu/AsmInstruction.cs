@@ -1,4 +1,6 @@
-﻿namespace rzr
+﻿using static rzr.Asm;
+
+namespace rzr
 {
 	public enum InstrType
 	{
@@ -200,11 +202,11 @@
 			{
 				case OperandType.BitIdx:
 				case OperandType.RstAddr:
-				case OperandType.d8: return $"{d8:X2}";
-				case OperandType.r8: return $"{r8:X2}";
-				case OperandType.d16: return $"{d16:X4}";
-				case OperandType.io8: return $"0xFF00+{d8:X2}";
-				case OperandType.ioC: return $"0xFF00+C";
+				case OperandType.d8: return $"${d8:X2}";
+				case OperandType.r8: return $"${r8:X2}";
+				case OperandType.d16: return $"${d16:X4}";
+				case OperandType.io8: return $"($FF00+{d8:X2})";
+				case OperandType.ioC: return $"($FF00+C)";
 				case OperandType.A:
 				case OperandType.B:
 				case OperandType.C:

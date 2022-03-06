@@ -34,14 +34,6 @@ namespace rzr
                     yield return op;
                 }
             }
-
-            public override IEnumerable<string> Operands( Ref<ushort> pc, Section mem )
-            {
-                byte opcode = mem[pc.Value];
-                Instruction ext = m_extInstructions[opcode];
-                pc.Value++;
-                return ext.Operands( pc, mem );
-            }
         }
 
         private delegate Instruction BuildFunc<Y, X>(Y y, X x);
@@ -176,26 +168,26 @@ namespace rzr
             this[0xE9] = JpHl;
 
             // JP NZ, a16
-            this[0xC2] = JpCcImm16( Ops.NZ, "NZ");
-            this[0xD2] = JpCcImm16( Ops.NC, "NC");
+            this[0xC2] = JpCcImm16( Ops.NZ );
+            this[0xD2] = JpCcImm16( Ops.NC );
 
             // JP a16
             this[0xC3] = JpImm16;
 
             // JP Z, a16
-            this[0xCA] = JpCcImm16( Ops.Z, "Z");
-            this[0xDA] = JpCcImm16( Ops.C, "C");
+            this[0xCA] = JpCcImm16( Ops.Z );
+            this[0xDA] = JpCcImm16( Ops.C );
 
             // JR NZ, e8
-            this[0x20] = JrCcImm( Ops.NZ, "NZ" );
-            this[0x30] = JrCcImm( Ops.NC, "NC" );
+            this[0x20] = JrCcImm( Ops.NZ );
+            this[0x30] = JrCcImm( Ops.NC );
 
             // JR e8
             this[0x18] = JrImm;
 
             // JR Z, e8
-            this[0x28] = JrCcImm( Ops.Z, "Z" );
-            this[0x38] = JrCcImm( Ops.C, "C" );
+            this[0x28] = JrCcImm( Ops.Z );
+            this[0x38] = JrCcImm( Ops.C );
 
             this[0x03] = Inc( Reg16.BC );
             this[0x13] = Inc( Reg16.DE );
@@ -228,19 +220,19 @@ namespace rzr
             this[0x3D] = Dec( Reg8.A );
 
             // CALL cc, nn
-            this[0xC4] = CallCc( Ops.NZ, "NZ" );
-            this[0xD4] = CallCc( Ops.NC, "NC" );
-            this[0xCC] = CallCc( Ops.Z, "Z" );
-            this[0xDC] = CallCc( Ops.C, "C" );
+            this[0xC4] = CallCc( Ops.NZ );
+            this[0xD4] = CallCc( Ops.NC );
+            this[0xCC] = CallCc( Ops.Z );
+            this[0xDC] = CallCc( Ops.C );
 
             // CALL nn
             this[0xCD] = Call;
 
             // RET cc
-            this[0xC0] = RetCc( Ops.NZ, "NZ" );
-            this[0xD0] = RetCc( Ops.NC, "NC" );
-            this[0xC8] = RetCc( Ops.Z, "Z" );
-            this[0xD8] = RetCc( Ops.C, "C" );
+            this[0xC0] = RetCc( Ops.NZ );
+            this[0xD0] = RetCc( Ops.NC );
+            this[0xC8] = RetCc( Ops.Z );
+            this[0xD8] = RetCc( Ops.C );
 
             // RET
             this[0xC9] = Ret;
@@ -375,16 +367,15 @@ namespace rzr
 		/// <param name="pc"></param>
 		/// <param name="bin"></param>
 		/// <returns></returns>
-		public string Disassemble( ref ushort pc, Section bin )
+		public string Disassemble( ref ushort pc, ISection mem )
         {
-            byte opcode = bin[pc]; // fetch
-            Instruction instr = this[opcode];
+            byte opcode = mem[pc]; 
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
 
-			++pc;
-			sb.Append( instr.ToString( ref pc, bin ) );
+            AsmInstr instr = Asm.Disassemble( ref pc, mem );
+            sb.Append( instr.ToString().ToUpper() );
 
 			return sb.ToString();
         }
@@ -473,48 +464,48 @@ namespace rzr
         // ###################################################
 
         // INVALID
-        private static readonly Instruction Invalid = Ops.Nop.Get( "INVALID" );
+        private static readonly Instruction Invalid = Ops.Nop;
 
         // NOP
-        private static readonly Instruction Nop = Ops.Nop.Get( "NOP" );
+        private static readonly Instruction Nop = Ops.Nop;
 
         // HALT
-        private static readonly Instruction Halt = Ops.Halt.Get( "HALT" );
+        private static readonly Instruction Halt = Ops.Halt;
 
         // STOP
-        private static readonly Instruction Stop = new Instruction( Ops.Stop, "STOP" );
+        private static readonly Instruction Stop = new ( Ops.Stop );
 
         // INC r8
-        private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst ).Get( "INC" ) + Ops.operand( dst );
+        private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst );
         // INC r16
-        private static Instruction Inc( Reg16 dst ) => new Instruction( () => Ops.Inc( dst ), "INC" ) + Ops.operand( dst );
+        private static Instruction Inc( Reg16 dst ) => new ( () => Ops.Inc( dst ) );
         // INC (HL)
-        private static readonly Instruction IncHl = new Instruction( Ops.IncHl, "INC" ) + "(HL)";
+        private static readonly Instruction IncHl = new ( Ops.IncHl );
 
         // INC r8
-        private static Instruction Dec( Reg8 dst ) => Ops.Dec( dst ).Get( "Dec" ) + Ops.operand( dst );
+        private static Instruction Dec( Reg8 dst ) => Ops.Dec( dst );
         // INC r16
-        private static Instruction Dec( Reg16 dst ) => new Instruction( () => Ops.Dec( dst ), "Dec" ) + Ops.operand( dst );
+        private static Instruction Dec( Reg16 dst ) => new ( () => Ops.Dec( dst ) );
         // INC (HL)
-        private static readonly Instruction DecHl = new Instruction( Ops.DecHl, "Dec" ) + "(HL)";
+        private static readonly Instruction DecHl = new ( Ops.DecHl );
 
         // BIT i, [r8, (HL)]
-        private static Instruction Bit( byte bit, RegX target ) => new Instruction( () => Ops.Bit( bit, target ), "BIT" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+        private static Instruction Bit( byte bit, RegX target ) => new ( () => Ops.Bit( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static Instruction Set( byte bit, RegX target ) => new Instruction( () => Ops.Set( bit, target ), "SET" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+        private static Instruction Set( byte bit, RegX target ) => new ( () => Ops.Set( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static Instruction Res( byte bit, RegX target ) => new Instruction( () => Ops.Res( bit, target ), "RES" ) + $"{bit}" + Ops.operand8OrAdd16( target );
+        private static Instruction Res( byte bit, RegX target ) => new ( () => Ops.Res( bit, target ) );
 
         // XOR A, [r8, (HL)]
-        private static Instruction Xor( RegX target ) => new Instruction( () => Ops.Xor( target ), "XOR" ) + "A" + Ops.operand( target );
+        private static Instruction Xor( RegX target ) => new ( () => Ops.Xor( target ) );
 
         // XOR A, db8
-        private static readonly Instruction XorImm8 = new Instruction( Ops.XorImm8, "XOR" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction XorImm8 = new ( Ops.XorImm8 );
 
         // LD r8, db8 LD r16, db16
-        private static Instruction LdImm( RegX dst ) => new Instruction( () => Ops.LdImm( dst ), "LD" ) + Ops.operand( dst ) + ( dst.Is8() ? Ops.operandDB8 : Ops.operandDB16 );
+        private static Instruction LdImm( RegX dst ) => new ( () => Ops.LdImm( dst ) );
 
         /// <summary>
         /// LD r8, r8' 
@@ -525,182 +516,166 @@ namespace rzr
         /// <param name="dst"></param>
         /// <param name="src"></param>
         /// <returns></returns>
-        private static Instruction Ld( RegX dst, RegX src )
-        {
-            Instruction builder = new( () => Ops.LdRegOrAddr( dst, src ), "LD" );
-
-            if( ( dst.Is8() && src.Is8() ) || ( dst.Is16() && src.Is16() ) )
-            {
-                return builder + Ops.operand( dst ) + Ops.operand( src );
-            }
-            else if( dst.Is16() && src.Is8() )
-            {
-                return builder + $"({dst})" + Ops.operand( src );
-            }
-            else
-            {
-                return builder + Ops.operand( dst ) + $"({src})";
-            }
-        }
+        private static Instruction Ld( RegX dst, RegX src ) => new( () => Ops.LdRegOrAddr( dst, src ) );
 
         // LD (HL+), A
-        private static readonly Instruction LdHlPlusA = new Instruction( Ops.LdHlPlusA, "LD" ) + $"(HL+)" + "A";
+        private static readonly Instruction LdHlPlusA = new ( Ops.LdHlPlusA );
         // LD (HL-), A
-        private static readonly Instruction LdHlMinusA = new Instruction( Ops.LdHlMinusA, "LD" ) + $"(HL-)" + "A";
+        private static readonly Instruction LdHlMinusA = new ( Ops.LdHlMinusA );
 
         // LD A, (HL+)
-        private static readonly Instruction LdAHlPlus = new Instruction( Ops.LdAHlPlus, "LD" ) + "A" + $"(HL+)";
+        private static readonly Instruction LdAHlPlus = new ( Ops.LdAHlPlus );
         // LD A, (HL-)
-        private static readonly Instruction LdAHlMinus = new Instruction( Ops.LdAHlMinus, "LD" ) + "A" + $"(HL-)";
+        private static readonly Instruction LdAHlMinus = new ( Ops.LdAHlMinus );
 
         // LD A, (0xFF00+C)
-        private static readonly Instruction LdhAc = new Instruction( Ops.LdhAc, "LD" ) + "A" + "(0xFF00+C)";
+        private static readonly Instruction LdhAc = new ( Ops.LdhAc );
 
         // LD (0xFF00+C), A
-        private static readonly Instruction LdhCa = new Instruction( Ops.LdhCa, "LD" ) + "(0xFF00+C)" + "A";
+        private static readonly Instruction LdhCa = new ( Ops.LdhCa );
 
         // LD A, (0xFF00+db8)
-        private static readonly Instruction LdhAImm = new Instruction( Ops.LdhAImm, "LD" ) + "A" + Ops.operandDB8x( "0xFF00+" );
+        private static readonly Instruction LdhAImm = new ( Ops.LdhAImm );
 
         // LD (0xFF00+db8), A
-        private static readonly Instruction LdhImmA = new Instruction( Ops.LdhImmA, "LD" ) + Ops.operandDB8x( "0xFF00+" ) + "A";
+        private static readonly Instruction LdhImmA = new ( Ops.LdhImmA );
 
         // LD (a16), SP
-        private static readonly Instruction LdImm16Sp = new Instruction( Ops.LdImm16Sp, "LD" ) + Ops.addrDB16 + "SP";
+        private static readonly Instruction LdImm16Sp = new ( Ops.LdImm16Sp );
 
         // LD (a16), A
-        private static readonly Instruction LdImmAddrA = new Instruction( Ops.LdImmAddrA, "LD" ) + Ops.addrDB16 + "A";
+        private static readonly Instruction LdImmAddrA = new ( Ops.LdImmAddrA ) ;
 
         // LD A, (a16)
-        private static readonly Instruction LdAImmAddr = new Instruction( Ops.LdAImmAddr, "LD" ) + "A" + Ops.addrDB16;
+        private static readonly Instruction LdAImmAddr = new ( Ops.LdAImmAddr );
 
         // LD HL,SP + r8 - 3 cycles
-        private static readonly Instruction LdHlSpR8 = new Instruction( Ops.LdHlSpR8, "LD" ) + "HL" + Ops.operandE8x("SP+");
+        private static readonly Instruction LdHlSpR8 = new ( Ops.LdHlSpR8 );
 
 
         // ADD A, [r8 (HL)]
-        private static Instruction Add( RegX src ) => new Instruction( () => Ops.Add( src ), "ADD" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Add( RegX src ) => new ( () => Ops.Add( src ) );
 
         // ADD HL, r16
-        private static Instruction AddHl( Reg16 src ) => new Instruction( () => Ops.AddHl( src ), "ADD" ) + "HL" + Ops.operand( src );
+        private static Instruction AddHl( Reg16 src ) => new ( () => Ops.AddHl( src ) ) ;
 
         // ADD A, db8
-        private static readonly Instruction AddImm8 = new Instruction( () => Ops.AddImm8( carry: 0 ), "ADD" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction AddImm8 = new ( () => Ops.AddImm8( carry: 0 ));
 
         // ADC A, db8
-        private static readonly Instruction AdcImm8 = new Instruction( () => Ops.AddImm8( carry: 1 ), "ADC" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction AdcImm8 = new ( () => Ops.AddImm8( carry: 1 ) ) ;
         
         // ADD SP, R8
-        private static readonly Instruction AddSpR8 = new Instruction( Ops.AddSpR8, "ADD" ) + "SP" + Ops.operandE8;
+        private static readonly Instruction AddSpR8 = new ( Ops.AddSpR8 );
 
         // ADD A, [r8 (HL)]
-        private static Instruction Adc( RegX src ) => new Instruction( () => Ops.Add( src, carry: 1 ), "ADC" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Adc( RegX src ) => new ( () => Ops.Add( src, carry: 1 ) );
 
 
         // SUB A, [r8 (HL)]
-        private static Instruction Sub( RegX src ) => new Instruction( () => Ops.Sub( src ), "SUB" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Sub( RegX src ) => new ( () => Ops.Sub( src ) );
 
         // SUB A, db8
-        private static readonly Instruction SubImm8 = new Instruction( () => Ops.SubImm8( carry: 0 ), "SUB" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction SubImm8 = new ( () => Ops.SubImm8( carry: 0 ) );
 
         // SBC A, [r8 (HL)]
-        private static Instruction Sbc( RegX src ) => new Instruction( () => Ops.Sub( src, carry: 1 ), "SBC" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Sbc( RegX src ) => new ( () => Ops.Sub( src, carry: 1 ) );
 
         // SBC A, db8
-        private static readonly Instruction SbcImm8 = new Instruction( () => Ops.SubImm8( carry: 1 ), "SBC" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction SbcImm8 = new ( () => Ops.SubImm8( carry: 1 ) );
 
         // AND A, [r8 (HL)]
-        private static Instruction And( RegX src ) => new Instruction( () => Ops.And( src ), "AND" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction And( RegX src ) => new ( () => Ops.And( src ) );
 
         // AND A, db8
-        private static readonly Instruction AndImm8 = new Instruction( Ops.AndImm8, "AND" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction AndImm8 = new ( Ops.AndImm8 );
 
         // OR A, [r8 (HL)]
-        private static Instruction Or( RegX src ) => new Instruction( () => Ops.Or( src ), "OR" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Or( RegX src ) => new ( () => Ops.Or( src ) );
 
         // OR A, db8
-        private static readonly Instruction OrImm8 = new Instruction( Ops.OrImm8, "OR" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction OrImm8 = new ( Ops.OrImm8 );
 
         // CP A, [r8 (HL)]
-        private static Instruction Cp( RegX src ) => new Instruction( () => Ops.Cp( src ), "CP" ) + "A" + Ops.operand8OrAdd16( src );
+        private static Instruction Cp( RegX src ) => new ( () => Ops.Cp( src ) );
 
         // CP A, db8
-        private static readonly Instruction CpImm8 = new Instruction( Ops.CpImm8, "CP" ) + "A" + Ops.operandDB8;
+        private static readonly Instruction CpImm8 = new ( Ops.CpImm8 ) ;
 
         // JP HL
-        private static readonly Instruction JpHl = Ops.JpHl.Get( "JP" ) + "HL";
+        private static readonly Instruction JpHl = Ops.JpHl;
 
         // JP a16
-        private static readonly Instruction JpImm16 = new Instruction( () => Ops.JpImm16(), "JP" ) + Ops.operandDB16;
+        private static readonly Instruction JpImm16 = new ( () => Ops.JpImm16());
 
         // JP cc, a16
-        private static Instruction JpCcImm16( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JpImm16( cc ), "JP" ) + flag + Ops.operandDB16;
+        private static Instruction JpCcImm16( Ops.Condition cc ) => new ( () => Ops.JpImm16( cc ) );
 
         // JR e8
-        private static readonly Instruction JrImm = new Instruction( () => Ops.JrImm(), "JR" ) + Ops.operandE8;
+        private static readonly Instruction JrImm = new ( () => Ops.JrImm() );
 
         // JR cc, e8
-        private static Instruction JrCcImm( Ops.Condition cc, string flag ) => new Instruction( () => Ops.JrImm( cc ), "JR" ) + flag + Ops.operandE8;
+        private static Instruction JrCcImm( Ops.Condition cc ) => new ( () => Ops.JrImm( cc ) );
 
         // CALL nn
-        private static readonly Instruction Call = new Instruction( () => Ops.Call(), "CALL" ) + Ops.operandDB16;
+        private static readonly Instruction Call = new ( () => Ops.Call() ) ;
 
         // CALL cc, nn
-        private static Instruction CallCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Call( cc ), "CALL" ) + flag + Ops.operandDB16;
+        private static Instruction CallCc( Ops.Condition cc ) => new ( () => Ops.Call( cc ) );
 
         // RETI
-        private static readonly Instruction Reti = new Instruction( Ops.Reti, "RETI" );
+        private static readonly Instruction Reti = new ( Ops.Reti );
 
         // EI
-        private static readonly Instruction Ei = new Instruction( Ops.Ei, "EI" );
+        private static readonly Instruction Ei = new ( Ops.Ei  );
 
         // DI
-        private static readonly Instruction Di = new Instruction( Ops.Di, "DI" );
+        private static readonly Instruction Di = new ( Ops.Di );
 
         // RET
-        private static readonly Instruction Ret = new Instruction( () => Ops.Ret(), "RET" );
+        private static readonly Instruction Ret = new ( () => Ops.Ret() );
 
         // RET cc
-        private static Instruction RetCc( Ops.Condition cc, string flag ) => new Instruction( () => Ops.Ret( cc ), "RET" ) + flag;
+        private static Instruction RetCc( Ops.Condition cc ) => new ( () => Ops.Ret( cc ) );
 
         // PUSH r16
-        private static Instruction Push( Reg16 src ) => new Instruction( () => Ops.Push( src ), "PUSH" ) + Ops.operand( src );
+        private static Instruction Push( Reg16 src ) => new ( () => Ops.Push( src ) );
 
         // POP r16
-        private static Instruction Pop( Reg16 dst ) => new Instruction( () => Ops.Pop( dst ), "POP" ) + Ops.operand( dst );
+        private static Instruction Pop( Reg16 dst ) => new ( () => Ops.Pop( dst ) );
 
         // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
-        private static Instruction Rst( byte vec ) => new Instruction( () => Ops.Rst( vec ), "RST" ) + $"0x{vec:X2}";
+        private static Instruction Rst( byte vec ) => new ( () => Ops.Rst( vec ) );
 
         // CCF
-        private static readonly Instruction Ccf = new Instruction( Ops.Ccf, "CCF" );
+        private static readonly Instruction Ccf = new ( Ops.Ccf );
         // SCF
-        private static readonly Instruction Scf = new Instruction( Ops.Scf, "SCF" );
+        private static readonly Instruction Scf = new ( Ops.Scf );
         // SCF
-        private static readonly Instruction Cpl = new Instruction( Ops.Cpl, "CPL" );
+        private static readonly Instruction Cpl = new ( Ops.Cpl );
         // DAA
-        private static readonly Instruction Daa = new Instruction( Ops.Daa, "DAA" );
+        private static readonly Instruction Daa = new ( Ops.Daa );
 
         // RLC
-        private static Instruction Rlc( RegX dst ) => new Instruction( () => Ops.Rlc( dst ), "RLC" ) + Ops.operand( dst );
+        private static Instruction Rlc( RegX dst ) => new ( () => Ops.Rlc( dst ) );
         // RRC
-        private static Instruction Rrc( RegX dst ) => new Instruction( () => Ops.Rrc( dst ), "RRC" ) + Ops.operand( dst );
+        private static Instruction Rrc( RegX dst ) => new ( () => Ops.Rrc( dst ));
 
         // RL
-        private static Instruction Rl( RegX dst ) => new Instruction( () => Ops.Rl( dst ), "RL" ) + Ops.operand( dst );
+        private static Instruction Rl( RegX dst ) => new ( () => Ops.Rl( dst ));
         // RR
-        private static Instruction Rr( RegX dst ) => new Instruction( () => Ops.Rr( dst ), "RR" ) + Ops.operand( dst );
+        private static Instruction Rr( RegX dst ) => new ( () => Ops.Rr( dst ) );
 
         // SLA
-        private static Instruction Sla( RegX dst ) => new Instruction( () => Ops.Sla( dst ), "SLA" ) + Ops.operand( dst );
+        private static Instruction Sla( RegX dst ) => new ( () => Ops.Sla( dst ) );
         // SRA
-        private static Instruction Sra( RegX dst ) => new Instruction( () => Ops.Sra( dst ), "SRA" ) + Ops.operand( dst );
+        private static Instruction Sra( RegX dst ) => new ( () => Ops.Sra( dst ));
 
         // SWAP
-        private static Instruction Swap( RegX dst ) => new Instruction( () => Ops.Swap( dst ), "SWAP" ) + Ops.operand( dst );
+        private static Instruction Swap( RegX dst ) => new ( () => Ops.Swap( dst ) );
 
         // SRL
-        private static Instruction Srl( RegX dst ) => new Instruction( () => Ops.Srl( dst ), "SRL" ) + Ops.operand( dst );
+        private static Instruction Srl( RegX dst ) => new ( () => Ops.Srl( dst )) ;
 
 		public IEnumerator<Instruction> GetEnumerator()
 		{
