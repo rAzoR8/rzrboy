@@ -2,12 +2,14 @@
 {
 	public static class Asm
 	{
+
 		public static Operand D8( byte val ) => new Operand( OperandType.d8, val );
 		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );
 		public static Operand R8( byte val ) => new Operand( OperandType.r8, val );
 		public static Operand D16( byte msb, byte lsb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
 		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 		public static Operand RstAdr( byte val ) => new Operand( OperandType.RstAddr, val );
+		public static Operand BitIdx( byte idx ) => new Operand( OperandType.BitIdx, idx );
 
 		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
 		public static AsmInstr Stop( params Operand[] ops ) => new AsmInstr( InstrType.Stop, ops );
@@ -134,9 +136,9 @@
 				// 0x76 HALT
 				(6, 7 ) => Halt(),
 				// LD [B D H (HL)], [B C D E H L (HL) A]
-				(_, _ ) when x < 8 && y > 3 && y < 8 => Ld( BDHAdrHl[y], BCDEHLAdrHlA[x] ),
+				(_, _ ) when x < 8 && y >= 4 && y < 8 => Ld( BDHAdrHl[y-4], BCDEHLAdrHlA[x] ),
 				// LD [C E L A], [B C D E H L (HL) A]
-				(_, _ ) when x >= 8 && y > 3 && y < 8 => Ld( CELA[y], BCDEHLAdrHlA[x] ),
+				(_, _ ) when x >= 8 && y >= 4 && y < 8 => Ld( CELA[y-4], BCDEHLAdrHlA[x-8] ),
 				// 0x80->0x88 ADD A, [B C D E H L (HL) A]
 				(_, 8 ) when x < 8 => Add( BCDEHLAdrHlA[x] ),
 				// 0x88->0x8F ADC A, [B C D E H L (HL) A]
@@ -144,15 +146,15 @@
 				// 0x90->0x98 SUB A, [B C D E H L (HL) A]
 				(_, 9 ) when x < 8 => Sub( BCDEHLAdrHlA[x] ),
 				// 0x98->0x9F SBC A, [B C D E H L (HL) A]
-				(_, 9 ) when x >= 8 => Sbc( BCDEHLAdrHlA[x - 8] ),
+				(_, 9 ) when x >= 8 => Sbc( BCDEHLAdrHlA[x-8] ),
 				// 0xA0->0xA8 AND A, [B C D E H L (HL) A]
 				(_, 0xA) when x < 8 => And( BCDEHLAdrHlA[x] ),
 				// 0xA8->0xAF XOR A, [B C D E H L (HL) A]
-				(_, 0xA ) when x >= 8 => Xor( BCDEHLAdrHlA[x - 8] ),
+				(_, 0xA ) when x >= 8 => Xor( BCDEHLAdrHlA[x-8] ),
 				// 0xB0->0xB8 AND A, [B C D E H L (HL) A]
 				(_, 0xB ) when x < 8 => Or( BCDEHLAdrHlA[x] ),
 				// 0xB8->0xBF XOR A, [B C D E H L (HL) A]
-				(_, 0xB ) when x >= 8 => Cp( BCDEHLAdrHlA[x - 8] ),
+				(_, 0xB ) when x >= 8 => Cp( BCDEHLAdrHlA[x-8] ),
 				// 0xC0 RET NZ
 				(0, 0xC) => Ret(condNZ),
 				// 0xC0 RET NC
@@ -162,7 +164,7 @@
 				// 0xF0 LD (0xFF00+db8), A
 				(0, 0xF ) => Ld( A, Io8( mem[pc++] ) ),
 				// 0xC1->0xF1 POP [BC DE HL]
-				(1, _ ) when y > 0xB && y < 0xF => Pop( BcDeHlSp[y] ),
+				(1, _ ) when y >= 0xC && y < 0xF => Pop( BcDeHlSp[y-0xC] ),
 				// 0xF1 POP AF
 				(1, 0xF ) => Pop( AF ),
 				// JP NZ, a16
@@ -182,7 +184,7 @@
 				// 0xD4 CALL NC, a16
 				(4, 0xD ) => Call( condNC, D16( mem[pc++], mem[pc++] ) ),
 				// 0xC5->0xF5 PUSH [BC DE HL]
-				(5, _ ) when y > 0xB && y < 0xF => Push( BcDeHlSp[y] ),
+				(5, _ ) when y >= 0xC && y < 0xF => Push( BcDeHlSp[y-0xC] ),
 				// 0xF5 POP AF
 				(5, 0xF ) => Push( AF ),
 				// 0xC6 ADD A, db8
@@ -194,7 +196,7 @@
 				// 0xF6 OR A, db8
 				(6, 0xF ) => Or( D8( mem[pc++] ) ),
 				// 0xC7 RST 00h
-				(7, 0xC) => Rst (RstAdr(0x00) ),
+				(7, 0xC) => Rst( RstAdr(0x00) ),
 				// 0xD7 RST 10h
 				(7, 0xD ) => Rst( RstAdr( 0x10 ) ),
 				// 0xE7 RST 10h
@@ -266,16 +268,41 @@
 		public static AsmInstr Srl( Operand rhs ) => new AsmInstr( InstrType.Srl, rhs );
 
 		public static AsmInstr Bit( Operand idx, Operand reg ) => new AsmInstr( InstrType.Bit, idx, reg );
-		public static AsmInstr Bit( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, D8(idx), reg );
-		public static AsmInstr Bit( byte idx, Operand reg ) => new AsmInstr( InstrType.Bit, D8( idx ), reg );
+		public static AsmInstr Bit( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, BitIdx(idx), reg );
+		public static AsmInstr Bit( byte idx, Operand reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
+
+		public static AsmInstr Res( Operand idx, Operand reg ) => new AsmInstr( InstrType.Bit, idx, reg );
+		public static AsmInstr Res( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
+		public static AsmInstr Res( byte idx, Operand reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
+
+		public static AsmInstr Set( Operand idx, Operand reg ) => new AsmInstr( InstrType.Bit, idx, reg );
+		public static AsmInstr Set( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
+		public static AsmInstr Set( byte idx, Operand reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
 
 		private static AsmInstr Ext( ref ushort pc, ISection mem )
 		{ 
 			++pc; // caller cant modify ref param, so we need to do it here
 
-			(byte x, byte y) = mem[pc++].Nibbles();
+			byte op = mem[pc++];
+			( byte x, byte y) = op.Nibbles();
+
 			return (x, y) switch
 			{
+				(_, 0 ) when x < 8 => Rlc( BCDEHLAdrHlA[x] ),
+				(_, 0 ) when x >= 8 => Rrc( BCDEHLAdrHlA[x-8] ),
+				(_, 1 ) when x < 8 => Rl( BCDEHLAdrHlA[x] ),
+				(_, 1 ) when x >= 8 => Rr( BCDEHLAdrHlA[x - 8] ),
+				(_, 2 ) when x < 8 => Sla( BCDEHLAdrHlA[x] ),
+				(_, 2 ) when x >= 8 => Sra( BCDEHLAdrHlA[x - 8] ),
+				(_, 3 ) when x < 8 => Swap( BCDEHLAdrHlA[x] ),
+				(_, 3 ) when x >= 8 => Srl( BCDEHLAdrHlA[x - 8] ),
+				(_, _ ) when x < 8 && y >= 4 && y < 8 => Bit( (byte)( ( op - 0x40 ) / 8 ), BCDEHLAdrHlA[x] ),
+				(_, _ ) when x >= 8 && y >= 4 && y < 8 => Bit( (byte)( ( op - 0x40 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+				(_, _ ) when x < 8 && y >= 8 && y < 0xC => Res( (byte)( ( op - 0x80 ) / 8 ), BCDEHLAdrHlA[x] ),
+				(_, _ ) when x >= 8 && y >= 8 && y < 0xC => Res( (byte)( ( op - 0x80 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+				(_, _ ) when x < 8 && y >= 0xC => Set( (byte)( ( op - 0xC0 ) / 8 ), BCDEHLAdrHlA[x] ),
+				(_, _ ) when x >= 8 && y >= 0xC => Set( (byte)( ( op - 0xC0 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+
 				_ => AsmInstr.Invalid
 			};
 		}
