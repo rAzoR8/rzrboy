@@ -2,6 +2,7 @@
 {
     public static class binutil
     {
+        public static (byte low, byte high) Nibbles( this byte val ) => ((byte)( val & 0xF ), (byte)( val >> 4 ));
         public static ushort Combine( this byte msb, byte lsb ) { return (ushort)( ( msb << 8 ) | lsb ); }
         public static void Split( this ushort val, out byte msb, out byte lsb ) { msb = (byte)( ( val & 0xff00 ) >> 8 ); lsb = (byte)( val & 0xff ); }
 

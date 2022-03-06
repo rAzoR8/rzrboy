@@ -171,6 +171,9 @@
 		public static bool IsD16( this OperandType type ) => type == OperandType.d16;
 		public static bool IsR8( this OperandType type ) => type == OperandType.r8;
 		public static bool IsIo8( this OperandType type ) => type == OperandType.io8;
+
+		public static AsmInstr Ops( this InstrType type, Operand lhs, Operand rhs ) { return new AsmInstr( type, lhs, rhs ); }
+		public static AsmInstr Ops( this InstrType type, OperandType lhs, OperandType rhs ) { return new AsmInstr( type, lhs, rhs ); }
 	}
 
 	public class Operand
@@ -238,6 +241,9 @@
 		public AsmInstr( InstrType type, OperandType lhs ) { Type = type; Add( new( lhs ) ); }
 		public AsmInstr( InstrType type, OperandType lhs, OperandType rhs ) { Type = type; Add( new( lhs ) ); Add( new( rhs ) ); }
 
+		public static implicit operator AsmInstr( InstrType type ) { return new AsmInstr( type ); }
+		public static AsmInstr operator +( AsmInstr i, Operand op ) { i.Add(op); return i; }
+		public static AsmInstr operator +( AsmInstr i, OperandType op ) { i.Add( op ); return i; }
 
 		public InstrType Type { get; }
 

@@ -2,70 +2,127 @@
 {
 	public static class Asm
 	{
-		public static Operand D8( byte val ) => new Operand( OperandType.d8, val );
-		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );
-		public static Operand D16( ushort val ) => new Operand( OperandType.d16, val );
-		public static Operand D16( byte msb, byte lsb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
-		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
+		private static Operand D8( byte val ) => new Operand( OperandType.d8, val );
+		private static Operand R8( byte val ) => new Operand( OperandType.r8, val );
+		private static Operand D16( byte msb, byte lsb ) => new Operand( OperandType.d16, msb.Combine( lsb ) );
+		private static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 
-		public static AsmInstr Nop( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Nop );
-		public static AsmInstr Stop( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Stop );
-		public static AsmInstr Halt( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Halt );
-		public static AsmInstr Di( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Di );
-		public static AsmInstr Ei( ref ushort pc, ISection mem ) => new AsmInstr( InstrType.Ei );
+		private static AsmInstr Ld( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Ld, lhs, rhs );
+		private static AsmInstr Jr( Operand lhs ) => new AsmInstr( InstrType.Jr, lhs );
+		private static AsmInstr Jr( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Jr, lhs, rhs );
+		private static AsmInstr Inc( Operand lhs ) => new AsmInstr( InstrType.Inc, lhs );
+		private static AsmInstr Dec( Operand lhs ) => new AsmInstr( InstrType.Dec, lhs );
+		private static AsmInstr Add( Operand lhs ) => new AsmInstr( InstrType.Add, lhs );
+		private static AsmInstr Add( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
+		private static AsmInstr Adc( Operand lhs ) => new AsmInstr( InstrType.Adc, lhs );
+		private static AsmInstr Adc( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Adc, lhs, rhs );
 
 		private static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
 		private static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD };
 		private static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
 		private static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
 		private static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
-		// split into nibbles
-		private static (byte x, byte y) Split( byte val ) => ((byte)(val & 0xF), (byte)(val >> 4));
 
 		private const OperandType A = OperandType.A;
 		private const OperandType SP = OperandType.SP;
 		private const OperandType HL = OperandType.HL;
 		private const OperandType IoC = OperandType.ioC;
 
-		public static AsmInstr Ld( ref ushort pc, ISection mem )
+		private const OperandType condC = OperandType.condC;
+		private const OperandType condNC = OperandType.condNC;
+		private const OperandType condZ = OperandType.condZ;
+		private const OperandType condNZ = OperandType.condNZ;
+
+		public static AsmInstr Disassemble( ref ushort pc, ISection mem )
 		{
-			(byte x, byte y) = Split( mem[pc++] );
+			(byte x, byte y) = mem[pc++].Nibbles();
 			return (x, y) switch
 			{
-				// 0x01, 0x11, 0x21, 0x31 -> LD BC, d16
-				(1, _ ) when y < 4 => new AsmInstr( InstrType.Ld, BcDeHlSp[y], D16( mem[pc]++, mem[pc]++ ) ),
+				// 0x00 NOP
+				(0, 0 ) => InstrType.Nop,
+				// 0x10 STOP
+				(0, 1 ) => InstrType.Stop,
+				// 0x20 JR NZ, r8
+				(0, 2 ) => Jr( condNZ, R8( mem[pc++] ) ),
+				// 0x30 JR NC, r8
+				(0, 3 ) => Jr( condNC, R8( mem[pc++] ) ),
+				// 0x01->0x31 -> LD BC, d16
+				(1, _ ) when y < 4 => Ld( BcDeHlSp[y], D16( mem[pc]++, mem[pc]++ ) ),
 				// 0x02->0x32 LD (BC), A
-				(2, _ ) when y < 4 => new AsmInstr( InstrType.Ld, adrBcDeHlID[y], A ),
+				(2, _ ) when y < 4 => Ld( adrBcDeHlID[y], A ),
+				// 0x03->0x33 INC [BC DE HL SP]
+				(3, _ ) when y < 4 => Inc( BcDeHlSp[y] ),
+				// 0x04->0x34 INC [B D H (HL)]
+				(4, _ ) when y < 4 => Inc( BDHAdrHl[y] ),
+				// 0x05->0x35 DEC [BC DE HL SP]
+				(5, _ ) when y < 4 => Dec( BcDeHlSp[y] ),
 				// 0x6->0x36 LD [B D H (HL)], db8
-				(6, _ ) when y < 4 => new AsmInstr( InstrType.Ld, BDHAdrHl[y], D8( mem[pc++] ) ),
-				// 0x08 -> LD (a16), SP
-				(8, 0 ) => new AsmInstr( InstrType.Ld, D16( mem[pc++], mem[pc++] ), SP ),
-				// 0x0A->0x3A LD A, (BC)
-				(0xA, _ ) when y < 4 => new AsmInstr( InstrType.Ld, A, adrBcDeHlID[y] ),
+				(6, _ ) when y < 4 => Ld( BDHAdrHl[y], D8( mem[pc++] ) ),
+				// 0x07
+				(7, 0 ) => InstrType.Rlca,
+				// 0x17
+				(7, 1 ) => InstrType.Rla,
+				// 0x27
+				(7, 2 ) => InstrType.Daa,
+				// 0x37
+				(7, 3 ) => InstrType.Scf,
+				// 0x08 LD (a16), SP
+				(8, 0 ) => Ld( D16( mem[pc++], mem[pc++] ), SP ),
+				// 0x18 JR r8
+				(8, 1 ) => Jr( R8( mem[pc++] ) ),
+				// 0x28 JR Z, r8
+				(8, 2 ) => Jr( condZ, R8( mem[pc++] ) ),
+				// 0x38 JR C, r8
+				(8, 3 ) => Jr( condC, R8( mem[pc++] ) ),
+				// 0x09-0x39 ADD HL, [BC DE HL SP]
+				(9, _) when y < 4 => Add( HL, BcDeHlSp[y]),
+				// 0x0A->0x3A LD A, [(BC) (DE) (HL+) (HL-)]
+				(0xA, _ ) when y < 4 => Ld( A, adrBcDeHlID[y] ),
+				// 0x0B->0x3B DEC [BC DE HL SP]
+				(0xB, _ ) when y < 4 => Dec( BcDeHlSp[y] ),
+				// 0x0C->0x3C INC [C E L A]
+				(0xC, _ ) when y < 4 => Inc( CELA[y] ),
+				// 0x0D->0x3D Dec [C E L A]
+				(0xD, _ ) when y < 4 => Dec( CELA[y] ),
 				// 0x0E->0x3E LD [C E L A], d8
-				(0xE, _ ) when y < 4 => new AsmInstr( InstrType.Ld, CELA[y], D8( mem[pc++] ) ),
+				(0xE, _ ) when y < 4 => Ld( CELA[y], D8( mem[pc++] ) ),
+				// 0x0F
+				(0xF, 0 ) => InstrType.Rrca,
+				// 0x1F
+				(0xF, 1 ) => InstrType.Rra,
+				// 0x2F
+				(0xF, 2 ) => InstrType.Cpl,
+				// 0x3F
+				(0xF, 3 ) => InstrType.Ccf,
 				// 0x76 HALT
-				(6, 7 ) => AsmInstr.Invalid,
+				(6, 7 ) => InstrType.Halt,
 				// LD [B D H (HL)], [B C D E H L (HL) A]
-				(_, _ ) when x < 8 && y > 3 && y < 8 => new AsmInstr( InstrType.Ld, BDHAdrHl[y], BCDEHLAdrHlA[x] ),
+				(_, _ ) when x < 8 && y > 3 && y < 8 => Ld( BDHAdrHl[y], BCDEHLAdrHlA[x] ),
 				// LD [C E L A], [B C D E H L (HL) A]
-				(_, _ ) when x >= 8 && y > 3 && y < 8 => new AsmInstr( InstrType.Ld, CELA[y], BCDEHLAdrHlA[x] ),
+				(_, _ ) when x >= 8 && y > 3 && y < 8 => Ld( CELA[y], BCDEHLAdrHlA[x] ),
+				// 0x80->0x88 ADD A, [B C D E H L (HL) A]
+				(_, 8 ) when x < 8 => Add( BCDEHLAdrHlA[x] ),
+				// 0x88->0x8F ADC A, [B C D E H L (HL) A]
+				(_, 8 ) when x >= 8 => Add( BCDEHLAdrHlA[x-8] ),
+				
+				// .. SUB & SBC
+
 				// 0xE0 LD (0xFF00+db8), A
-				(0, 0xE ) => new AsmInstr( InstrType.Ld, Io8( mem[pc++] ), A ),
+				(0, 0xE ) => Ld( Io8( mem[pc++] ), A ),
 				// 0xF0 LD (0xFF00+db8), A
-				(0, 0xF ) => new AsmInstr( InstrType.Ld, A, Io8( mem[pc++] ) ),
+				(0, 0xF ) => Ld( A, Io8( mem[pc++] ) ),
 				// 0xE2 LD (0xFF00+C), A
-				(2, 0xE ) => new AsmInstr( InstrType.Ld, IoC, A ),
+				(2, 0xE ) => Ld( IoC, A ),
 				// 0xF2 LD A, (0xFF00+C)
-				(2, 0xF ) => new AsmInstr( InstrType.Ld, A, IoC ),
+				(2, 0xF ) => Ld( A, IoC ),
 				// 0xF8 LD HL, SP + r8
-				(8, 0xF ) => new AsmInstr( InstrType.Ld, HL, new Operand( OperandType.SPr8, mem[pc++] ) ),
+				(8, 0xF ) => Ld( HL, new Operand( OperandType.SPr8, mem[pc++] ) ),
 				// 0xF9 LD SP, HL
-				(9, 0xF ) => new AsmInstr( InstrType.Ld, SP, HL ),
+				(9, 0xF ) => Ld( SP, HL ),
 				// 0xEA LD (a16), A
-				(0xA, 0xE ) => new AsmInstr( InstrType.Ld, D16( mem[pc++], mem[pc++] ), A ),
+				(0xA, 0xE ) => Ld( D16( mem[pc++], mem[pc++] ), A ),
 				// 0xEA LD A, (a16)
-				(0xA, 0xF ) => new AsmInstr( InstrType.Ld, A, D16( mem[pc++], mem[pc++] ) ),
+				(0xA, 0xF ) => Ld( A, D16( mem[pc++], mem[pc++] ) ),
 				_ => AsmInstr.Invalid
 			};
 		}

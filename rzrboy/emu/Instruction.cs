@@ -2,10 +2,6 @@
 
 namespace rzr
 {
-	
-
-	public delegate AsmInstr DisAsm( ref ushort pc, ISection mem );
-
 	public class Ref<T> where T : struct
 	{
 		public Ref( T val )
