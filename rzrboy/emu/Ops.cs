@@ -8,14 +8,17 @@
 		private static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 
 		private static AsmInstr Ld( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Ld, lhs, rhs );
-		private static AsmInstr Jr( Operand lhs ) => new AsmInstr( InstrType.Jr, lhs );
-		private static AsmInstr Jr( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Jr, lhs, rhs );
+		private static AsmInstr Jr( params Operand[] ops ) => new AsmInstr( InstrType.Jr, ops);
 		private static AsmInstr Inc( Operand lhs ) => new AsmInstr( InstrType.Inc, lhs );
 		private static AsmInstr Dec( Operand lhs ) => new AsmInstr( InstrType.Dec, lhs );
-		private static AsmInstr Add( Operand lhs ) => new AsmInstr( InstrType.Add, lhs );
-		private static AsmInstr Add( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
-		private static AsmInstr Adc( Operand lhs ) => new AsmInstr( InstrType.Adc, lhs );
-		private static AsmInstr Adc( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Adc, lhs, rhs );
+		private static AsmInstr Add( params Operand[] ops ) => new AsmInstr( InstrType.Add, ops);
+		private static AsmInstr Adc( params Operand[] ops ) => new AsmInstr( InstrType.Adc, ops );
+		private static AsmInstr Sub( params Operand[] ops ) => new AsmInstr( InstrType.Sub, ops );
+		private static AsmInstr Sbc( params Operand[] ops ) => new AsmInstr( InstrType.Sbc, ops );
+		private static AsmInstr And( Operand lhs ) => new AsmInstr( InstrType.And, lhs );
+		private static AsmInstr Or( Operand lhs ) => new AsmInstr( InstrType.Or, lhs );
+		private static AsmInstr Xor( Operand lhs ) => new AsmInstr( InstrType.Xor, lhs );
+		private static AsmInstr Cp( Operand lhs ) => new AsmInstr( InstrType.Cp, lhs );
 
 		private static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
 		private static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD };
@@ -103,9 +106,19 @@
 				// 0x80->0x88 ADD A, [B C D E H L (HL) A]
 				(_, 8 ) when x < 8 => Add( BCDEHLAdrHlA[x] ),
 				// 0x88->0x8F ADC A, [B C D E H L (HL) A]
-				(_, 8 ) when x >= 8 => Add( BCDEHLAdrHlA[x-8] ),
-				
-				// .. SUB & SBC
+				(_, 8 ) when x >= 8 => Adc( BCDEHLAdrHlA[x-8] ),
+				// 0x90->0x98 SUB A, [B C D E H L (HL) A]
+				(_, 9 ) when x < 8 => Sub( BCDEHLAdrHlA[x] ),
+				// 0x98->0x9F SBC A, [B C D E H L (HL) A]
+				(_, 9 ) when x >= 8 => Sbc( BCDEHLAdrHlA[x - 8] ),
+				// 0xA0->0xA8 AND A, [B C D E H L (HL) A]
+				(_, 0xA) when x < 8 => And( BCDEHLAdrHlA[x] ),
+				// 0xA8->0xAF XOR A, [B C D E H L (HL) A]
+				(_, 0xA ) when x >= 8 => Xor( BCDEHLAdrHlA[x - 8] ),
+				// 0xB0->0xB8 AND A, [B C D E H L (HL) A]
+				(_, 0xB ) when x < 8 => Or( BCDEHLAdrHlA[x] ),
+				// 0xB8->0xBF XOR A, [B C D E H L (HL) A]
+				(_, 0xB ) when x >= 8 => Cp( BCDEHLAdrHlA[x - 8] ),
 
 				// 0xE0 LD (0xFF00+db8), A
 				(0, 0xE ) => Ld( Io8( mem[pc++] ), A ),
