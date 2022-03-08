@@ -1,6 +1,4 @@
-﻿using static rzr.Asm;
-
-namespace rzr
+﻿namespace rzr
 {
 	public enum InstrType
 	{

@@ -2,6 +2,40 @@
 {
 	public static class Asm
 	{
+		public static List<AsmInstr> Disassemble( byte[] rom ) 
+		{
+			// estimate the average instruction length as 2byte
+			List<AsmInstr> instrs = new ( rom.Length / 2);
+			Storage sec = new( rom );
+
+			for( uint i = 0; i < rom.Length; ) 
+			{
+				ushort pc = 0;
+				instrs.Add( Disassemble( ref pc, sec ) );
+				i += pc;
+			}
+
+			return instrs;
+		}
+
+		public static byte[] Assemble( List<AsmInstr> module ) 
+		{
+			// max instruction length is 3 byte
+			byte[] rom = new byte[module.Count * 2]; ;
+			Storage sec = new( rom );
+
+			foreach( AsmInstr instr in module )
+			{
+				
+				ushort pc = 0;
+				instr.Assemble( ref pc, sec );
+				sec.BufferOffset += pc;
+			}
+
+			// shave off the excess data
+			return rom.Take(sec.BufferOffset).ToArray();
+		}
+
 		// Operands
 		public static Operand D8( byte val ) => new Operand( OperandType.d8, val );
 		public static Operand R8( sbyte val ) => new Operand( OperandType.r8, val );

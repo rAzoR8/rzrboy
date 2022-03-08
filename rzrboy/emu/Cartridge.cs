@@ -120,6 +120,12 @@
 				Mbc = CreateMbc( type, cart );			
 			}
 
+#if DEBUG
+			var instructions = Asm.Disassemble( cart );
+			byte[] rom = Asm.Assemble( instructions );
+			System.Diagnostics.Debug.Assert( rom == cart );
+#endif
+
 			if( boot != null )
 			{
 				Mbc.BootRom = boot;

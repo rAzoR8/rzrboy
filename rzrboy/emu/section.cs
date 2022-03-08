@@ -35,17 +35,17 @@ namespace rzr
 			m_storage = storage;
             BufferOffset = storageOffset;
             StartAddr = startAddr;
-			Length = len > 0 ? len : (ushort)( storageOffset - m_storage.Count );
+			Length = len > 0 ? len : (ushort)( m_storage.Count - storageOffset );
 		}
 
-        public int BufferOffset { get; }
+        public int BufferOffset { get; set; }
 		public byte this[ushort address]
         {
 			get => m_storage[BufferOffset + ( address - StartAddr )];
 			set => m_storage[BufferOffset + ( address - StartAddr )] = value;
 		}
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
+        public ushort StartAddr { get; set; }
+        public ushort Length { get; set; }
     }
 
 
