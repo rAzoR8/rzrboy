@@ -176,7 +176,7 @@
 		public static AsmInstr Ops( this InstrType type, OperandType lhs, OperandType rhs ) { return new AsmInstr( type, lhs, rhs ); }
 	}
 
-	public class Operand
+	public class Operand : IEquatable<Operand>
 	{
 		public Operand( OperandType type ) { Type = type; }
 		public Operand( OperandType type, byte val ) { Type = type; d16 = val; }
@@ -230,6 +230,14 @@
 				case OperandType.condNC: return "NC";
 				default: return "?";
 			}
+		}
+
+		public bool Equals( Operand? other )
+		{
+			if( other == null ) return false;
+			if( this == other ) return true;
+
+			return Type == other.Type && d16 == other.d16;
 		}
 	}
 
@@ -373,7 +381,7 @@
 					{
 						case OperandType.condNZ when Rhs.IsD16(): Set( 0xC2 ); Op2D16(); break;
 						case OperandType.condNC when Rhs.IsD16(): Set( 0xD2 ); Op2D16(); break;
-						case OperandType.d16: Set( 0xC3 ); Op2D16(); break;
+						case OperandType.d16: Set( 0xC3 ); Op1D16(); break;
 						case OperandType.condZ when Rhs.IsD16(): Set( 0x2A ); Op2D8(); break;
 						case OperandType.condC when Rhs.IsD16(): Set( 0x3A ); Op2D8(); break;
 						case OperandType.HL: Set( 0xE9 ); break;

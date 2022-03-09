@@ -21,12 +21,11 @@
 		public static byte[] Assemble( List<AsmInstr> module ) 
 		{
 			// max instruction length is 3 byte
-			byte[] rom = new byte[module.Count * 2]; ;
+			byte[] rom = new byte[module.Count * 3]; ;
 			Storage sec = new( rom );
 
 			foreach( AsmInstr instr in module )
-			{
-				
+			{				
 				ushort pc = 0;
 				instr.Assemble( ref pc, sec );
 				sec.BufferOffset += pc;
