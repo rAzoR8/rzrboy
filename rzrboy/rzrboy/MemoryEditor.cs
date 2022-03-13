@@ -74,7 +74,7 @@ namespace rzrboy
                     MaximumHeightRequest = CellHeight,
                     FontFamily = Font.Regular,
                     FontSize = 12,
-                    Keyboard = Microsoft.Maui.Keyboard.Numeric
+                    Keyboard = Microsoft.Maui.Keyboard.Default,
                 }
                 .Row( 0 ).Column( 0 )
                 .Invoke( edit => edit.Completed += OnSetOffset)
