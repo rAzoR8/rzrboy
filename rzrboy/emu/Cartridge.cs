@@ -123,7 +123,12 @@
 #if DEBUG
 			var instructions = Asm.Disassemble( cart );
 			byte[] rom = Asm.Assemble( instructions );
-			System.Diagnostics.Debug.Assert( rom == cart );
+			bool same = rom == cart;
+			System.Diagnostics.Debug.Assert( same );
+			if( !same )
+			{
+				//find which instruction differs
+			}
 #endif
 
 			if( boot != null )
