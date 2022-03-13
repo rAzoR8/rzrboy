@@ -135,6 +135,8 @@ namespace rzrboy
         {
             Title = "rzrBoy Studio";
 
+            InstructionPicker picker = new();
+
             boy = gb;
             m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
 
@@ -163,11 +165,12 @@ namespace rzrboy
 
                 Children =
                 {
-                    new HorizontalStackLayout {
-                        new Label{ FontFamily = Font.Light, FontSize = 40, Text = $"rzr" },
-                        new Label{ FontFamily = Font.Bold, FontSize = 40, Text = $"Boy" },
-                        new Label{ FontFamily = Font.Regular, FontSize = 40, Text = $"Studio" },
-                    }.Row(Row.Title),
+                    picker.Row(Row.Title),
+                    //new HorizontalStackLayout {
+                    //    new Label{ FontFamily = Font.Light, FontSize = 40, Text = $"rzr" },
+                    //    new Label{ FontFamily = Font.Bold, FontSize = 40, Text = $"Boy" },
+                    //    new Label{ FontFamily = Font.Regular, FontSize = 40, Text = $"Studio" },
+                    //}.Row(Row.Title),
 
                     new HorizontalStackLayout {
                         new Button { Text = "Load Boot" }
