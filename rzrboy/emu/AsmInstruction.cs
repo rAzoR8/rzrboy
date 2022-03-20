@@ -188,11 +188,12 @@
 		public Operand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
 
 		public static implicit operator Operand( OperandType type ) { return new Operand( type ); }
+		public static implicit operator OperandType( Operand op ) { return op.Type; }
 
-		public OperandType Type { get; }
-		public ushort d16 { get; } = 0;
-		public sbyte r8 => (sbyte)d16.GetLsb();
-		public byte d8 => d16.GetLsb();
+		public OperandType Type { get; set; }
+		public ushort d16 { get; set; } = 0;
+		public sbyte r8 { get => (sbyte)d16.GetLsb(); set => d16 = (byte)value; }
+		public byte d8 {get => d16.GetLsb(); set => d16 = value; }
 
 		public override string ToString()
 		{
@@ -246,18 +247,39 @@
 		public static readonly AsmInstr Invalid = new AsmInstr( InstrType.Invalid );
 		public AsmInstr( InstrType type ) { Type = type; }
 		public AsmInstr( InstrType type, params Operand[] operands ) : base( operands ) { Type = type; }
-		public AsmInstr( InstrType type, OperandType lhs ) { Type = type; Add( new( lhs ) ); }
-		public AsmInstr( InstrType type, OperandType lhs, OperandType rhs ) { Type = type; Add( new( lhs ) ); Add( new( rhs ) ); }
 
 		public static implicit operator AsmInstr( InstrType type ) { return new AsmInstr( type ); }
 		public static AsmInstr operator +( AsmInstr i, Operand op ) { i.Add(op); return i; }
 		public static AsmInstr operator +( AsmInstr i, OperandType op ) { i.Add( op ); return i; }
 
-		public InstrType Type { get; }
+		public InstrType Type { get; set; }
 
-		public OperandType Lhs => this[0].Type;
-		public OperandType Rhs => this[1].Type;
+		public OperandType Lhs { get => this[0].Type; set => this[0].Type = value; }
+		public OperandType Rhs { get => this[1].Type; set => this[1].Type = value; }
 
+		public Operand L { get => this[0]; set => this[0] = value; }
+		public Operand R { get => this[1]; set => this[1] = value; }
+
+		public void SetL( Operand op ) 
+		{
+			if( Count == 0 )
+				Add( op );
+			else
+				this[0] = op;
+		}
+
+		public void SetR( Operand op, OperandType defaultL = OperandType.A )
+		{
+			if( Count == 0 )
+			{
+				Add( defaultL );
+				Add( op );
+			}
+			else if( Count == 1 )
+				Add( op );
+			else
+				this[1] = op;
+		}
 
 		/// <summary>
 		/// Assemble to machine code

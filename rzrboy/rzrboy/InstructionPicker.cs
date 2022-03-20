@@ -22,8 +22,13 @@ namespace rzrboy
 		private Entry m_LhsValue = new() { FontFamily = Font.Regular, FontSize = FontSize }; // value / number picking
 		private Entry m_RhsValue = new() { FontFamily = Font.Regular, FontSize = FontSize }; // value / number picking
 
-		public InstructionPicker( rzr.InstrType selected = rzr.InstrType.Nop )
+		private Button m_ButtonFullText = new();
+
+		public rzr.AsmInstr Instruction { get; }
+		public InstructionPicker( rzr.AsmInstr instr )
 		{
+			Instruction = instr;
+
 			ColumnDefinitions.Add( new() { Width = 70 } );
 			ColumnDefinitions.Add( new() { Width = 60 } );
 			ColumnDefinitions.Add( new() { Width = 60 } );
@@ -39,16 +44,28 @@ namespace rzrboy
 			( this as Grid ).Add( m_LhsValue, column: 1, row: 1 );
 			( this as Grid ).Add( m_RhsValue, column: 2, row: 1 );
 
-			m_InstrPicker.SelectedIndexChanged += OnInstrChanged;
-			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == selected );
+			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == instr.Type );
+			m_InstrPicker.SelectedIndexChanged += OnInstrPicked;
 
 			//m_Lhs.Clicked += OnLhsButtonPressed;
-			//m_Rhs.Clicked += OnRhsButtonPressed;
+			//m_Rhs.Clicked += OnRhsButtonPressed;		
 		}
 
-		void OnInstrChanged( object sender, EventArgs args )
+		public void UnderlyingInstrChanged() 
+		{
+			m_ButtonFullText.Text = Instruction.ToString();
+			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == Instruction.Type );
+		}
+
+		void OnInstrPicked( object sender, EventArgs args )
 		{
 			rzr.InstrType instr = SelectableInstructions[m_InstrPicker.SelectedIndex];
+			if(instr != Instruction.Type )
+			{
+				Instruction.Type = instr;
+				// TODO: clear operands
+			}
+			//RowDefinitions.RemoveAt( RowDefinitions.Count -1 );
 		}
 
 		void OnLhsButtonPressed( object sender, EventArgs args )

@@ -135,7 +135,7 @@ namespace rzrboy
         {
             Title = "rzrBoy Studio";
 
-            InstructionPicker picker = new();
+            InstructionPicker picker = new( Asm.Nop() );
 
             boy = gb;
             m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
