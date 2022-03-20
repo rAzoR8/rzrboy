@@ -81,12 +81,6 @@ namespace rzrboy
             return new Grid
             {
                 RowSpacing = 2,
-                
-                Padding = Device.RuntimePlatform switch
-                {
-                    Device.iOS => new Thickness( 30, 60, 30, 30 ),
-                    _ => new Thickness( 30 )
-                },
 
                 RowDefinitions = Rows.Define(
                     (RegRows.AF, Auto),
