@@ -1,33 +1,54 @@
 ﻿using Microsoft.Maui.Controls;
+
 using System;
 using System.Collections.Generic;
 using static rzr.ExtensionMethods;
 
 namespace rzrboy
 {
-	public class InstructionPicker : StackLayout
+	public class InstructionPicker : Grid
 	{
-		private Picker m_InstrPicker = new Picker { ItemsSource = new List<rzr.InstrType>(rzr.InstrType.Db.EnumValues()) }; // fixed list picking
-		private Button m_Lhs = new() { Text = "Lhs" };
-		private Button m_Rhs = new() { Text = "Rhs" };
+		public enum Row { Picker, Value }
 
-		private HorizontalStackLayout m_Buttons;
+		private static readonly List<rzr.InstrType> SelectableInstructions = new( rzr.InstrType.Db.EnumValues() );
 
-		private Entry m_Entry = new(); // value / number picking
+		public const uint FontSize = 12;
 
-		public InstructionPicker()
+		private Picker m_InstrPicker = new() { ItemsSource = SelectableInstructions, FontFamily = Font.Regular, FontSize = FontSize, HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Start }; // fixed list picking
+		private Picker m_Lhs = new() { FontFamily = Font.Regular, FontSize = FontSize, HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Start };
+		private Picker m_Rhs = new() { FontFamily = Font.Regular, FontSize = FontSize, HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Start };
+
+		private Label m_ValueLabel = new Label { Text = "Ops:", FontFamily = Font.Regular, FontSize = FontSize };
+		private Entry m_LhsValue = new() { FontFamily = Font.Regular, FontSize = FontSize }; // value / number picking
+		private Entry m_RhsValue = new() { FontFamily = Font.Regular, FontSize = FontSize }; // value / number picking
+
+		public InstructionPicker( rzr.InstrType selected = rzr.InstrType.Nop )
 		{
-			m_Buttons = new HorizontalStackLayout { m_InstrPicker, m_Lhs, m_Rhs };
+			ColumnDefinitions.Add( new() { Width = 70 } );
+			ColumnDefinitions.Add( new() { Width = 60 } );
+			ColumnDefinitions.Add( new() { Width = 60 } );
 
-			Children.Add( m_Buttons );
+			RowDefinitions.Add( new RowDefinition() { Height = 30 } ); 
+			RowDefinitions.Add( new RowDefinition() { Height = 30 } );
 
-			m_Lhs.Clicked += OnLhsButtonPressed;
-			m_Rhs.Clicked += OnRhsButtonPressed;
+			( this as Grid ).Add( m_InstrPicker, column: 0, row: 0 );
+			( this as Grid ).Add( m_Lhs, column: 1, row: 0 );
+			( this as Grid ).Add( m_Rhs, column: 2, row: 0 );
+
+			( this as Grid ).Add( m_ValueLabel, column: 0, row: 1 );
+			( this as Grid ).Add( m_LhsValue, column: 1, row: 1 );
+			( this as Grid ).Add( m_RhsValue, column: 2, row: 1 );
+
+			m_InstrPicker.SelectedIndexChanged += OnInstrChanged;
+			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == selected );
+
+			//m_Lhs.Clicked += OnLhsButtonPressed;
+			//m_Rhs.Clicked += OnRhsButtonPressed;
 		}
 
-		void OnInstrButtonPressed( object sender, EventArgs args )
+		void OnInstrChanged( object sender, EventArgs args )
 		{
-			//m_Picker.ItemsSource = 
+			rzr.InstrType instr = SelectableInstructions[m_InstrPicker.SelectedIndex];
 		}
 
 		void OnLhsButtonPressed( object sender, EventArgs args )
