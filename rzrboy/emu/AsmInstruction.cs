@@ -303,7 +303,7 @@
 			{
 				case InstrType.Db:		Op1D8(); break;
 				case InstrType.Nop:		Set(0x00); break;
-				case InstrType.Stop:	Set(0x10); Op1D8(); break;
+				case InstrType.Stop:	Set(0x10); if(Count>0) Op1D8(); break;
 				case InstrType.Halt:	Set(0x76); break;
 				case InstrType.Di:		Set(0xF3); break;
 				case InstrType.Ei:		Set(0xFB); break;
