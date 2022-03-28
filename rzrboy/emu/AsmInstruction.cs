@@ -427,7 +427,6 @@
 						case OperandType.HL: Set( 0xE9 ); break;
 						default: break;
 					}
-
 					break;
 				case InstrType.Jr:
 					switch( Lhs )
@@ -439,7 +438,6 @@
 						case OperandType.condC when Rhs.IsR8(): Set( 0x38 ); Op2D8(); break;
 						default: break;
 					}
-
 					break;
 				case InstrType.Ret:
 					if( Count == 0 ) Set( 0xC9 ); 
