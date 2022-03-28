@@ -118,6 +118,12 @@
 				case OperandType.A: return (byte)( offset + 0x07 );
 			}
 		}
+		// is A
+		public static bool IsA(this OperandType type) => type == OperandType.A;
+		// is HL
+		public static bool IsHl( this OperandType type ) => type == OperandType.HL;
+		// is SP
+		public static bool IsSP( this OperandType type ) => type == OperandType.SP;
 		// is B C D E H L (HL) A
 		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
 		// is (BC) (DE) (HL+) (HL-)
@@ -128,7 +134,8 @@
 				type == OperandType.B ||
 				type == OperandType.D ||
 				type == OperandType.H ||
-				type == OperandType.AdrHL; }
+				type == OperandType.AdrHL;
+		}
 		// is C E L A
 		public static bool IsCELA( this OperandType type )
 		{
@@ -137,6 +144,15 @@
 				type == OperandType.E ||
 				type == OperandType.L ||
 				type == OperandType.A;
+		}
+		// is BC DE HL SP
+		public static bool IsBcDeHlSp( this OperandType type )
+		{
+			return
+				type == OperandType.BC ||
+				type == OperandType.DE ||
+				type == OperandType.HL ||
+				type == OperandType.SP;
 		}
 
 		public static byte YOffset( this OperandType type, byte offset )
@@ -367,7 +383,6 @@
 						default:
 							break;
 					}
-
 					break;
 				case InstrType.Inc:
 					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x03 ) );
@@ -379,8 +394,8 @@
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x05 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
 					break;
-					// ADD [B C D E H L (HL) A]
-				case InstrType.Add when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
+				// ADD [B C D E H L (HL) A]
+				case InstrType.Add when Lhs.IsA() && Rhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
 				case InstrType.Adc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x88 ) ); break;
 				case InstrType.Sub when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x90 ) ); break;
 				case InstrType.Sbc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x98 ) ); break;
@@ -389,7 +404,7 @@
 				case InstrType.Or when Lhs.IsReg8HlA():	Set( Lhs.Reg8XOffset( 0xB0 ) ); break;
 				case InstrType.Cp when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xB8 ) ); break;
 				// ADD db8
-				case InstrType.Add when Lhs.IsD8(): Set( 0xC6 ); Op1D8(); break;
+				case InstrType.Add when Lhs.IsA() && Rhs.IsD8(): Set( 0xC6 ); Op1D8(); break;
 				case InstrType.Sub when Lhs.IsD8(): Set( 0xD6 ); Op1D8(); break;
 				case InstrType.And when Lhs.IsD8(): Set( 0xE6 ); Op1D8(); break;
 				case InstrType.Or when Lhs.IsD8(): Set( 0xF6 ); Op1D8(); break;
@@ -397,7 +412,10 @@
 				case InstrType.Sbc when Lhs.IsD8(): Set( 0xDE ); Op1D8(); break;
 				case InstrType.Xor when Lhs.IsD8(): Set( 0xEE ); Op1D8(); break;
 				case InstrType.Cp when Lhs.IsD8(): Set( 0xFE ); Op1D8(); break;
-				
+				// ADD HL, [BC DE HL SP]
+				case InstrType.Add when Lhs.IsHl() && Rhs.IsBCDHHl(): Set( Rhs.YOffset( 0x09 ) ); break;
+				// ADD SP, r8
+				case InstrType.Add when Lhs.IsSP() && Rhs.IsR8(): Set(0xE8); break;
 				case InstrType.Jp:
 					switch( Lhs )
 					{

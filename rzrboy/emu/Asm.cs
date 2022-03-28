@@ -53,7 +53,7 @@
 		public static AsmInstr Jp( params Operand[] ops ) => new AsmInstr( InstrType.Jp, ops );
 		public static AsmInstr Inc( Operand lhs ) => new AsmInstr( InstrType.Inc, lhs );
 		public static AsmInstr Dec( Operand lhs ) => new AsmInstr( InstrType.Dec, lhs );
-		public static AsmInstr Add( params Operand[] ops ) => new AsmInstr( InstrType.Add, ops );
+		public static AsmInstr Add( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
 		public static AsmInstr Adc( params Operand[] ops ) => new AsmInstr( InstrType.Adc, ops );
 		public static AsmInstr Sub( Operand rhs ) => new AsmInstr( InstrType.Sub, rhs );
 		public static AsmInstr Sbc( Operand rhs ) => new AsmInstr( InstrType.Sbc, rhs );
@@ -173,7 +173,7 @@
 				// LD [C E L A], [B C D E H L (HL) A]
 				(_, _ ) when x >= 8 && y >= 4 && y < 8 => Ld( CELA[y - 4], BCDEHLAdrHlA[x - 8] ),
 				// 0x80->0x88 ADD A, [B C D E H L (HL) A]
-				(_, 8 ) when x < 8 => Add( BCDEHLAdrHlA[x] ),
+				(_, 8 ) when x < 8 => Add( A, BCDEHLAdrHlA[x] ),
 				// 0x88->0x8F ADC A, [B C D E H L (HL) A]
 				(_, 8 ) when x >= 8 => Adc( BCDEHLAdrHlA[x - 8] ),
 				// 0x90->0x98 SUB A, [B C D E H L (HL) A]
@@ -221,7 +221,7 @@
 				// 0xF5 POP AF
 				(5, 0xF ) => Push( AF ),
 				// 0xC6 ADD A, db8
-				(6, 0xC ) => Add( D8( mem[pc++] ) ),
+				(6, 0xC ) => Add( A, D8( mem[pc++] ) ),
 				// 0xD6 SUB A, db8
 				(6, 0xD ) => Sub( D8( mem[pc++] ) ),
 				// 0xE6 AND A, db8

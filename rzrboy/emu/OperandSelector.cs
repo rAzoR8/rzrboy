@@ -49,7 +49,7 @@ namespace rzr
 				OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL,
 				OperandType.C, OperandType.E, OperandType.L, OperandType.A,
 			};
-			this[InstrType.Add] = new OperandType[]	{OperandType.A, OperandType.SP};
+			this[InstrType.Add] = new OperandType[]	{OperandType.A, OperandType.SP, OperandType.HL};
 		}
 	}
 }
