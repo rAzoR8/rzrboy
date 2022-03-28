@@ -56,8 +56,8 @@ namespace rzrboy
 			}
 
 			DisplayMode();
-
-			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == instr.Type );
+			UnderlyingInstrChanged();
+			
 			m_InstrPicker.SelectedIndexChanged += OnInstrPicked;
 
 			m_ButtonFullText.Clicked += ( object sender, EventArgs args ) => EditMode();
@@ -99,7 +99,7 @@ namespace rzrboy
 
 		public void UnderlyingInstrChanged() 
 		{
-			m_ButtonFullText.Text = Instruction.ToString();
+			m_ButtonFullText.Text = Instruction.ToString().ToUpper();
 			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == Instruction.Type );
 		}
 

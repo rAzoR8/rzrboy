@@ -84,26 +84,26 @@
 		private static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
 		private static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
 
-		private const OperandType A = OperandType.A;
-		private const OperandType B = OperandType.B;
-		private const OperandType C = OperandType.C;
-		private const OperandType D = OperandType.D;
-		private const OperandType E = OperandType.E;
-		private const OperandType H = OperandType.H;
-		private const OperandType L = OperandType.L;
+		public const OperandType A = OperandType.A;
+		public const OperandType B = OperandType.B;
+		public const OperandType C = OperandType.C;
+		public const OperandType D = OperandType.D;
+		public const OperandType E = OperandType.E;
+		public const OperandType H = OperandType.H;
+		public const OperandType L = OperandType.L;
 
-		private const OperandType BC = OperandType.BC;
-		private const OperandType DE = OperandType.DE;
-		private const OperandType HL = OperandType.HL;
-		private const OperandType SP = OperandType.SP;
-		private const OperandType AF = OperandType.AF;
+		public const OperandType BC = OperandType.BC;
+		public const OperandType DE = OperandType.DE;
+		public const OperandType HL = OperandType.HL;
+		public const OperandType SP = OperandType.SP;
+		public const OperandType AF = OperandType.AF;
 
-		private const OperandType IoC = OperandType.ioC;
+		public const OperandType IoC = OperandType.ioC;
 
-		private const OperandType condC = OperandType.condC;
-		private const OperandType condNC = OperandType.condNC;
-		private const OperandType condZ = OperandType.condZ;
-		private const OperandType condNZ = OperandType.condNZ;
+		public const OperandType condC = OperandType.condC;
+		public const OperandType condNC = OperandType.condNC;
+		public const OperandType condZ = OperandType.condZ;
+		public const OperandType condNZ = OperandType.condNZ;
 
 		public static AsmInstr Disassemble( ref ushort pc, ISection mem )
 		{
