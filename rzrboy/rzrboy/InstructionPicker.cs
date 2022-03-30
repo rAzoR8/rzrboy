@@ -13,6 +13,15 @@ namespace rzrboy
 		private static readonly rzr.OperandSelector Selector = new();
 		private static readonly List<rzr.InstrType> SelectableInstructions = new( Selector );
 
+		private rzr.InstrType CurInstrType => SelectableInstructions[m_InstrPicker.SelectedIndex];
+		private rzr.OperandSelector.LhsToRhs CurLhsToRhs => Selector[CurInstrType];
+
+		private List<rzr.OperandType> CurLhsSelecatbles => CurLhsToRhs.GetLhs();
+		private rzr.OperandType CurLhs => CurLhsSelecatbles[m_Lhs.SelectedIndex];
+
+		private List<rzr.OperandType> CurRhsSelectables => CurLhsToRhs[CurLhs];
+		private rzr.OperandType CurRhs => CurRhsSelectables[m_Rhs.SelectedIndex];
+
 		public const uint FontSize = 12;
 
 		private Picker m_InstrPicker = new() { ItemsSource = SelectableInstructions, FontFamily = Font.Regular, FontSize = FontSize, HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Start }; // fixed list picking
@@ -58,13 +67,15 @@ namespace rzrboy
 
 			DisplayMode();
 			UnderlyingInstrChanged();
-			
+
+			m_Lhs.ItemsSource = CurLhsSelecatbles;
+			m_Rhs.ItemsSource = CurRhsSelectables;
+
 			m_InstrPicker.SelectedIndexChanged += OnInstrPicked;
+			m_Lhs.SelectedIndexChanged += OnLhsPicked;
+			m_Rhs.SelectedIndexChanged += OnRhsPicked;
 
-			m_ButtonFullText.Clicked += ( object sender, EventArgs args ) => EditMode();
-
-			//m_Lhs.Clicked += OnLhsButtonPressed;
-			//m_Rhs.Clicked += OnRhsButtonPressed;		
+			m_ButtonFullText.Clicked += ( object sender, EventArgs args ) => EditMode();	
 		}
 
 		public enum Mode { Edit, Display }
@@ -102,6 +113,8 @@ namespace rzrboy
 		{
 			m_ButtonFullText.Text = Instruction.ToString().ToUpper();
 			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == Instruction.Type );
+			m_Lhs.SelectedIndex = Instruction.Count > 0 ? CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs ) : -1;
+			m_Rhs.SelectedIndex = Instruction.Count > 1 ? CurRhsSelectables.FindIndex( rhs => rhs == Instruction.Rhs ) : -1;
 		}
 
 		void OnInstrPicked( object sender, EventArgs args )
@@ -111,16 +124,20 @@ namespace rzrboy
 			{
 				Instruction.Type = instr;
 				// TODO: clear operands
+
+				m_Lhs.ItemsSource = CurLhsSelecatbles;
 			}
 		}
 
 		void OnLhsPicked( object sender, EventArgs args )
 		{
+			Instruction.SetL( CurLhs );
+			m_Rhs.ItemsSource = CurRhsSelectables;
 		}
 
 		void OnRhsPicked( object sender, EventArgs args )
 		{
+			Instruction.SetR( CurRhs );
 		}
-
 	}
 }

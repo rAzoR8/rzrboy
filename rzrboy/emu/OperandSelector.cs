@@ -12,13 +12,12 @@ namespace rzr
 		// Lhs operand -> list of viable Rhs operands
 		public class LhsToRhs : Dictionary<OperandType, List<OperandType>>
 		{
-			private static readonly OperandType[] Empty = { };
-
+			public List<OperandType> GetLhs() => Keys.ToList();
 			public LhsToRhs() { }
 
 			public LhsToRhs( OperandType key )
 			{
-				Add( key, Empty );
+				Add( key, NoRhs );
 			}
 
 			public static implicit operator LhsToRhs( OperandType key ) => new LhsToRhs(key);
@@ -79,9 +78,11 @@ namespace rzr
 
 		private static readonly Dictionary<InstrType, LhsToRhs> m_instrToOps = new();
 
-		private static readonly LhsToRhs Empty = new();
+		private static readonly LhsToRhs NoOperands = new();
+		private static readonly OperandType[] NoRhs = { };
 
 		private const OperandType D8 = OperandType.d8;
+		private const OperandType R8 = OperandType.r8;
 		private const OperandType D16 = OperandType.d16;
 		private const OperandType Io8 = OperandType.io8;
 		private const OperandType SPr8 = OperandType.SPr8;
@@ -97,13 +98,13 @@ namespace rzr
 
 		public OperandSelector() 
 		{
-
+			// TOTO: reorder by most-used-first
 			this[InstrType.Db] = D8;
-			this[InstrType.Nop] = Empty;
+			this[InstrType.Nop] = NoOperands;
 			this[InstrType.Stop] = D8;
-			this[InstrType.Halt] = Empty;
-			this[InstrType.Di] = Empty;
-			this[InstrType.Ei] = Empty;
+			this[InstrType.Halt] = NoOperands;
+			this[InstrType.Di] = NoOperands;
+			this[InstrType.Ei] = NoOperands;
 			this[InstrType.Ld] = new
 				LhsToRhs( Asm.BcDeHlSp, D8 )
 				.Add( Asm.adrBcDeHlID, Asm.A )
@@ -123,6 +124,27 @@ namespace rzr
 				.Add( Asm.SP, Asm.HL )
 				.Add( D16, Asm.A )
 				.Add( Asm.A, D16 );
+			this[InstrType.Inc] = new
+				LhsToRhs( Asm.BcDeHlSp, NoRhs )
+				.Add( Asm.BDHAdrHl, NoRhs )
+				.Add( Asm.CELA, NoRhs );
+			this[InstrType.Dec] = new
+				LhsToRhs( Asm.BcDeHlSp, NoRhs )
+				.Add( Asm.BDHAdrHl, NoRhs )
+				.Add( Asm.CELA, NoRhs );
+			this[InstrType.Add] = new
+				LhsToRhs( Asm.A, Asm.BCDEHLAdrHlA )
+				.Add( Asm.A, D8 )
+				.Add( Asm.SP, R8 );
+			this[InstrType.Adc] =
+			this[InstrType.Sub] =
+			this[InstrType.Sbc] =
+			this[InstrType.And] =
+			this[InstrType.Xor] =
+			this[InstrType.Or] =
+			this[InstrType.Cp] = new
+				LhsToRhs( Asm.BCDEHLAdrHlA, NoRhs )
+				.Add( D8, NoRhs );
 		}
 
 		public IEnumerator<InstrType> GetEnumerator()
