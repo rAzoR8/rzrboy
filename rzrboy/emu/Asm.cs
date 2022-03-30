@@ -55,7 +55,7 @@
 		public static AsmInstr Inc( Operand lhs ) => new AsmInstr( InstrType.Inc, lhs );
 		public static AsmInstr Dec( Operand lhs ) => new AsmInstr( InstrType.Dec, lhs );
 		public static AsmInstr Add( Operand lhs, Operand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
-		public static AsmInstr Adc( params Operand[] ops ) => new AsmInstr( InstrType.Adc, ops );
+		public static AsmInstr Adc( Operand rhs ) => new AsmInstr( InstrType.Adc, rhs );
 		public static AsmInstr Sub( Operand rhs ) => new AsmInstr( InstrType.Sub, rhs );
 		public static AsmInstr Sbc( Operand rhs ) => new AsmInstr( InstrType.Sbc, rhs );
 		public static AsmInstr And( Operand rhs ) => new AsmInstr( InstrType.And, rhs );
