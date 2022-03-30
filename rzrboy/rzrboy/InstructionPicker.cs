@@ -10,7 +10,8 @@ namespace rzrboy
 	{
 		public enum Row { Picker, Value }
 
-		private static readonly List<rzr.InstrType> SelectableInstructions = new( rzr.InstrType.Db.EnumValues() );
+		private static readonly rzr.OperandSelector Selector = new();
+		private static readonly List<rzr.InstrType> SelectableInstructions = new( Selector );
 
 		public const uint FontSize = 12;
 

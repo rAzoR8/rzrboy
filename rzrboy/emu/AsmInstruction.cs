@@ -79,8 +79,8 @@
 
 		AdrBC, // (BC)
 		AdrDE, // (DE)
-		AdrHLI, // (HL+)
-		AdrHLD, // (HL-)
+		AdrHLi, // (HL+)
+		AdrHLd, // (HL-)
 
 		BC,
 		DE,
@@ -127,7 +127,7 @@
 		// is B C D E H L (HL) A
 		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
 		// is (BC) (DE) (HL+) (HL-)
-		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLD; }
+		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLd; }
 		// is B D H (HL)
 		public static bool IsBCDHHl( this OperandType type ) {
 			return
@@ -170,12 +170,12 @@
 				case OperandType.D:
 				case OperandType.E: return (byte)( offset + 0x10 );
 
-				case OperandType.AdrHLI:
+				case OperandType.AdrHLi:
 				case OperandType.HL:
 				case OperandType.H:
 				case OperandType.L: return (byte)( offset + 0x20 );
 
-				case OperandType.AdrHLD:
+				case OperandType.AdrHLd:
 				case OperandType.AdrHL:
 				case OperandType.SP:
 				case OperandType.AF:
@@ -237,8 +237,8 @@
 					return Type.ToString();
 				case OperandType.SPr8: return $"SP+{r8:X2}";
 				case OperandType.AdrHL: return "(HL)";
-				case OperandType.AdrHLI: return "(HL+)";
-				case OperandType.AdrHLD: return "(HL-)";
+				case OperandType.AdrHLi: return "(HL+)";
+				case OperandType.AdrHLd: return "(HL-)";
 				case OperandType.AdrBC: return "(BC)";
 				case OperandType.AdrDE: return "(DE)";
 				case OperandType.condZ: return "Z";
@@ -345,8 +345,8 @@
 						// LD (BC), A
 						case OperandType.AdrBC when Rhs == OperandType.A: Set( 0x02 ); break;
 						case OperandType.AdrDE when Rhs == OperandType.A: Set( 0x12 ); break;
-						case OperandType.AdrHLI when Rhs == OperandType.A: Set( 0x22 ); break;
-						case OperandType.AdrHLD when Rhs == OperandType.A: Set( 0x32 ); break;
+						case OperandType.AdrHLi when Rhs == OperandType.A: Set( 0x22 ); break;
+						case OperandType.AdrHLd when Rhs == OperandType.A: Set( 0x32 ); break;
 						// LD B, d8
 						case OperandType.B when Rhs.IsD8(): Set( 0x06 ); Op2D8(); break;
 						case OperandType.D when Rhs.IsD8(): Set( 0x16 ); Op2D8(); break;
@@ -355,8 +355,8 @@
 						// LD A, (BC)
 						case OperandType.A when Rhs == OperandType.AdrBC: Set( 0x0A ); break;
 						case OperandType.A when Rhs == OperandType.AdrDE: Set( 0x1A ); break;
-						case OperandType.A when Rhs == OperandType.AdrHLI: Set( 0x2A ); break;
-						case OperandType.A when Rhs == OperandType.AdrHLD: Set( 0x3A ); break;
+						case OperandType.A when Rhs == OperandType.AdrHLi: Set( 0x2A ); break;
+						case OperandType.A when Rhs == OperandType.AdrHLd: Set( 0x3A ); break;
 						// LD C, d8
 						case OperandType.C when Rhs.IsD8(): Set( 0x0E ); Op2D8(); break;
 						case OperandType.E when Rhs.IsD8(): Set( 0x1E ); Op2D8(); break;

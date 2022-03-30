@@ -43,6 +43,7 @@
 		public static Operand Io8( byte val ) => new Operand( OperandType.io8, val );
 		public static Operand RstAdr( byte val ) => new Operand( OperandType.RstAddr, val );
 		public static Operand BitIdx( byte idx ) => new Operand( OperandType.BitIdx, idx );
+		public static Operand SPr8(sbyte val ) => new Operand( OperandType.SPr8, val );
 
 		// Instructions
 		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
@@ -78,11 +79,11 @@
 		public static AsmInstr Ccf() => new AsmInstr( InstrType.Ccf );
 		public static AsmInstr Rst( Operand vec ) => new AsmInstr( InstrType.Rst, vec );
 
-		private static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
-		private static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD };
-		private static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
-		private static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
-		private static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
+		public static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
+		public static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLi, OperandType.AdrHLd };
+		public static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
+		public static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
+		public static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
 
 		public const OperandType A = OperandType.A;
 		public const OperandType B = OperandType.B;
@@ -99,6 +100,10 @@
 		public const OperandType AF = OperandType.AF;
 
 		public const OperandType IoC = OperandType.ioC;
+
+		public const OperandType adrHL = OperandType.AdrHL;
+		public const OperandType adrHLi = OperandType.AdrHLi;
+		public const OperandType adrHLd = OperandType.AdrHLd;
 
 		public const OperandType condC = OperandType.condC;
 		public const OperandType condNC = OperandType.condNC;

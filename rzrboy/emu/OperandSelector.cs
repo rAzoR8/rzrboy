@@ -1,55 +1,138 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace rzr
 {
-	public class OperandSelector
+	public class OperandSelector : IEnumerable<InstrType>
 	{
-		private static readonly Dictionary<InstrType, IList<OperandType>> m_firstOperand = new();
-
-		private static readonly OperandType[] Empty = { };
-		private static readonly OperandType[] D8 = { OperandType.d8 };
-		private static readonly OperandType[] D16 = { OperandType.d16 };
-
-		public IList<OperandType> this[InstrType i]
+		// Lhs operand -> list of viable Rhs operands
+		public class LhsToRhs : Dictionary<OperandType, List<OperandType>>
 		{
-			get => m_firstOperand[i];
+			private static readonly OperandType[] Empty = { };
+
+			public LhsToRhs() { }
+
+			public LhsToRhs( OperandType key )
+			{
+				Add( key, Empty );
+			}
+
+			public static implicit operator LhsToRhs( OperandType key ) => new LhsToRhs(key);
+
+			public LhsToRhs( OperandType key, params OperandType[] values )
+			{
+				Add( key, values );
+			}
+
+			public LhsToRhs( IEnumerable<OperandType> keys, IEnumerable<OperandType> values )
+			{
+				Add( keys, values );
+			}
+
+			public LhsToRhs( IEnumerable<OperandType> keys, params OperandType[] values )
+			{
+				Add( keys, values );
+			}
+
+			public LhsToRhs Add( OperandType key, IEnumerable<OperandType> values )
+			{
+				List<OperandType>? entries;
+				if( base.TryGetValue( key, out entries ) == false ) 
+				{
+					entries = new( values );
+					base.Add( key, entries );
+				}
+				else
+				{
+					entries.AddRange( values );
+				}
+				return this;
+			}
+
+			public LhsToRhs Add( OperandType key, params OperandType[] values )
+			{
+				return Add( key, (IEnumerable<OperandType>) values );
+			}
+
+			public LhsToRhs Add( IEnumerable<OperandType> keys, IEnumerable<OperandType> values )
+			{
+				foreach( OperandType key in keys )
+				{
+					Add( key, values );				
+				}
+				return this;
+			}
+
+			public LhsToRhs Add( IEnumerable<OperandType> keys, params OperandType[] values )
+			{
+				foreach( OperandType key in keys )
+				{
+					Add( key, values );
+				}
+				return this;
+			}
+		}
+
+		private static readonly Dictionary<InstrType, LhsToRhs> m_instrToOps = new();
+
+		private static readonly LhsToRhs Empty = new();
+
+		private const OperandType D8 = OperandType.d8;
+		private const OperandType D16 = OperandType.d16;
+		private const OperandType Io8 = OperandType.io8;
+		private const OperandType SPr8 = OperandType.SPr8;
+
+		public LhsToRhs this[InstrType i]
+		{
+			get => m_instrToOps[i];
 			private set
 			{
-				Debug.Assert( m_firstOperand[i] == null );
-				m_firstOperand[i] = value;
+				m_instrToOps[i] = value;
 			}
 		}
 
 		public OperandSelector() 
 		{
+
 			this[InstrType.Db] = D8;
 			this[InstrType.Nop] = Empty;
 			this[InstrType.Stop] = D8;
 			this[InstrType.Halt] = Empty;
 			this[InstrType.Di] = Empty;
 			this[InstrType.Ei] = Empty;
-			this[InstrType.Ld] = new OperandType[]
-			{
-				OperandType.BC, OperandType.DE, OperandType.HL, OperandType.SP,
-				OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLI, OperandType.AdrHLD,
-				OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL,
-				OperandType.d16,
-				OperandType.C, OperandType.E, OperandType.L, OperandType.A,
-				OperandType.io8,
-				OperandType.ioC
-			};
-			this[InstrType.Inc] = this[InstrType.Dec] = new OperandType[]
-			{
-				OperandType.BC, OperandType.DE, OperandType.HL, OperandType.SP,
-				OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL,
-				OperandType.C, OperandType.E, OperandType.L, OperandType.A,
-			};
-			this[InstrType.Add] = new OperandType[]	{OperandType.A, OperandType.SP, OperandType.HL};
+			this[InstrType.Ld] = new
+				LhsToRhs( Asm.BcDeHlSp, D8 )
+				.Add( Asm.adrBcDeHlID, Asm.A )
+				.Add( Asm.BDHAdrHl, D8 )
+				.Add( D16, Asm.SP )
+				.Add( Asm.A, Asm.adrBcDeHlID )
+				.Add( Asm.CELA, D8 )
+				.Add( Asm.BDHAdrHl, Asm.BCDEHLAdrHlA.Take( 6 ) ) // up to (HL)
+				.Add( new[] { Asm.B, Asm.D, Asm.H }, Asm.adrHL ) // colum upto HALT
+				.Add( Asm.BDHAdrHl, Asm.A )
+				.Add( Asm.CELA, Asm.BCDEHLAdrHlA )
+				.Add( Io8, Asm.A )
+				.Add( Asm.A, Io8 )
+				.Add( Asm.IoC, Asm.A )
+				.Add( Asm.A, Asm.IoC )
+				.Add( Asm.HL, SPr8 )
+				.Add( Asm.SP, Asm.HL )
+				.Add( D16, Asm.A )
+				.Add( Asm.A, D16 );
+		}
+
+		public IEnumerator<InstrType> GetEnumerator()
+		{
+			return m_instrToOps.Keys.GetEnumerator();
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return m_instrToOps.Keys.GetEnumerator();
 		}
 	}
 }
