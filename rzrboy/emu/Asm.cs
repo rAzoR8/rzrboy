@@ -105,10 +105,12 @@
 		public const OperandType adrHLi = OperandType.AdrHLi;
 		public const OperandType adrHLd = OperandType.AdrHLd;
 
-		public const OperandType condC = OperandType.condC;
-		public const OperandType condNC = OperandType.condNC;
 		public const OperandType condZ = OperandType.condZ;
 		public const OperandType condNZ = OperandType.condNZ;
+		public const OperandType condC = OperandType.condC;
+		public const OperandType condNC = OperandType.condNC;
+
+		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
 
 		public static AsmInstr Disassemble( ref ushort pc, ISection mem )
 		{

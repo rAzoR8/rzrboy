@@ -13,6 +13,7 @@ namespace rzr
 		public class LhsToRhs : Dictionary<OperandType, List<OperandType>>
 		{
 			private List<OperandType>? m_lhs = null;
+			// TODO: sort by length of Name: A -> SP -> IoC -> adrBC
 			public List<OperandType> Lhs { get { return m_lhs != null ? m_lhs : ( m_lhs = Keys.ToList() ); } }
 
 			public LhsToRhs() { }
@@ -147,6 +148,20 @@ namespace rzr
 			this[InstrType.Cp] = new
 				LhsToRhs( Asm.BCDEHLAdrHlA, NoRhs )
 				.Add( D8, NoRhs );
+			this[InstrType.Jp] = new
+				LhsToRhs( Asm.condZCnZnC, D16 )
+				.Add(D16, NoRhs)
+				.Add(Asm.HL, NoRhs);
+			this[InstrType.Jr] = new
+				LhsToRhs( Asm.condZCnZnC, R8 )
+				.Add( R8, NoRhs );
+			this[InstrType.Ret] = new
+				LhsToRhs(OperandType.none, NoRhs) // RET
+				.Add(Asm.condZCnZnC, NoRhs); // RET C ...
+			this[InstrType.Reti] = NoOperands;
+			this[InstrType.Call] = new
+				LhsToRhs( D16, NoRhs )
+				.Add( Asm.condZCnZnC, D16 );
 		}
 
 		public IEnumerator<InstrType> GetEnumerator()

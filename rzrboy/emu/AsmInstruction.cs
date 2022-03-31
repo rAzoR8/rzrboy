@@ -96,11 +96,52 @@
 		condZ,
 		condNZ,
 		condC,
-		condNC
+		condNC,
+
+		none
 	}
 
 	public static class OperandExtensions 
 	{
+		public static string ToString( this OperandType type ) 
+		{
+			switch( type )
+			{
+				case OperandType.BitIdx:
+				case OperandType.RstAddr:
+				case OperandType.d8:
+				case OperandType.r8:
+				case OperandType.d16:
+				case OperandType.A:
+				case OperandType.B:
+				case OperandType.C:
+				case OperandType.D:
+				case OperandType.E:
+				case OperandType.H:
+				case OperandType.L:
+				case OperandType.BC:
+				case OperandType.DE:
+				case OperandType.HL:
+				case OperandType.SP:
+				case OperandType.AF:
+					return type.ToString();
+				case OperandType.io8: return "($FF00+r8)";
+				case OperandType.ioC: return "($FF00+C)";
+				case OperandType.SPr8: return "SP+r8";
+				case OperandType.AdrHL: return "(HL)";
+				case OperandType.AdrHLi: return "(HL+)";
+				case OperandType.AdrHLd: return "(HL-)";
+				case OperandType.AdrBC: return "(BC)";
+				case OperandType.AdrDE: return "(DE)";
+				case OperandType.condZ: return "Z";
+				case OperandType.condNZ: return "NZ";
+				case OperandType.condC: return "C";
+				case OperandType.condNC: return "NC";
+				case OperandType.none: return "";
+				default: return "?";
+			}
+		}
+
 		// X offset for B C D E H L (HL) A
 		public static byte Reg8XOffset( this OperandType type, byte offset )
 		{
@@ -245,6 +286,7 @@
 				case OperandType.condNZ: return "NZ";
 				case OperandType.condC: return "C";
 				case OperandType.condNC: return "NC";
+				case OperandType.none: return "";
 				default: return "?";
 			}
 		}
