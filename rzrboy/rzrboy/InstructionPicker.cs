@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls;
 
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using static rzr.ExtensionMethods;
 
@@ -16,10 +17,10 @@ namespace rzrboy
 		private rzr.InstrType CurInstrType => SelectableInstructions[m_InstrPicker.SelectedIndex];
 		private rzr.OperandSelector.LhsToRhs CurLhsToRhs => Selector[CurInstrType];
 
-		private List<rzr.OperandType> CurLhsSelecatbles => CurLhsToRhs.Lhs;
+		private List<rzr.Operand> CurLhsSelecatbles => CurLhsToRhs.Lhs.Select( o => new rzr.Operand(o) ).ToList();
 		private rzr.OperandType CurLhs => CurLhsSelecatbles[m_Lhs.SelectedIndex];
 
-		private List<rzr.OperandType> CurRhsSelectables => CurLhsToRhs[CurLhs];
+		private List<rzr.Operand> CurRhsSelectables => CurLhsToRhs[CurLhs].Select( o => new rzr.Operand( o ) ).ToList();
 		private rzr.OperandType CurRhs => CurRhsSelectables[m_Rhs.SelectedIndex];
 
 		public const uint FontSize = 12;
@@ -71,6 +72,8 @@ namespace rzrboy
 			m_InstrPicker.SelectedIndexChanged += OnInstrPicked;
 			m_Lhs.SelectedIndexChanged += OnLhsPicked;
 			m_Rhs.SelectedIndexChanged += OnRhsPicked;
+			m_LhsValue.TextChanged += OnLhsValueChanged;
+			m_RhsValue.TextChanged += OnRhsValueChanged;
 
 			m_ButtonFullText.Clicked += ( object sender, EventArgs args ) => EditMode();	
 		}
@@ -126,6 +129,53 @@ namespace rzrboy
 						m_Rhs.SelectedIndex = CurRhsSelectables.FindIndex( rhs => rhs == Instruction.Rhs );
 					}
 				}
+			}
+		}
+
+
+		private static bool ParseD8( string text, out byte val ) => byte.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || byte.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
+		private static bool ParseR8( string text, out sbyte val ) => sbyte.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || sbyte.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
+		private static bool ParseD16( string text, out ushort val ) => ushort.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || ushort.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
+
+		void OnLhsValueChanged( object sender, TextChangedEventArgs args )
+		{
+			if(Instruction.Count < 1 || m_Lhs.SelectedIndex < 0 )
+				return;
+
+			var type = CurLhs;
+
+			if( ( type == rzr.OperandType.d8 || type == rzr.OperandType.io8) && ParseD8( args.NewTextValue, out var d8)  )
+			{
+				Instruction.L.d8 = d8;
+			}
+			else if( type == rzr.OperandType.r8 && ParseR8(args.NewTextValue, out var r8) )
+			{
+				Instruction.L.r8 = r8;
+			}
+			else if( type == rzr.OperandType.d16 && ParseD16( args.NewTextValue, out var d16 ) )
+			{
+				Instruction.L.d16 = d16;
+			}
+		}
+
+		void OnRhsValueChanged( object sender, TextChangedEventArgs args )
+		{
+			if( Instruction.Count < 2 || m_Rhs.SelectedIndex < 0 )
+				return;
+
+			var type = CurRhs;
+
+			if( ( type == rzr.OperandType.d8 || type == rzr.OperandType.io8 ) && ParseD8( args.NewTextValue, out var d8 ) )
+			{
+				Instruction.R.d8 = d8;
+			}
+			else if( type == rzr.OperandType.r8 && ParseR8( args.NewTextValue, out var r8 ) )
+			{
+				Instruction.R.r8 = r8;
+			}
+			else if( type == rzr.OperandType.d16 && ParseD16( args.NewTextValue, out var d16 ) )
+			{
+				Instruction.R.d16 = d16;
 			}
 		}
 
