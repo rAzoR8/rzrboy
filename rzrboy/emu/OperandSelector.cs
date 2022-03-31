@@ -12,7 +12,9 @@ namespace rzr
 		// Lhs operand -> list of viable Rhs operands
 		public class LhsToRhs : Dictionary<OperandType, List<OperandType>>
 		{
-			public List<OperandType> GetLhs() => Keys.ToList();
+			private List<OperandType>? m_lhs = null;
+			public List<OperandType> Lhs { get { return m_lhs != null ? m_lhs : ( m_lhs = Keys.ToList() ); } }
+
 			public LhsToRhs() { }
 
 			public LhsToRhs( OperandType key )

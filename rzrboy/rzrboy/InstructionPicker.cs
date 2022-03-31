@@ -16,7 +16,7 @@ namespace rzrboy
 		private rzr.InstrType CurInstrType => SelectableInstructions[m_InstrPicker.SelectedIndex];
 		private rzr.OperandSelector.LhsToRhs CurLhsToRhs => Selector[CurInstrType];
 
-		private List<rzr.OperandType> CurLhsSelecatbles => CurLhsToRhs.GetLhs();
+		private List<rzr.OperandType> CurLhsSelecatbles => CurLhsToRhs.Lhs;
 		private rzr.OperandType CurLhs => CurLhsSelecatbles[m_Lhs.SelectedIndex];
 
 		private List<rzr.OperandType> CurRhsSelectables => CurLhsToRhs[CurLhs];
@@ -68,9 +68,6 @@ namespace rzrboy
 			DisplayMode();
 			UnderlyingInstrChanged();
 
-			m_Lhs.ItemsSource = CurLhsSelecatbles;
-			m_Rhs.ItemsSource = CurRhsSelectables;
-
 			m_InstrPicker.SelectedIndexChanged += OnInstrPicked;
 			m_Lhs.SelectedIndexChanged += OnLhsPicked;
 			m_Rhs.SelectedIndexChanged += OnRhsPicked;
@@ -112,32 +109,67 @@ namespace rzrboy
 		public void UnderlyingInstrChanged() 
 		{
 			m_ButtonFullText.Text = Instruction.ToString().ToUpper();
+
 			m_InstrPicker.SelectedIndex = SelectableInstructions.FindIndex( i => i == Instruction.Type );
-			m_Lhs.SelectedIndex = Instruction.Count > 0 ? CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs ) : -1;
-			m_Rhs.SelectedIndex = Instruction.Count > 1 ? CurRhsSelectables.FindIndex( rhs => rhs == Instruction.Rhs ) : -1;
+			m_Lhs.ItemsSource = CurLhsSelecatbles;
+
+			if( Instruction.Count > 0 )
+			{
+				m_Lhs.SelectedIndex = CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs );
+
+				if( m_Lhs.SelectedIndex > -1 )
+				{
+					m_Rhs.ItemsSource = CurRhsSelectables;
+
+					if( Instruction.Count > 1 )
+					{
+						m_Rhs.SelectedIndex = CurRhsSelectables.FindIndex( rhs => rhs == Instruction.Rhs );
+					}
+				}
+			}
 		}
 
 		void OnInstrPicked( object sender, EventArgs args )
 		{
 			rzr.InstrType instr = SelectableInstructions[m_InstrPicker.SelectedIndex];
-			if(instr != Instruction.Type )
+			if( instr != Instruction.Type )
 			{
 				Instruction.Type = instr;
-				// TODO: clear operands
-
 				m_Lhs.ItemsSource = CurLhsSelecatbles;
+				m_Lhs.SelectedIndex = CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs );
+
+				m_Lhs.IsVisible = CurLhsSelecatbles.Count > 0;
+				if( m_Lhs.IsVisible == false ) m_Rhs.IsVisible = false;
+
+				if( m_Lhs.SelectedIndex < 0)
+				{
+					if( CurLhsSelecatbles.Count > 0 ) // reset Lhs
+					{
+						m_Lhs.SelectedIndex = 0;
+						Instruction.SetL( CurLhsSelecatbles[0] );
+					}
+					else { Instruction.Clear();  }
+				}
 			}
 		}
 
 		void OnLhsPicked( object sender, EventArgs args )
 		{
-			Instruction.SetL( CurLhs );
-			m_Rhs.ItemsSource = CurRhsSelectables;
+			if(m_Lhs.SelectedIndex > -1 )
+			{
+				Instruction.SetL( CurLhs );
+				m_Rhs.ItemsSource = CurRhsSelectables;
+				m_Rhs.IsVisible = m_Rhs.ItemsSource.Count > 0;
+			}
+			else { m_Rhs.IsVisible = false; }
 		}
 
 		void OnRhsPicked( object sender, EventArgs args )
 		{
-			Instruction.SetR( CurRhs );
+			if( m_Rhs.SelectedIndex > -1 )
+			{
+				Instruction.SetR( CurRhs );			
+			}
 		}
 	}
 }
