@@ -135,20 +135,20 @@ namespace rzrboy
 			if( instr != Instruction.Type )
 			{
 				Instruction.Type = instr;
-				m_Lhs.ItemsSource = CurLhsSelecatbles;
-				m_Lhs.SelectedIndex = CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs );
 
-				m_Lhs.IsVisible = CurLhsSelecatbles.Count > 0;
-				if( m_Lhs.IsVisible == false ) m_Rhs.IsVisible = false;
-
-				if( m_Lhs.SelectedIndex < 0)
+				if( m_Lhs.ItemsSource != CurLhsSelecatbles )
 				{
-					if( CurLhsSelecatbles.Count > 0 ) // reset Lhs
+					m_Lhs.ItemsSource = CurLhsSelecatbles;
+					m_Lhs.SelectedIndex = Instruction.Count > 0 ? CurLhsSelecatbles.FindIndex( lhs => lhs == Instruction.Lhs ) : -1;
+
+					if( m_Lhs.SelectedIndex < 0 ) // old Lhs operand not valid anymore
 					{
-						m_Lhs.SelectedIndex = 0;
-						Instruction.SetL( CurLhsSelecatbles[0] );
+						if( CurLhsSelecatbles.Count > 0 ) // reset Lhs
+						{
+							m_Lhs.SelectedIndex = 0;
+						}
+						else { Instruction.Clear(); }
 					}
-					else { Instruction.Clear();  }
 				}
 			}
 		}
@@ -158,10 +158,22 @@ namespace rzrboy
 			if(m_Lhs.SelectedIndex > -1 )
 			{
 				Instruction.SetL( CurLhs );
-				m_Rhs.ItemsSource = CurRhsSelectables;
-				m_Rhs.IsVisible = m_Rhs.ItemsSource.Count > 0;
+
+				if( m_Rhs.ItemsSource != CurRhsSelectables )
+				{
+					m_Rhs.ItemsSource = CurRhsSelectables;
+					int rhsIdx = Instruction.Count > 1 ? CurRhsSelectables.FindIndex( lhs => lhs == Instruction.Rhs ) : -1;
+					if( rhsIdx > -1 )
+					{
+						m_Rhs.SelectedIndex = rhsIdx;
+					}
+					else if( CurRhsSelectables.Count > 0 )
+					{
+						m_Rhs.SelectedIndex = 0;
+					}
+				}
 			}
-			else { m_Rhs.IsVisible = false; }
+			else { m_Rhs.ItemsSource = null; }
 		}
 
 		void OnRhsPicked( object sender, EventArgs args )
