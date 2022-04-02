@@ -16,7 +16,7 @@ namespace rzr
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public delegate bool Callback( Reg reg, Mem mem );
+        public delegate void Callback( Reg reg, Mem mem );
 
         public List<Callback> StepCallbacks { get; } = new();
 

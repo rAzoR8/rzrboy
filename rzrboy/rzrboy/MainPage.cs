@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Threading;
+using System.Collections.ObjectModel;
 
 namespace rzrboy
 {
@@ -47,6 +48,7 @@ namespace rzrboy
         private Callback m_updateDissassembly;
 
         private MemoryEditor m_memEdit;
+        private ObservableCollection<AsmInstr> m_assembly = new();
 
         private enum RegRows 
         {
@@ -105,24 +107,26 @@ namespace rzrboy
             };
         }
 
-        private Label Disassembly( int instructions )
+        private View Disassembly( int instructions )
         {
-            return new Label { FontFamily = Font.Regular }.Update( m_afterStep, lbl =>
-            {
-                int i = 0;
-                StringBuilder sb = new();
-                foreach ( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
-                {
-                    if ( i++ > instructions )                    
-                    {
-                        break;
-                    }
+            return new AssemblyView( m_assembly );
 
-                    sb.AppendLine( instr );
-                }
+            //return new Label { FontFamily = Font.Regular }.Update( m_afterStep, lbl =>
+            //{
+            //    int i = 0;
+            //    StringBuilder sb = new();
+            //    foreach ( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
+            //    {
+            //        if ( i++ > instructions )                    
+            //        {
+            //            break;
+            //        }
 
-                lbl.Text = sb.ToString();
-            }, out m_updateDissassembly );
+            //        sb.AppendLine( instr );
+            //    }
+
+            //    lbl.Text = sb.ToString();
+            //}, out m_updateDissassembly );
         }
 
         public MainPage( rzr.Boy gb )
@@ -134,8 +138,13 @@ namespace rzrboy
             boy = gb;
             m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
 
-            mem.WriteCallbacks.Add( ( Section section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
-            mem.WriteCallbacks.Add( ( Section section, ushort address, byte value ) => { if( address < 0x8000 ) m_updateDissassembly(); } );
+            mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
+            //mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => { if( address < 0x8000 ) m_updateDissassembly(); } );
+
+            boy.StepCallbacks.Add( ( reg, mem ) =>
+			{
+                // refresh m_assembly around reg.PC =- 30
+			});
 
             //boy.StepCallbacks.Add( ( reg, mem ) =>
             //{

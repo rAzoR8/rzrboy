@@ -238,10 +238,10 @@ namespace rzr
             throw new AddressNotMappedException( address );
         }
 
-        public delegate void OnRead(Section section, ushort address);
-        public delegate void OnWrite(Section section, ushort address, byte value);
+		public delegate void OnRead( ISection section, ushort address );
+		public delegate void OnWrite( ISection section, ushort address, byte value );
 
-        public List<OnRead> ReadCallbacks { get; } = new();
+		public List<OnRead> ReadCallbacks { get; } = new();
         public List<OnWrite> WriteCallbacks { get; } = new();
 
         public override byte this[ushort address]
