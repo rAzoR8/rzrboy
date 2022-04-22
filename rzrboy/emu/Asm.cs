@@ -79,7 +79,8 @@
 		public static AsmInstr Ccf() => new AsmInstr( InstrType.Ccf );
 		public static AsmInstr Rst( Operand vec ) => new AsmInstr( InstrType.Rst, vec );
 
-		public static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.HL };
+		public static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.SP };
+		public static readonly OperandType[] BcDeHlAf = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.AF };
 		public static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLi, OperandType.AdrHLd };
 		public static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
 		public static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };

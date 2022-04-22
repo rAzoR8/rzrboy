@@ -162,6 +162,9 @@ namespace rzr
 			this[InstrType.Call] = new
 				LhsToRhs( D16, NoRhs )
 				.Add( Asm.condZCnZnC, D16 );
+			this[InstrType.Rst] = new LhsToRhs( OperandType.RstAddr, NoRhs );
+			this[InstrType.Push] =
+			this[InstrType.Pop] = new LhsToRhs( Asm.BcDeHlAf, NoRhs );
 		}
 
 		public IEnumerator<InstrType> GetEnumerator()

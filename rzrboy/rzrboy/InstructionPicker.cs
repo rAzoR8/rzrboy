@@ -137,25 +137,33 @@ namespace rzrboy
 		private static bool ParseR8( string text, out sbyte val ) => sbyte.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || sbyte.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
 		private static bool ParseD16( string text, out ushort val ) => ushort.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || ushort.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
 
+		private static void ParseOpValue( string numText, rzr.Operand target ) 
+		{
+			switch( target.Type )
+			{
+				case rzr.OperandType.d8:
+				case rzr.OperandType.io8:
+				case rzr.OperandType.RstAddr:
+					if( ParseD8( numText, out var d8 ) )
+						target.d8 = d8;
+					break;
+				case rzr.OperandType.r8 when ParseR8( numText, out var r8 ):
+					target.r8 = r8;
+					break;
+				case rzr.OperandType.d16 when ParseD16( numText, out var d16 ):
+					target.d16 = d16;
+					break;
+				default:
+					break;
+			}
+		}
+
 		void OnLhsValueChanged( object sender, TextChangedEventArgs args )
 		{
 			if(Instruction.Count < 1 || m_Lhs.SelectedIndex < 0 )
 				return;
 
-			var type = CurLhs;
-
-			if( ( type == rzr.OperandType.d8 || type == rzr.OperandType.io8) && ParseD8( args.NewTextValue, out var d8)  )
-			{
-				Instruction.L.d8 = d8;
-			}
-			else if( type == rzr.OperandType.r8 && ParseR8(args.NewTextValue, out var r8) )
-			{
-				Instruction.L.r8 = r8;
-			}
-			else if( type == rzr.OperandType.d16 && ParseD16( args.NewTextValue, out var d16 ) )
-			{
-				Instruction.L.d16 = d16;
-			}
+			ParseOpValue( args.NewTextValue, Instruction.L );
 		}
 
 		void OnRhsValueChanged( object sender, TextChangedEventArgs args )
@@ -163,20 +171,7 @@ namespace rzrboy
 			if( Instruction.Count < 2 || m_Rhs.SelectedIndex < 0 )
 				return;
 
-			var type = CurRhs;
-
-			if( ( type == rzr.OperandType.d8 || type == rzr.OperandType.io8 ) && ParseD8( args.NewTextValue, out var d8 ) )
-			{
-				Instruction.R.d8 = d8;
-			}
-			else if( type == rzr.OperandType.r8 && ParseR8( args.NewTextValue, out var r8 ) )
-			{
-				Instruction.R.r8 = r8;
-			}
-			else if( type == rzr.OperandType.d16 && ParseD16( args.NewTextValue, out var d16 ) )
-			{
-				Instruction.R.d16 = d16;
-			}
+			ParseOpValue( args.NewTextValue, Instruction.R );
 		}
 
 		void OnInstrPicked( object sender, EventArgs args )

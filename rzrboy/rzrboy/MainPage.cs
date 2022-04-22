@@ -45,8 +45,6 @@ namespace rzrboy
         private List<Callback> m_beforeStep = new();
         private List<Callback> m_afterStep = new();
 
-        private Callback m_updateDissassembly;
-
         private MemoryEditor m_memEdit;
         private ObservableCollection<AsmInstr> m_assembly = new();
 
@@ -308,9 +306,16 @@ namespace rzrboy
             var result = await FilePicker.PickAsync( options );
 			if( result != null )
 			{
-				boy.LoadRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
+                var rom = await System.IO.File.ReadAllBytesAsync( result.FullPath );
+
+                boy.LoadRom( rom );
 				m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-                m_updateDissassembly();
+
+                //m_assembly.Clear();
+				//foreach( AsmInstr instr in Asm.Disassemble( rom ) )
+				//{
+                //  m_assembly.Add( instr );
+				//}
 			}
 		}
 
