@@ -1,15 +1,12 @@
 ﻿using System;
 using Microsoft.Maui.Controls;
-using Microsoft.Maui.Essentials;
 using CommunityToolkit.Maui.Markup;
 using static CommunityToolkit.Maui.Markup.GridRowsColumns;
-using Microsoft.Maui;
 using rzr;
 using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
 using System.Threading;
 using System.Collections.ObjectModel;
+using Microsoft.Maui.Storage;
 
 namespace rzrboy
 {

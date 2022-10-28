@@ -1,6 +1,4 @@
-﻿using Microsoft.Maui;
-using Microsoft.Maui.Hosting;
-using Microsoft.Maui.Controls.Compatibility;
+﻿using Microsoft.Maui.Hosting;
 using Microsoft.Maui.Controls.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.LifecycleEvents;
@@ -28,21 +26,21 @@ namespace rzrboy
 					lifecycle
 						.AddiOS(iOS => iOS
 							.OpenUrl((app, url, options) =>
-								Microsoft.Maui.Essentials.Platform.OpenUrl(app, url, options))
+								Microsoft.Maui.ApplicationModel.Platform.OpenUrl(app, url, options))
 							.ContinueUserActivity((application, userActivity, completionHandler) =>
-								Microsoft.Maui.Essentials.Platform.ContinueUserActivity(application, userActivity, completionHandler))
+								Microsoft.Maui.ApplicationModel.Platform.ContinueUserActivity(application, userActivity, completionHandler))
 							.PerformActionForShortcutItem((application, shortcutItem, completionHandler) =>
-								Microsoft.Maui.Essentials.Platform.PerformActionForShortcutItem(application, shortcutItem, completionHandler)));
+								Microsoft.Maui.ApplicationModel.Platform.PerformActionForShortcutItem(application, shortcutItem, completionHandler)));
 #elif WINDOWS
 					lifecycle
 						.AddWindows(windows =>
 						{
 							windows
 								.OnLaunched((app, e) =>
-									Microsoft.Maui.Essentials.Platform.OnLaunched(e));
+									Microsoft.Maui.ApplicationModel.Platform.OnLaunched(e));
 							windows
 								.OnActivated((window, e) =>
-									Microsoft.Maui.Essentials.Platform.OnActivated(window, e));
+									Microsoft.Maui.ApplicationModel.Platform.OnActivated(window, e));
 						});
 #elif ANDROID
 					//lifecycle.AddAndroid(d => {

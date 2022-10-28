@@ -26,6 +26,7 @@
 		<SupportedOSPlatformVersion Condition="'$(TargetFramework)' == 'net6.0-android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$(TargetFramework.Contains('-windows'))">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$(TargetFramework.Contains('-windows'))">10.0.17763.0</TargetPlatformMinVersion>
+		<Platforms>AnyCPU;x64</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -44,13 +45,12 @@
 
 	<ItemGroup Condition="$(TargetFramework.Contains('-windows'))">
 		<!-- Required - WinUI does not yet have buildTransitive for everything -->
-		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.0.30" />
-		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.0.0" />
+		<PackageReference Include="Microsoft.Graphics.Win2D" Version="1.0.4" />
+		<PackageReference Include="Microsoft.WindowsAppSDK" Version="1.1.5" />
 	</ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Maui.Markup" Version="1.0.0-pre7" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.0.1" />
+    <PackageReference Include="CommunityToolkit.Maui.Markup" Version="1.1.1" />
   </ItemGroup>
 
 	<ItemGroup>
