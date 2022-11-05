@@ -157,8 +157,8 @@ namespace rzrboy
                     (Row.Title, Auto),
                     (Row.LoadAndSaveButtons, Auto),
                     (Row.RegAndDis, Auto),
-                    (Row.Memory, Auto),
-                    (Row.StepAndRunButtons, Auto)
+                    (Row.StepAndRunButtons, Auto),
+                    (Row.Memory, Auto)
                     ),
 
                 Children =
@@ -184,8 +184,6 @@ namespace rzrboy
 
                     new HorizontalStackLayout{ Registers(), Disassembly(10) }.Row(Row.RegAndDis),
 
-                    m_memEdit.Row(Row.Memory),
-
                     new HorizontalStackLayout {
                         new Button { Text = "Step" }
                             .Font(bold: true, size: 20)
@@ -194,6 +192,8 @@ namespace rzrboy
                             .Font(bold: true, size: 20)
                             .Invoke(button => button.Clicked += OnRunClicked),
                     }.Row(Row.StepAndRunButtons),
+
+                    m_memEdit.Row(Row.Memory),
                 }
             };
 
@@ -215,8 +215,8 @@ namespace rzrboy
             Title,
             LoadAndSaveButtons,
             RegAndDis,
+            StepAndRunButtons,
             Memory,
-            StepAndRunButtons
         }
 
         private CancellationTokenSource cts = new();
