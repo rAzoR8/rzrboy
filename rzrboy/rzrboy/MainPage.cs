@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Collections.ObjectModel;
 using Microsoft.Maui.Storage;
+using System.Text;
 
 namespace rzrboy
 {
@@ -44,8 +45,9 @@ namespace rzrboy
 
         private MemoryEditor m_memEdit;
         private ObservableCollection<AsmInstr> m_assembly = new();
+        private Callback m_updateDissassembly;
 
-        private enum RegRows 
+		private enum RegRows 
         {
             AF, BC, DE, HL, SP, PC, Flags
         }
@@ -104,24 +106,24 @@ namespace rzrboy
 
         private View Disassembly( int instructions )
         {
-            return new AssemblyView( m_assembly );
+            //return new AssemblyView( m_assembly );
 
-            //return new Label { FontFamily = Font.Regular }.Update( m_afterStep, lbl =>
-            //{
-            //    int i = 0;
-            //    StringBuilder sb = new();
-            //    foreach ( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
-            //    {
-            //        if ( i++ > instructions )                    
-            //        {
-            //            break;
-            //        }
+            return new Label { FontFamily = Font.Regular }.Update( m_afterStep, lbl =>
+            {
+                int i = 0;
+                StringBuilder sb = new();
+                foreach( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
+                {
+                    if( i++ > instructions )
+                    {
+                        break;
+                    }
 
-            //        sb.AppendLine( instr );
-            //    }
+                    sb.AppendLine( instr );
+                }
 
-            //    lbl.Text = sb.ToString();
-            //}, out m_updateDissassembly );
+                lbl.Text = sb.ToString();
+            }, out m_updateDissassembly );
         }
 
         public MainPage( rzr.Boy gb )
@@ -307,11 +309,11 @@ namespace rzrboy
 
                 boy.LoadRom( rom );
 				m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-
-                //m_assembly.Clear();
+                m_updateDissassembly();
+				//m_assembly.Clear();
 				//foreach( AsmInstr instr in Asm.Disassemble( rom ) )
 				//{
-                //  m_assembly.Add( instr );
+				//  m_assembly.Add( instr );
 				//}
 			}
 		}
