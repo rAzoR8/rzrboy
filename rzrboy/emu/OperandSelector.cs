@@ -23,16 +23,12 @@ namespace rzr
 				Add( key, NoRhs );
 			}
 
-			public static implicit operator LhsToRhs( OperandType key ) => new LhsToRhs(key);
+			public static implicit operator LhsToRhs( OperandType key ) => new LhsToRhs( key );
+			public static implicit operator LhsToRhs( OperandType[] keys ) => new LhsToRhs( keys );
 
-			public LhsToRhs( OperandType key, params OperandType[] values )
+			public LhsToRhs( OperandType key, IEnumerable<OperandType> values )
 			{
 				Add( key, values );
-			}
-
-			public LhsToRhs( IEnumerable<OperandType> keys, IEnumerable<OperandType> values )
-			{
-				Add( keys, values );
 			}
 
 			public LhsToRhs( IEnumerable<OperandType> keys, params OperandType[] values )
@@ -57,7 +53,7 @@ namespace rzr
 
 			public LhsToRhs Add( OperandType key, params OperandType[] values )
 			{
-				return Add( key, (IEnumerable<OperandType>) values );
+				return Add( key, (IEnumerable<OperandType>)values );
 			}
 
 			public LhsToRhs Add( IEnumerable<OperandType> keys, IEnumerable<OperandType> values )
@@ -101,7 +97,7 @@ namespace rzr
 
 		public OperandSelector() 
 		{
-			// TOTO: reorder by most-used-first
+			// TODO: reorder by most-used-first
 			this[InstrType.Db] = D8;
 			this[InstrType.Nop] = NoOperands;
 			this[InstrType.Stop] = D8;
@@ -156,15 +152,34 @@ namespace rzr
 				LhsToRhs( Asm.condZCnZnC, R8 )
 				.Add( R8, NoRhs );
 			this[InstrType.Ret] = new
-				LhsToRhs(OperandType.none, NoRhs) // RET
-				.Add(Asm.condZCnZnC, NoRhs); // RET C ...
+				LhsToRhs( OperandType.none, NoRhs ) // RET
+				.Add( Asm.condZCnZnC, NoRhs ); // RET C ...
 			this[InstrType.Reti] = NoOperands;
 			this[InstrType.Call] = new
 				LhsToRhs( D16, NoRhs )
 				.Add( Asm.condZCnZnC, D16 );
-			this[InstrType.Rst] = new LhsToRhs( OperandType.RstAddr, NoRhs );
+			this[InstrType.Rst] = OperandType.RstAddr;
 			this[InstrType.Push] =
-			this[InstrType.Pop] = new LhsToRhs( Asm.BcDeHlAf, NoRhs );
+			this[InstrType.Pop] = Asm.BcDeHlAf;
+			this[InstrType.Rla] = NoOperands;
+			this[InstrType.Rlca] = NoOperands;
+			this[InstrType.Rra] = NoOperands;
+			this[InstrType.Rrca] = NoOperands;
+			this[InstrType.Daa] = NoOperands;
+			this[InstrType.Scf] = NoOperands;
+			this[InstrType.Cpl] = NoOperands;
+			this[InstrType.Ccf] = NoOperands;
+			this[InstrType.Rlc] =
+			this[InstrType.Rrc] =
+			this[InstrType.Rl] =
+			this[InstrType.Rr] =
+			this[InstrType.Sla] =
+			this[InstrType.Sra] =
+			this[InstrType.Swap] =
+			this[InstrType.Srl] = Asm.BCDEHLAdrHlA;
+			this[InstrType.Bit] =
+			this[InstrType.Res] =
+			this[InstrType.Bit] = new LhsToRhs( OperandType.BitIdx, Asm.BCDEHLAdrHlA );
 		}
 
 		public IEnumerator<InstrType> GetEnumerator()
