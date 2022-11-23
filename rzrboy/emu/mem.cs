@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace rzr
+﻿namespace rzr
 {
     public class AddressNotMappedException : System.AccessViolationException 
     {
@@ -9,7 +7,7 @@ namespace rzr
 
     public class Mem : ListSection
     {
-        public const ushort RomBankSize = 0x4000; // 16KIB
+        public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort VRamSize = 0x2000; // 8KiB
         public const ushort ERamSize = 0x2000; // 8KiB
         public const ushort WRamSize = 0x1000; // 4KiB

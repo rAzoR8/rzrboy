@@ -48,7 +48,7 @@ namespace rzr
 
 	public class Mbc : Section
 	{
-        public const ushort RomBankSize = 0x4000; // 16KIB
+        public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort RamBankSize = 0x2000; // 8KiB
 
         private List<byte> m_rom;
@@ -191,11 +191,11 @@ namespace rzr
                     var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
                     m_ram[bankAdr] = value;
                 }
-                //else
-                //{
-                //    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
-                //    throw new System.AccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
-                //}
+                else
+                {
+                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
+                    throw new System.AccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+                }
             }
         }
 

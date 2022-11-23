@@ -298,6 +298,7 @@
 			};
 		}
 
+		// Extension Instructions
 		public static AsmInstr Rlc( AsmOperand rhs ) => new AsmInstr( InstrType.Rlc, rhs );
 		public static AsmInstr Rrc( AsmOperand rhs ) => new AsmInstr( InstrType.Rrc, rhs );
 		public static AsmInstr Rl( AsmOperand rhs ) => new AsmInstr( InstrType.Rl, rhs );
