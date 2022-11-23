@@ -7,7 +7,6 @@ namespace rzr
         private Reg m_reg;
         private Mem m_mem;
         private IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
-        private Interrupt m_int = new(); // TODO: move to Boy
 
         public byte curOpCode { get; private set; } = 0; // opcode od the currenlty executed instruction
         public ushort curInstrPC { get; private set; } = 0; // start ProgramCounter of the currently executed instruction
@@ -62,7 +61,7 @@ namespace rzr
 					{
                         m_reg.Halted = false;
 
-						curOp = m_int.HandleInterrupts().GetEnumerator();
+						curOp = Interrupt.HandlePending().GetEnumerator();
 						curOp.MoveNext();
 						return false;
 					}

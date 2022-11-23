@@ -2,7 +2,7 @@
 
 namespace rzr
 {
-	public class Interrupt
+	public static class Interrupt
 	{
         public const ushort IFRegister = 0xFF0F;
         public const ushort IERegister = 0xFFFF;
@@ -28,8 +28,11 @@ namespace rzr
 			new Entry(0x0060, Type.Joypad),
 		};
 
-		// Handle interrupt, 5 cycles
-		public /*static*/ IEnumerable<Op> HandleInterrupts()
+		/// <summary>
+		/// Handle one pending interrupt, 5 cycles
+		/// </summary>
+		/// <returns></returns>
+		public static IEnumerable<Op> HandlePending()
         {
             byte IF = 0; byte IE = 0;
             yield return ( reg, mem ) => IF = mem[0xFF0F];
