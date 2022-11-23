@@ -1,21 +1,5 @@
 ﻿namespace rzr
 {
-	public class Ref<T> where T : struct
-	{
-		public Ref( T val )
-		{
-			Value = val;
-		}
-
-		public T Value = default;
-		public static implicit operator T( Ref<T> val ) { return val.Value; }
-
-		public override string ToString()
-		{
-			return $"{Value}";
-		}
-	}
-
 	/// <summary>
 	/// Each op (operation) takes one m-cycle.
 	/// </summary>
@@ -23,6 +7,10 @@
 	/// <param name="mem"></param>
 	public delegate void Op( Reg reg, ISection mem );
 
+	/// <summary>
+	/// Operation stream producer
+	/// </summary>
+	/// <returns></returns>
 	public delegate IEnumerable<Op> OpFactory();
 
 	/// <summary>
@@ -45,7 +33,7 @@
 		public static implicit operator ExecInstr( Op op ) { return new ExecInstr( op ); }
 	}
 
-	public static class InstructionExtensions
+	public static class ExecInstrExtensions
 	{
 		// Debug name
 		public static string ToString( this OpFactory ops )
