@@ -1,20 +1,21 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections;
 
 namespace rzr
 {
 	public class OperandSelector : IEnumerable<InstrType>
 	{
+		public interface ILhsToRhs : IReadOnlyDictionary<OperandType, List<OperandType>>
+		{
+			public IReadOnlyList<OperandType> Lhs { get; }
+		}
+
 		// Lhs operand -> list of viable Rhs operands
-		public class LhsToRhs : Dictionary<OperandType, List<OperandType>>
+		private class LhsToRhs : Dictionary<OperandType, List<OperandType>>, ILhsToRhs
 		{
 			private List<OperandType>? m_lhs = null;
+
 			// TODO: sort by length of Name: A -> SP -> IoC -> adrBC
-			public List<OperandType> Lhs { get { return m_lhs != null ? m_lhs : ( m_lhs = Keys.ToList() ); } }
+			public IReadOnlyList<OperandType> Lhs { get { return m_lhs != null ? m_lhs : ( m_lhs = Keys.ToList() ); } }
 
 			public LhsToRhs() { }
 
@@ -84,27 +85,19 @@ namespace rzr
 		private const OperandType R8 = OperandType.r8;
 		private const OperandType D16 = OperandType.d16;
 		private const OperandType Io8 = OperandType.io8;
-		private const OperandType SPr8 = OperandType.SPr8;
+		private const OperandType SPr8 = OperandType.SPr8;		
 
-		public LhsToRhs this[InstrType i]
-		{
-			get => m_instrToOps[i];
-			private set
-			{
-				m_instrToOps[i] = value;
-			}
-		}
+		public ILhsToRhs this[InstrType i] => m_instrToOps[i];
 
 		public OperandSelector() 
 		{
-			// TODO: reorder by most-used-first
-			this[InstrType.Db] = D8;
-			this[InstrType.Nop] = NoOperands;
-			this[InstrType.Stop] = D8;
-			this[InstrType.Halt] = NoOperands;
-			this[InstrType.Di] = NoOperands;
-			this[InstrType.Ei] = NoOperands;
-			this[InstrType.Ld] = new
+			m_instrToOps[InstrType.Db] = D8;
+			m_instrToOps[InstrType.Nop] = NoOperands;
+			m_instrToOps[InstrType.Stop] = D8;
+			m_instrToOps[InstrType.Halt] = NoOperands;
+			m_instrToOps[InstrType.Di] = NoOperands;
+			m_instrToOps[InstrType.Ei] = NoOperands;
+			m_instrToOps[InstrType.Ld] = new
 				LhsToRhs( Asm.BcDeHlSp, D8 )
 				.Add( Asm.adrBcDeHlID, Asm.A )
 				.Add( Asm.BDHAdrHl, D8 )
@@ -123,63 +116,61 @@ namespace rzr
 				.Add( Asm.SP, Asm.HL )
 				.Add( D16, Asm.A )
 				.Add( Asm.A, D16 );
-			this[InstrType.Inc] = new
+			m_instrToOps[InstrType.Inc] = 
+			m_instrToOps[InstrType.Dec] = new
 				LhsToRhs( Asm.BcDeHlSp, NoRhs )
 				.Add( Asm.BDHAdrHl, NoRhs )
 				.Add( Asm.CELA, NoRhs );
-			this[InstrType.Dec] = new
-				LhsToRhs( Asm.BcDeHlSp, NoRhs )
-				.Add( Asm.BDHAdrHl, NoRhs )
-				.Add( Asm.CELA, NoRhs );
-			this[InstrType.Add] = new
+			m_instrToOps[InstrType.Add] = new
 				LhsToRhs( Asm.A, Asm.BCDEHLAdrHlA )
 				.Add( Asm.A, D8 )
 				.Add( Asm.SP, R8 );
-			this[InstrType.Adc] =
-			this[InstrType.Sub] =
-			this[InstrType.Sbc] =
-			this[InstrType.And] =
-			this[InstrType.Xor] =
-			this[InstrType.Or] =
-			this[InstrType.Cp] = new
+			m_instrToOps[InstrType.Adc] =
+			m_instrToOps[InstrType.Sub] =
+			m_instrToOps[InstrType.Sbc] =
+			m_instrToOps[InstrType.And] =
+			m_instrToOps[InstrType.Or] =
+			m_instrToOps[InstrType.Xor] =
+			m_instrToOps[InstrType.Cp] = new
 				LhsToRhs( Asm.BCDEHLAdrHlA, NoRhs )
 				.Add( D8, NoRhs );
-			this[InstrType.Jp] = new
+			m_instrToOps[InstrType.Jp] = new
 				LhsToRhs( Asm.condZCnZnC, D16 )
 				.Add(D16, NoRhs)
 				.Add(Asm.HL, NoRhs);
-			this[InstrType.Jr] = new
+			m_instrToOps[InstrType.Jr] = new
 				LhsToRhs( Asm.condZCnZnC, R8 )
 				.Add( R8, NoRhs );
-			this[InstrType.Ret] = new
+			m_instrToOps[InstrType.Ret] = new
 				LhsToRhs( OperandType.none, NoRhs ) // RET
 				.Add( Asm.condZCnZnC, NoRhs ); // RET C ...
-			this[InstrType.Reti] = NoOperands;
-			this[InstrType.Call] = new
+			m_instrToOps[InstrType.Reti] = NoOperands;
+			m_instrToOps[InstrType.Call] = new
 				LhsToRhs( D16, NoRhs )
 				.Add( Asm.condZCnZnC, D16 );
-			this[InstrType.Rst] = OperandType.RstAddr;
-			this[InstrType.Push] =
-			this[InstrType.Pop] = Asm.BcDeHlAf;
-			this[InstrType.Rla] = NoOperands;
-			this[InstrType.Rlca] = NoOperands;
-			this[InstrType.Rra] = NoOperands;
-			this[InstrType.Rrca] = NoOperands;
-			this[InstrType.Daa] = NoOperands;
-			this[InstrType.Scf] = NoOperands;
-			this[InstrType.Cpl] = NoOperands;
-			this[InstrType.Ccf] = NoOperands;
-			this[InstrType.Rlc] =
-			this[InstrType.Rrc] =
-			this[InstrType.Rl] =
-			this[InstrType.Rr] =
-			this[InstrType.Sla] =
-			this[InstrType.Sra] =
-			this[InstrType.Swap] =
-			this[InstrType.Srl] = Asm.BCDEHLAdrHlA;
-			this[InstrType.Bit] =
-			this[InstrType.Res] =
-			this[InstrType.Bit] = new LhsToRhs( OperandType.BitIdx, Asm.BCDEHLAdrHlA );
+			m_instrToOps[InstrType.Rst] = OperandType.RstAddr;
+			m_instrToOps[InstrType.Push] =
+			m_instrToOps[InstrType.Pop] = Asm.BcDeHlAf;
+			m_instrToOps[InstrType.Rla] = NoOperands;
+			m_instrToOps[InstrType.Rlca] = NoOperands;
+			m_instrToOps[InstrType.Rra] = NoOperands;
+			m_instrToOps[InstrType.Rrca] = NoOperands;
+			m_instrToOps[InstrType.Daa] = NoOperands;
+			m_instrToOps[InstrType.Scf] = NoOperands;
+			m_instrToOps[InstrType.Cpl] = NoOperands;
+			m_instrToOps[InstrType.Ccf] = NoOperands;
+			m_instrToOps[InstrType.Rlc] =
+			m_instrToOps[InstrType.Rrc] =
+			m_instrToOps[InstrType.Rl] =
+			m_instrToOps[InstrType.Rr] =
+			m_instrToOps[InstrType.Sla] =
+			m_instrToOps[InstrType.Sra] =
+			m_instrToOps[InstrType.Swap] =
+			m_instrToOps[InstrType.Srl] = Asm.BCDEHLAdrHlA;
+			m_instrToOps[InstrType.Bit] =
+			m_instrToOps[InstrType.Res] =
+			m_instrToOps[InstrType.Bit] = 
+			m_instrToOps[InstrType.Set] = new LhsToRhs( OperandType.BitIdx, Asm.BCDEHLAdrHlA );
 		}
 
 		public IEnumerator<InstrType> GetEnumerator()

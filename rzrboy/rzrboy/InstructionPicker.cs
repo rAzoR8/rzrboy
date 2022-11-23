@@ -15,7 +15,7 @@ namespace rzrboy
 		private static readonly List<rzr.InstrType> SelectableInstructions = new( Selector );
 
 		private rzr.InstrType CurInstrType => SelectableInstructions[m_InstrPicker.SelectedIndex];
-		private rzr.OperandSelector.LhsToRhs CurLhsToRhs => Selector[CurInstrType];
+		private rzr.OperandSelector.ILhsToRhs CurLhsToRhs => Selector[CurInstrType];
 
 		private List<rzr.Operand> CurLhsSelecatbles => CurLhsToRhs.Lhs.Select( o => new rzr.Operand(o) ).ToList();
 		private rzr.OperandType CurLhs => CurLhsSelecatbles[m_Lhs.SelectedIndex];
