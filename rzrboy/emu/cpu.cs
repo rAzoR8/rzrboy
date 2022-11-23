@@ -24,7 +24,7 @@ namespace rzr
             m_mem = memory;
 
             // cache instructions
-			foreach( (Instruction instr, int i) in isa.Indexed() )
+			foreach( (ExecInstr instr, int i) in isa.Indexed() )
 			{
                 m_instr[i] = instr.Make();
             }

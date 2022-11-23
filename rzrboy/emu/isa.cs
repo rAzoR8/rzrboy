@@ -4,12 +4,12 @@ using System.Text;
 
 namespace rzr
 {
-    public class Isa : IEnumerable<Instruction>
+    public class Isa : IEnumerable<ExecInstr>
     {
-        private static readonly Instruction[] m_instructions = new Instruction[256];
-        private static readonly Instruction[] m_extInstructions = new Instruction[256];
+        private static readonly ExecInstr[] m_instructions = new ExecInstr[256];
+        private static readonly ExecInstr[] m_extInstructions = new ExecInstr[256];
 
-        public Instruction this[byte opcode]
+        public ExecInstr this[byte opcode]
         { 
             get => m_instructions[opcode];
             private set
@@ -19,7 +19,7 @@ namespace rzr
             }
         }
 
-        private class ExtInstr : Instruction
+        private class ExtInstr : ExecInstr
         {
             public ExtInstr( ) : base( ExtOps ) {}
 
@@ -28,7 +28,7 @@ namespace rzr
                 byte opcode = 0;
                 yield return ( reg, mem ) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
 
-                Instruction ext = m_extInstructions[opcode];
+                ExecInstr ext = m_extInstructions[opcode];
                 foreach ( Op op in ext.Make() )
                 {
                     yield return op;
@@ -36,8 +36,8 @@ namespace rzr
             }
         }
 
-        private delegate Instruction BuildFunc<Y, X>(Y y, X x);
-        private delegate Instruction BuildFunc<X>( X x );
+        private delegate ExecInstr BuildFunc<Y, X>(Y y, X x);
+        private delegate ExecInstr BuildFunc<X>( X x );
 
         public Isa() 
         {
@@ -429,7 +429,7 @@ namespace rzr
 		}
         
         // HELPERS
-        private static void Fill<Y, X>( Instruction[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
+        private static void Fill<Y, X>( ExecInstr[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
         {
             foreach( Y y in ys )
             {
@@ -441,7 +441,7 @@ namespace rzr
                 offsetX += 0x10;
             }
         }
-        private static void FillX<X>( Instruction[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
+        private static void FillX<X>( ExecInstr[] target, byte offsetX, BuildFunc<X> builder, IEnumerable<X> xs )
         {
             foreach( (X x, int i) in xs.Indexed() )
             {
@@ -449,7 +449,7 @@ namespace rzr
                 target[offsetX + i] = builder( x );
             }
         }
-        private static void FillY<Y>( Instruction[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
+        private static void FillY<Y>( ExecInstr[] target, byte offsetX, BuildFunc<Y> builder, IEnumerable<Y> ys )
         {
             foreach( Y y in ys )
             {
@@ -464,48 +464,48 @@ namespace rzr
         // ###################################################
 
         // INVALID
-        private static readonly Instruction Invalid = Ops.Nop;
+        private static readonly ExecInstr Invalid = Ops.Nop;
 
         // NOP
-        private static readonly Instruction Nop = Ops.Nop;
+        private static readonly ExecInstr Nop = Ops.Nop;
 
         // HALT
-        private static readonly Instruction Halt = Ops.Halt;
+        private static readonly ExecInstr Halt = Ops.Halt;
 
         // STOP
-        private static readonly Instruction Stop = new ( Ops.Stop );
+        private static readonly ExecInstr Stop = new ( Ops.Stop );
 
         // INC r8
-        private static Instruction Inc( Reg8 dst ) => Ops.Inc( dst );
+        private static ExecInstr Inc( Reg8 dst ) => Ops.Inc( dst );
         // INC r16
-        private static Instruction Inc( Reg16 dst ) => new ( () => Ops.Inc( dst ) );
+        private static ExecInstr Inc( Reg16 dst ) => new ( () => Ops.Inc( dst ) );
         // INC (HL)
-        private static readonly Instruction IncHl = new ( Ops.IncHl );
+        private static readonly ExecInstr IncHl = new ( Ops.IncHl );
 
         // INC r8
-        private static Instruction Dec( Reg8 dst ) => Ops.Dec( dst );
+        private static ExecInstr Dec( Reg8 dst ) => Ops.Dec( dst );
         // INC r16
-        private static Instruction Dec( Reg16 dst ) => new ( () => Ops.Dec( dst ) );
+        private static ExecInstr Dec( Reg16 dst ) => new ( () => Ops.Dec( dst ) );
         // INC (HL)
-        private static readonly Instruction DecHl = new ( Ops.DecHl );
+        private static readonly ExecInstr DecHl = new ( Ops.DecHl );
 
         // BIT i, [r8, (HL)]
-        private static Instruction Bit( byte bit, RegX target ) => new ( () => Ops.Bit( bit, target ) );
+        private static ExecInstr Bit( byte bit, RegX target ) => new ( () => Ops.Bit( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static Instruction Set( byte bit, RegX target ) => new ( () => Ops.Set( bit, target ) );
+        private static ExecInstr Set( byte bit, RegX target ) => new ( () => Ops.Set( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static Instruction Res( byte bit, RegX target ) => new ( () => Ops.Res( bit, target ) );
+        private static ExecInstr Res( byte bit, RegX target ) => new ( () => Ops.Res( bit, target ) );
 
         // XOR A, [r8, (HL)]
-        private static Instruction Xor( RegX target ) => new ( () => Ops.Xor( target ) );
+        private static ExecInstr Xor( RegX target ) => new ( () => Ops.Xor( target ) );
 
         // XOR A, db8
-        private static readonly Instruction XorImm8 = new ( Ops.XorImm8 );
+        private static readonly ExecInstr XorImm8 = new ( Ops.XorImm8 );
 
         // LD r8, db8 LD r16, db16
-        private static Instruction LdImm( RegX dst ) => new ( () => Ops.LdImm( dst ) );
+        private static ExecInstr LdImm( RegX dst ) => new ( () => Ops.LdImm( dst ) );
 
         /// <summary>
         /// LD r8, r8' 
@@ -516,170 +516,170 @@ namespace rzr
         /// <param name="dst"></param>
         /// <param name="src"></param>
         /// <returns></returns>
-        private static Instruction Ld( RegX dst, RegX src ) => new( () => Ops.LdRegOrAddr( dst, src ) );
+        private static ExecInstr Ld( RegX dst, RegX src ) => new( () => Ops.LdRegOrAddr( dst, src ) );
 
         // LD (HL+), A
-        private static readonly Instruction LdHlPlusA = new ( Ops.LdHlPlusA );
+        private static readonly ExecInstr LdHlPlusA = new ( Ops.LdHlPlusA );
         // LD (HL-), A
-        private static readonly Instruction LdHlMinusA = new ( Ops.LdHlMinusA );
+        private static readonly ExecInstr LdHlMinusA = new ( Ops.LdHlMinusA );
 
         // LD A, (HL+)
-        private static readonly Instruction LdAHlPlus = new ( Ops.LdAHlPlus );
+        private static readonly ExecInstr LdAHlPlus = new ( Ops.LdAHlPlus );
         // LD A, (HL-)
-        private static readonly Instruction LdAHlMinus = new ( Ops.LdAHlMinus );
+        private static readonly ExecInstr LdAHlMinus = new ( Ops.LdAHlMinus );
 
         // LD A, (0xFF00+C)
-        private static readonly Instruction LdhAc = new ( Ops.LdhAc );
+        private static readonly ExecInstr LdhAc = new ( Ops.LdhAc );
 
         // LD (0xFF00+C), A
-        private static readonly Instruction LdhCa = new ( Ops.LdhCa );
+        private static readonly ExecInstr LdhCa = new ( Ops.LdhCa );
 
         // LD A, (0xFF00+db8)
-        private static readonly Instruction LdhAImm = new ( Ops.LdhAImm );
+        private static readonly ExecInstr LdhAImm = new ( Ops.LdhAImm );
 
         // LD (0xFF00+db8), A
-        private static readonly Instruction LdhImmA = new ( Ops.LdhImmA );
+        private static readonly ExecInstr LdhImmA = new ( Ops.LdhImmA );
 
         // LD (a16), SP
-        private static readonly Instruction LdImm16Sp = new ( Ops.LdImm16Sp );
+        private static readonly ExecInstr LdImm16Sp = new ( Ops.LdImm16Sp );
 
         // LD (a16), A
-        private static readonly Instruction LdImmAddrA = new ( Ops.LdImmAddrA ) ;
+        private static readonly ExecInstr LdImmAddrA = new ( Ops.LdImmAddrA ) ;
 
         // LD A, (a16)
-        private static readonly Instruction LdAImmAddr = new ( Ops.LdAImmAddr );
+        private static readonly ExecInstr LdAImmAddr = new ( Ops.LdAImmAddr );
 
         // LD HL,SP + r8 - 3 cycles
-        private static readonly Instruction LdHlSpR8 = new ( Ops.LdHlSpR8 );
+        private static readonly ExecInstr LdHlSpR8 = new ( Ops.LdHlSpR8 );
 
 
         // ADD A, [r8 (HL)]
-        private static Instruction Add( RegX src ) => new ( () => Ops.Add( src ) );
+        private static ExecInstr Add( RegX src ) => new ( () => Ops.Add( src ) );
 
         // ADD HL, r16
-        private static Instruction AddHl( Reg16 src ) => new ( () => Ops.AddHl( src ) ) ;
+        private static ExecInstr AddHl( Reg16 src ) => new ( () => Ops.AddHl( src ) ) ;
 
         // ADD A, db8
-        private static readonly Instruction AddImm8 = new ( () => Ops.AddImm8( carry: 0 ));
+        private static readonly ExecInstr AddImm8 = new ( () => Ops.AddImm8( carry: 0 ));
 
         // ADC A, db8
-        private static readonly Instruction AdcImm8 = new ( () => Ops.AddImm8( carry: 1 ) ) ;
+        private static readonly ExecInstr AdcImm8 = new ( () => Ops.AddImm8( carry: 1 ) ) ;
         
         // ADD SP, R8
-        private static readonly Instruction AddSpR8 = new ( Ops.AddSpR8 );
+        private static readonly ExecInstr AddSpR8 = new ( Ops.AddSpR8 );
 
         // ADD A, [r8 (HL)]
-        private static Instruction Adc( RegX src ) => new ( () => Ops.Add( src, carry: 1 ) );
+        private static ExecInstr Adc( RegX src ) => new ( () => Ops.Add( src, carry: 1 ) );
 
 
         // SUB A, [r8 (HL)]
-        private static Instruction Sub( RegX src ) => new ( () => Ops.Sub( src ) );
+        private static ExecInstr Sub( RegX src ) => new ( () => Ops.Sub( src ) );
 
         // SUB A, db8
-        private static readonly Instruction SubImm8 = new ( () => Ops.SubImm8( carry: 0 ) );
+        private static readonly ExecInstr SubImm8 = new ( () => Ops.SubImm8( carry: 0 ) );
 
         // SBC A, [r8 (HL)]
-        private static Instruction Sbc( RegX src ) => new ( () => Ops.Sub( src, carry: 1 ) );
+        private static ExecInstr Sbc( RegX src ) => new ( () => Ops.Sub( src, carry: 1 ) );
 
         // SBC A, db8
-        private static readonly Instruction SbcImm8 = new ( () => Ops.SubImm8( carry: 1 ) );
+        private static readonly ExecInstr SbcImm8 = new ( () => Ops.SubImm8( carry: 1 ) );
 
         // AND A, [r8 (HL)]
-        private static Instruction And( RegX src ) => new ( () => Ops.And( src ) );
+        private static ExecInstr And( RegX src ) => new ( () => Ops.And( src ) );
 
         // AND A, db8
-        private static readonly Instruction AndImm8 = new ( Ops.AndImm8 );
+        private static readonly ExecInstr AndImm8 = new ( Ops.AndImm8 );
 
         // OR A, [r8 (HL)]
-        private static Instruction Or( RegX src ) => new ( () => Ops.Or( src ) );
+        private static ExecInstr Or( RegX src ) => new ( () => Ops.Or( src ) );
 
         // OR A, db8
-        private static readonly Instruction OrImm8 = new ( Ops.OrImm8 );
+        private static readonly ExecInstr OrImm8 = new ( Ops.OrImm8 );
 
         // CP A, [r8 (HL)]
-        private static Instruction Cp( RegX src ) => new ( () => Ops.Cp( src ) );
+        private static ExecInstr Cp( RegX src ) => new ( () => Ops.Cp( src ) );
 
         // CP A, db8
-        private static readonly Instruction CpImm8 = new ( Ops.CpImm8 ) ;
+        private static readonly ExecInstr CpImm8 = new ( Ops.CpImm8 ) ;
 
         // JP HL
-        private static readonly Instruction JpHl = Ops.JpHl;
+        private static readonly ExecInstr JpHl = Ops.JpHl;
 
         // JP a16
-        private static readonly Instruction JpImm16 = new ( () => Ops.JpImm16());
+        private static readonly ExecInstr JpImm16 = new ( () => Ops.JpImm16());
 
         // JP cc, a16
-        private static Instruction JpCcImm16( Ops.Condition cc ) => new ( () => Ops.JpImm16( cc ) );
+        private static ExecInstr JpCcImm16( Ops.Condition cc ) => new ( () => Ops.JpImm16( cc ) );
 
         // JR e8
-        private static readonly Instruction JrImm = new ( () => Ops.JrImm() );
+        private static readonly ExecInstr JrImm = new ( () => Ops.JrImm() );
 
         // JR cc, e8
-        private static Instruction JrCcImm( Ops.Condition cc ) => new ( () => Ops.JrImm( cc ) );
+        private static ExecInstr JrCcImm( Ops.Condition cc ) => new ( () => Ops.JrImm( cc ) );
 
         // CALL nn
-        private static readonly Instruction Call = new ( () => Ops.Call() ) ;
+        private static readonly ExecInstr Call = new ( () => Ops.Call() ) ;
 
         // CALL cc, nn
-        private static Instruction CallCc( Ops.Condition cc ) => new ( () => Ops.Call( cc ) );
+        private static ExecInstr CallCc( Ops.Condition cc ) => new ( () => Ops.Call( cc ) );
 
         // RETI
-        private static readonly Instruction Reti = new ( Ops.Reti );
+        private static readonly ExecInstr Reti = new ( Ops.Reti );
 
         // EI
-        private static readonly Instruction Ei = new ( Ops.Ei  );
+        private static readonly ExecInstr Ei = new ( Ops.Ei  );
 
         // DI
-        private static readonly Instruction Di = new ( Ops.Di );
+        private static readonly ExecInstr Di = new ( Ops.Di );
 
         // RET
-        private static readonly Instruction Ret = new ( () => Ops.Ret() );
+        private static readonly ExecInstr Ret = new ( () => Ops.Ret() );
 
         // RET cc
-        private static Instruction RetCc( Ops.Condition cc ) => new ( () => Ops.Ret( cc ) );
+        private static ExecInstr RetCc( Ops.Condition cc ) => new ( () => Ops.Ret( cc ) );
 
         // PUSH r16
-        private static Instruction Push( Reg16 src ) => new ( () => Ops.Push( src ) );
+        private static ExecInstr Push( Reg16 src ) => new ( () => Ops.Push( src ) );
 
         // POP r16
-        private static Instruction Pop( Reg16 dst ) => new ( () => Ops.Pop( dst ) );
+        private static ExecInstr Pop( Reg16 dst ) => new ( () => Ops.Pop( dst ) );
 
         // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
-        private static Instruction Rst( byte vec ) => new ( () => Ops.Rst( vec ) );
+        private static ExecInstr Rst( byte vec ) => new ( () => Ops.Rst( vec ) );
 
         // CCF
-        private static readonly Instruction Ccf = new ( Ops.Ccf );
+        private static readonly ExecInstr Ccf = new ( Ops.Ccf );
         // SCF
-        private static readonly Instruction Scf = new ( Ops.Scf );
+        private static readonly ExecInstr Scf = new ( Ops.Scf );
         // SCF
-        private static readonly Instruction Cpl = new ( Ops.Cpl );
+        private static readonly ExecInstr Cpl = new ( Ops.Cpl );
         // DAA
-        private static readonly Instruction Daa = new ( Ops.Daa );
+        private static readonly ExecInstr Daa = new ( Ops.Daa );
 
         // RLC
-        private static Instruction Rlc( RegX dst ) => new ( () => Ops.Rlc( dst ) );
+        private static ExecInstr Rlc( RegX dst ) => new ( () => Ops.Rlc( dst ) );
         // RRC
-        private static Instruction Rrc( RegX dst ) => new ( () => Ops.Rrc( dst ));
+        private static ExecInstr Rrc( RegX dst ) => new ( () => Ops.Rrc( dst ));
 
         // RL
-        private static Instruction Rl( RegX dst ) => new ( () => Ops.Rl( dst ));
+        private static ExecInstr Rl( RegX dst ) => new ( () => Ops.Rl( dst ));
         // RR
-        private static Instruction Rr( RegX dst ) => new ( () => Ops.Rr( dst ) );
+        private static ExecInstr Rr( RegX dst ) => new ( () => Ops.Rr( dst ) );
 
         // SLA
-        private static Instruction Sla( RegX dst ) => new ( () => Ops.Sla( dst ) );
+        private static ExecInstr Sla( RegX dst ) => new ( () => Ops.Sla( dst ) );
         // SRA
-        private static Instruction Sra( RegX dst ) => new ( () => Ops.Sra( dst ));
+        private static ExecInstr Sra( RegX dst ) => new ( () => Ops.Sra( dst ));
 
         // SWAP
-        private static Instruction Swap( RegX dst ) => new ( () => Ops.Swap( dst ) );
+        private static ExecInstr Swap( RegX dst ) => new ( () => Ops.Swap( dst ) );
 
         // SRL
-        private static Instruction Srl( RegX dst ) => new ( () => Ops.Srl( dst )) ;
+        private static ExecInstr Srl( RegX dst ) => new ( () => Ops.Srl( dst )) ;
 
-		public IEnumerator<Instruction> GetEnumerator()
+		public IEnumerator<ExecInstr> GetEnumerator()
 		{
-			return ( (IEnumerable<Instruction>)m_instructions ).GetEnumerator();
+			return ( (IEnumerable<ExecInstr>)m_instructions ).GetEnumerator();
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()

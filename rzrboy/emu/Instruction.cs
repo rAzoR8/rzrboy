@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace rzr
+﻿namespace rzr
 {
 	public class Ref<T> where T : struct
 	{
@@ -19,38 +17,38 @@ namespace rzr
 	}
 
 	/// <summary>
-	/// Each op takes one m-cycle.
+	/// Each op (operation) takes one m-cycle.
 	/// </summary>
 	/// <param name="reg"></param>
 	/// <param name="mem"></param>
 	public delegate void Op( Reg reg, ISection mem );
 
-	public delegate IEnumerable<Op> ProduceInstruction();
+	public delegate IEnumerable<Op> OpFactory();
 
 	/// <summary>
-	/// Instruction op does not include instruction fetch cycle
+	/// ExecInstr op does not include instruction fetch cycle
 	/// </summary>
-	public class Instruction
+	public class ExecInstr
 	{
-		public ProduceInstruction Make { get; }
+		public OpFactory Make { get; }
 
-		public Instruction( ProduceInstruction ops )
+		public ExecInstr( OpFactory ops )
 		{
 			Make = ops;
 		}
 
-		public Instruction( Op op )
+		public ExecInstr( Op op )
 			: this( () => Enumerable.Repeat( op, 1 ) )
 		{
 		}
 
-		public static implicit operator Instruction( Op op ) { return new Instruction( op ); }
+		public static implicit operator ExecInstr( Op op ) { return new ExecInstr( op ); }
 	}
 
 	public static class InstructionExtensions
 	{
 		// Debug name
-		public static string ToString( this ProduceInstruction ops )
+		public static string ToString( this OpFactory ops )
 		{
 			return ops.Method.Name;
 		}
