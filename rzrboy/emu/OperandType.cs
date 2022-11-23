@@ -167,7 +167,7 @@
 		public static bool IsR8( this OperandType type ) => type == OperandType.r8;
 		public static bool IsIo8( this OperandType type ) => type == OperandType.io8;
 
-		public static AsmInstr Ops( this InstrType type, Operand lhs, Operand rhs ) { return new AsmInstr( type, lhs, rhs ); }
+		public static AsmInstr Ops( this InstrType type, AsmOperand lhs, AsmOperand rhs ) { return new AsmInstr( type, lhs, rhs ); }
 		public static AsmInstr Ops( this InstrType type, OperandType lhs, OperandType rhs ) { return new AsmInstr( type, lhs, rhs ); }
 	}
 }

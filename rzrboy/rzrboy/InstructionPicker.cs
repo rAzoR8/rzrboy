@@ -17,10 +17,10 @@ namespace rzrboy
 		private rzr.InstrType CurInstrType => SelectableInstructions[m_InstrPicker.SelectedIndex];
 		private rzr.OperandSelector.ILhsToRhs CurLhsToRhs => Selector[CurInstrType];
 
-		private List<rzr.Operand> CurLhsSelecatbles => CurLhsToRhs.Lhs.Select( o => new rzr.Operand(o) ).ToList();
+		private List<rzr.AsmOperand> CurLhsSelecatbles => CurLhsToRhs.Lhs.Select( o => new rzr.AsmOperand(o) ).ToList();
 		private rzr.OperandType CurLhs => CurLhsSelecatbles[m_Lhs.SelectedIndex];
 
-		private List<rzr.Operand> CurRhsSelectables => CurLhsToRhs[CurLhs].Select( o => new rzr.Operand( o ) ).ToList();
+		private List<rzr.AsmOperand> CurRhsSelectables => CurLhsToRhs[CurLhs].Select( o => new rzr.AsmOperand( o ) ).ToList();
 		private rzr.OperandType CurRhs => CurRhsSelectables[m_Rhs.SelectedIndex];
 
 		public const uint FontSize = 12;
@@ -137,7 +137,7 @@ namespace rzrboy
 		private static bool ParseR8( string text, out sbyte val ) => sbyte.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || sbyte.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
 		private static bool ParseD16( string text, out ushort val ) => ushort.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out val ) || ushort.TryParse( text, System.Globalization.NumberStyles.Number, null, out val );
 
-		private static void ParseOpValue( string numText, rzr.Operand target ) 
+		private static void ParseOpValue( string numText, rzr.AsmOperand target ) 
 		{
 			switch( target.Type )
 			{

@@ -62,82 +62,15 @@
 		Res,
 		Set
 	}	
-
-	public class Operand : IEquatable<Operand>
-	{
-		public Operand( OperandType type ) { Type = type; }
-		public Operand( OperandType type, byte val ) { Type = type; d16 = val; }
-		public Operand( OperandType type, sbyte val ) { Type = type; d16 = (byte)val; }
-		public Operand( OperandType type, ushort val ) { Type = type; d16 = val; }
-
-		public Operand( byte d8 ) { Type = OperandType.d8; d16 = d8; }
-		public Operand( sbyte r8 ) { Type = OperandType.r8; d16 = (byte)r8; }
-		public Operand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
-
-		public static implicit operator Operand( OperandType type ) { return new Operand( type ); }
-		public static implicit operator OperandType( Operand op ) { return op.Type; }
-
-		public OperandType Type { get; set; }
-		public ushort d16 { get; set; } = 0;
-		public sbyte r8 { get => (sbyte)d16.GetLsb(); set => d16 = (byte)value; }
-		public byte d8 {get => d16.GetLsb(); set => d16 = value; }
-
-		public override string ToString()
-		{
-			switch( Type )
-			{
-				case OperandType.BitIdx:
-				case OperandType.RstAddr:
-				case OperandType.d8: return $"${d8:X2}";
-				case OperandType.r8: return $"${r8:X2}";
-				case OperandType.d16: return $"${d16:X4}";
-				case OperandType.io8: return $"($FF00+{d8:X2})";
-				case OperandType.ioC: return $"($FF00+C)";
-				case OperandType.A:
-				case OperandType.B:
-				case OperandType.C:
-				case OperandType.D:
-				case OperandType.E:
-				case OperandType.H:
-				case OperandType.L:
-				case OperandType.BC:
-				case OperandType.DE:
-				case OperandType.HL:
-				case OperandType.SP:
-				case OperandType.AF:
-					return Type.ToString();
-				case OperandType.SPr8: return $"SP+{r8:X2}";
-				case OperandType.AdrHL: return "(HL)";
-				case OperandType.AdrHLi: return "(HL+)";
-				case OperandType.AdrHLd: return "(HL-)";
-				case OperandType.AdrBC: return "(BC)";
-				case OperandType.AdrDE: return "(DE)";
-				case OperandType.condZ: return "Z";
-				case OperandType.condNZ: return "NZ";
-				case OperandType.condC: return "C";
-				case OperandType.condNC: return "NC";
-				case OperandType.none: return "";
-				default: return "?";
-			}
-		}
-
-		public bool Equals( Operand? other )
-		{
-			if( other == null ) return false;
-			if( this == other ) return true;
-
-			return Type == other.Type && d16 == other.d16;
-		}
-	}
-
-	public class AsmInstr : List<Operand>
+	
+	public class AsmInstr : List<AsmOperand>
 	{
 		public static readonly AsmInstr Invalid = new AsmInstr( InstrType.Invalid );
 		public AsmInstr( InstrType type ) { Type = type; }
-		public AsmInstr( InstrType type, params Operand[] operands ) : base( operands ) { Type = type; }
+		public AsmInstr( InstrType type, params AsmOperand[] operands ) : base( operands ) { Type = type; }
 
 		public static implicit operator AsmInstr( InstrType type ) { return new AsmInstr( type ); }
-		public static AsmInstr operator +( AsmInstr i, Operand op ) { i.Add(op); return i; }
+		public static AsmInstr operator +( AsmInstr i, AsmOperand op ) { i.Add(op); return i; }
 		public static AsmInstr operator +( AsmInstr i, OperandType op ) { i.Add( op ); return i; }
 
 		public InstrType Type { get; set; }
@@ -145,10 +78,10 @@
 		public OperandType Lhs { get => this[0].Type; set => this[0].Type = value; }
 		public OperandType Rhs { get => this[1].Type; set => this[1].Type = value; }
 
-		public Operand L { get => this[0]; set => this[0] = value; }
-		public Operand R { get => this[1]; set => this[1] = value; }
+		public AsmOperand L { get => this[0]; set => this[0] = value; }
+		public AsmOperand R { get => this[1]; set => this[1] = value; }
 
-		public void SetL( Operand op ) 
+		public void SetL( AsmOperand op ) 
 		{
 			if( Count == 0 )
 				Add( op );
@@ -156,7 +89,7 @@
 				this[0] = op;
 		}
 
-		public void SetR( Operand op, OperandType defaultL = OperandType.A )
+		public void SetR( AsmOperand op, OperandType defaultL = OperandType.A )
 		{
 			if( Count == 0 )
 			{
