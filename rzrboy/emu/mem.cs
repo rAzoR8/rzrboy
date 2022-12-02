@@ -1,11 +1,13 @@
 ﻿namespace rzr
 {
-    public class AddressNotMappedException : System.AccessViolationException 
-    {
-        public AddressNotMappedException(ushort address) : base($"0x{address.ToString("X4")} not mapped to any memory section") { }
-    }
+	public class AddressNotMappedException : rzr.ExecException
+	{
+		public AddressNotMappedException( ushort address, Reg? state = null ) :
+			base( $"0x{address.ToString( "X4" )} not mapped to any memory section" )
+		{ }
+	}
 
-    public class Mem : ListSection
+	public class Mem : ListSection
     {
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort VRamSize = 0x2000; // 8KiB

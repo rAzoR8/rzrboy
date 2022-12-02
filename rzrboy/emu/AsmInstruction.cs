@@ -105,8 +105,8 @@
 		/// <summary>
 		/// Assemble to machine code
 		/// </summary>
-		/// <param name="pc"></param>
-		/// <param name="mem"></param>
+		/// <param name="_pc">offset at which to assemble the istruction</param>
+		/// <param name="mem">memory section to write the instruction too</param>
 		/// <returns>Opcode</returns>
 		public void Assemble( ref ushort _pc, ISection mem )
 		{

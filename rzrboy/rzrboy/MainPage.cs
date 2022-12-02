@@ -337,10 +337,14 @@ namespace rzrboy
                     m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
                 }
             }
-			catch( Exception )
+			catch( rzr.Exception )
+			{
+				// TODO: log
+			}
+			catch( System.Exception )
 			{
                 // TODO: log
 			}
-        }
+		}
     }
 }
