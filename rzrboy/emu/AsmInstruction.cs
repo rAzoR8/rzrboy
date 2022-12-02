@@ -61,8 +61,15 @@
 		Bit,
 		Res,
 		Set
-	}	
-	
+	}
+
+	public class InvalidOperand : rzr.AsmException
+	{
+		public InvalidOperand( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at{pc:X4}" )
+		{
+		}
+	}
+
 	public class AsmInstr : List<AsmOperand>
 	{
 		public static readonly AsmInstr Invalid = new AsmInstr( InstrType.Invalid );
@@ -108,9 +115,11 @@
 		/// <param name="_pc">offset at which to assemble the istruction</param>
 		/// <param name="mem">memory section to write the instruction too</param>
 		/// <returns>Opcode</returns>
-		public void Assemble( ref ushort _pc, ISection mem )
+		public void Assemble( ref ushort _pc, ISection mem, bool throwException = true )
 		{
 			ushort pc = _pc;
+
+			void Throw() { if( throwException ) throw new rzr.InvalidOperand( pc: pc, type: Type ); }
 
 			void Set( byte val ) { mem[pc++] = val; }
 			void Ext( byte val ) { mem[pc++] = 0xCB; mem[pc++] = val; }
@@ -186,6 +195,7 @@
 						// LD A, (a16)
 						case OperandType.A when Rhs.IsD16(): Set( 0xFA ); Op2D16(); break;
 						default:
+							Throw();
 							break;
 					}
 					break;
@@ -193,11 +203,13 @@
 					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x03 ) );
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x04 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0C ) );
+					else Throw();
 					break;
 				case InstrType.Dec:
 					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x0B ) );
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x05 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
+					else Throw();
 					break;
 				// ADD [B C D E H L (HL) A]
 				case InstrType.Add when Lhs.IsA() && Rhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
@@ -230,7 +242,7 @@
 						case OperandType.condZ when Rhs.IsD16(): Set( 0x2A ); Op2D8(); break;
 						case OperandType.condC when Rhs.IsD16(): Set( 0x3A ); Op2D8(); break;
 						case OperandType.HL: Set( 0xE9 ); break;
-						default: break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Jr:
@@ -241,7 +253,7 @@
 						case OperandType.r8: Set( 0x18 ); Op1D8(); break;
 						case OperandType.condZ when Rhs.IsR8(): Set( 0x28 ); Op2D8(); break;
 						case OperandType.condC when Rhs.IsR8(): Set( 0x38 ); Op2D8(); break;
-						default: break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Ret:
@@ -252,9 +264,8 @@
 						case OperandType.condNC: Set( 0xD0 ); break;
 						case OperandType.condZ: Set( 0xC8 ); break;
 						case OperandType.condC: Set( 0xD8 ); break;
-						default:
-							break;
-					}
+						default: Throw(); break;
+						}
 					break;
 				case InstrType.Reti: Set( 0xD9 ); break;
 				case InstrType.Call:
@@ -265,8 +276,7 @@
 						case OperandType.condNC: Set( 0xD4 ); Op2D16(); break;
 						case OperandType.condZ: Set( 0xCC ); Op2D16(); break;
 						case OperandType.condC: Set( 0xDC ); Op2D16(); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Rst when Lhs == OperandType.RstAddr:
@@ -281,8 +291,7 @@
 						case 0x18: Set( 0xDF ); break;
 						case 0x28: Set( 0xEF ); break;
 						case 0x38: Set( 0xFF ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Push:
@@ -292,8 +301,7 @@
 						case OperandType.DE: Set( 0xD1 ); break;
 						case OperandType.HL: Set( 0xE1 ); break;
 						case OperandType.AF: Set( 0xF1 ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Pop:
@@ -303,8 +311,7 @@
 						case OperandType.DE: Set( 0xD5 ); break;
 						case OperandType.HL: Set( 0xE5 ); break;
 						case OperandType.AF: Set( 0xF5 ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Rlca:Set( 0x07 ); break;
@@ -335,8 +342,7 @@
 						case 3: Ext( Rhs.Reg8XOffset( 0x58 ) ); break;
 						case 5: Ext( Rhs.Reg8XOffset( 0x68 ) ); break;
 						case 7: Ext( Rhs.Reg8XOffset( 0x78 ) ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Res when	Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
@@ -351,8 +357,7 @@
 						case 3: Ext( Rhs.Reg8XOffset( 0x98 ) ); break;
 						case 5: Ext( Rhs.Reg8XOffset( 0xA8 ) ); break;
 						case 7: Ext( Rhs.Reg8XOffset( 0xB8 ) ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				case InstrType.Set when Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
@@ -367,11 +372,11 @@
 						case 3: Ext( Rhs.Reg8XOffset( 0xD8 ) ); break;
 						case 5: Ext( Rhs.Reg8XOffset( 0xE8 ) ); break;
 						case 7: Ext( Rhs.Reg8XOffset( 0xF8 ) ); break;
-						default:
-							break;
+						default: Throw(); break;
 					}
 					break;
 				default:
+					Throw();
 					break;
 			}
 			_pc = pc;

@@ -1,5 +1,12 @@
 ﻿namespace rzr
 {
+	public class UnknownOpCode : rzr.AsmException
+	{
+		public UnknownOpCode( byte opcode, ushort pc, bool ext = false ) : base( $"Invalid OpCode {(ext?"0xCB":"")} 0x{opcode:X2} at 0x{pc:X4}" )
+		{
+		}
+	}
+
 	public static class Asm
 	{
 		public static List<AsmInstr> Disassemble( byte[] rom ) 
@@ -113,9 +120,11 @@
 
 		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
 
-		public static AsmInstr Disassemble( ref ushort pc, ISection mem )
+		public static AsmInstr Disassemble( ref ushort pc, ISection mem, bool throwExeption = true )
 		{
-			(byte x, byte y) = mem[pc++].Nibbles();
+			ushort _pc = pc;
+			byte opcode = mem[pc++];
+			( byte x, byte y) = opcode.Nibbles();
 			return (x, y) switch
 			{
 				// 0x00 NOP
@@ -294,8 +303,34 @@
 				(0xF, 0xE ) => Rst( RstAdr( 0x28 ) ),
 				// 0xFF RST 38h
 				(0xF, 0xF ) => Rst( RstAdr( 0x38 ) ),
-				_ => AsmInstr.Invalid
+				_ => throwExeption ? throw new UnknownOpCode( opcode: opcode, pc: _pc ) : AsmInstr.Invalid
 			};
+
+			AsmInstr Ext( ref ushort pc, ISection mem )
+			{
+				byte extop = mem[pc++];
+				(byte x, byte y) = extop.Nibbles();
+
+				return (x, y) switch
+				{
+					(_, 0 ) when x < 8 => Rlc( BCDEHLAdrHlA[x] ),
+					(_, 0 ) when x >= 8 => Rrc( BCDEHLAdrHlA[x - 8] ),
+					(_, 1 ) when x < 8 => Rl( BCDEHLAdrHlA[x] ),
+					(_, 1 ) when x >= 8 => Rr( BCDEHLAdrHlA[x - 8] ),
+					(_, 2 ) when x < 8 => Sla( BCDEHLAdrHlA[x] ),
+					(_, 2 ) when x >= 8 => Sra( BCDEHLAdrHlA[x - 8] ),
+					(_, 3 ) when x < 8 => Swap( BCDEHLAdrHlA[x] ),
+					(_, 3 ) when x >= 8 => Srl( BCDEHLAdrHlA[x - 8] ),
+					(_, _ ) when x < 8 && y >= 4 && y < 8 => Bit( (byte)( ( extop - 0x40 ) / 8 ), BCDEHLAdrHlA[x] ),
+					(_, _ ) when x >= 8 && y >= 4 && y < 8 => Bit( (byte)( ( extop - 0x40 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+					(_, _ ) when x < 8 && y >= 8 && y < 0xC => Res( (byte)( ( extop - 0x80 ) / 8 ), BCDEHLAdrHlA[x] ),
+					(_, _ ) when x >= 8 && y >= 8 && y < 0xC => Res( (byte)( ( extop - 0x80 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+					(_, _ ) when x < 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x] ),
+					(_, _ ) when x >= 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
+
+					_ => throwExeption ? throw new UnknownOpCode( opcode: extop, pc: _pc, ext: true ) : AsmInstr.Invalid
+				};
+			}
 		}
 
 		// Extension Instructions
@@ -320,33 +355,5 @@
 		public static AsmInstr Set( AsmOperand idx, AsmOperand reg ) => new AsmInstr( InstrType.Bit, idx, reg );
 		public static AsmInstr Set( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
 		public static AsmInstr Set( byte idx, AsmOperand reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
-
-		private static AsmInstr Ext( ref ushort pc, ISection mem )
-		{
-			//++pc; // caller cant modify ref param, so we need to do it here
-
-			byte op = mem[pc++];
-			(byte x, byte y) = op.Nibbles();
-
-			return (x, y) switch
-			{
-				(_, 0 ) when x < 8 => Rlc( BCDEHLAdrHlA[x] ),
-				(_, 0 ) when x >= 8 => Rrc( BCDEHLAdrHlA[x - 8] ),
-				(_, 1 ) when x < 8 => Rl( BCDEHLAdrHlA[x] ),
-				(_, 1 ) when x >= 8 => Rr( BCDEHLAdrHlA[x - 8] ),
-				(_, 2 ) when x < 8 => Sla( BCDEHLAdrHlA[x] ),
-				(_, 2 ) when x >= 8 => Sra( BCDEHLAdrHlA[x - 8] ),
-				(_, 3 ) when x < 8 => Swap( BCDEHLAdrHlA[x] ),
-				(_, 3 ) when x >= 8 => Srl( BCDEHLAdrHlA[x - 8] ),
-				(_, _ ) when x < 8 && y >= 4 && y < 8 => Bit( (byte)( ( op - 0x40 ) / 8 ), BCDEHLAdrHlA[x] ),
-				(_, _ ) when x >= 8 && y >= 4 && y < 8 => Bit( (byte)( ( op - 0x40 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
-				(_, _ ) when x < 8 && y >= 8 && y < 0xC => Res( (byte)( ( op - 0x80 ) / 8 ), BCDEHLAdrHlA[x] ),
-				(_, _ ) when x >= 8 && y >= 8 && y < 0xC => Res( (byte)( ( op - 0x80 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
-				(_, _ ) when x < 8 && y >= 0xC => Set( (byte)( ( op - 0xC0 ) / 8 ), BCDEHLAdrHlA[x] ),
-				(_, _ ) when x >= 8 && y >= 0xC => Set( (byte)( ( op - 0xC0 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
-
-				_ => AsmInstr.Invalid
-			};
-		}
 	} // !Asm
 }
