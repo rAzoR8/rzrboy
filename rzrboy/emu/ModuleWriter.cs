@@ -85,7 +85,7 @@
 			write( Rst30, 0x30, 0x38 );
 			write( Rst38, 0x38, 0x40 );
 			write( Rst40, 0x40, 0x48 );
-			write( Rst48, 0x48, VSync );
+			//write( Rst48, 0x48, VSync );
 
 			base.Write( pc+= 0x100, mem, throwException );
 
