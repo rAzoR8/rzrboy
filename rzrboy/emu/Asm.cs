@@ -47,6 +47,7 @@
 		public static AsmOperand R8( sbyte val ) => new AsmOperand( OperandType.r8, val );
 		public static AsmOperand R8( byte val ) => new AsmOperand( OperandType.r8, val );
 		public static AsmOperand D16( byte lsb, byte msb ) => new AsmOperand( OperandType.d16, msb.Combine( lsb ) );
+		public static AsmOperand D16( ushort val ) => new AsmOperand( OperandType.d16, val );
 		public static AsmOperand Io8( byte val ) => new AsmOperand( OperandType.io8, val );
 		public static AsmOperand RstAdr( byte val ) => new AsmOperand( OperandType.RstAddr, val );
 		public static AsmOperand BitIdx( byte idx ) => new AsmOperand( OperandType.BitIdx, idx );
