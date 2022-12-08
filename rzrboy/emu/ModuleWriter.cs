@@ -6,40 +6,50 @@ namespace rzr
 	{
 		protected List<AsmInstr> m_instructions = new List<AsmInstr>();
 		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
-		private void Add( InstrType instr, params AsmOperand[] operands ) => m_instructions.Add( new( instr, operands ) );
 
-		public void Nop() => Add( InstrType.Nop );
-		public void Stop( params AsmOperand[] ops ) => Add( InstrType.Stop, ops );
-		public void Halt() => Add( InstrType.Halt );
-		public void Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
-		public void Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
-		public void Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
-		public void Inc( AsmOperand lhs ) => Add( InstrType.Inc, lhs );
-		public void Dec( AsmOperand lhs ) => Add( InstrType.Dec, lhs );
-		public void Add( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Add, lhs, rhs );
-		public void Adc( AsmOperand rhs ) => Add( InstrType.Adc, rhs );
-		public void Sub( AsmOperand rhs ) => Add( InstrType.Sub, rhs );
-		public void Sbc( AsmOperand rhs ) => Add( InstrType.Sbc, rhs );
-		public void And( AsmOperand rhs ) => Add( InstrType.And, rhs );
-		public void Or( AsmOperand rhs ) => Add( InstrType.Or, rhs );
-		public void Xor( AsmOperand rhs ) => Add( InstrType.Xor, rhs );
-		public void Cp( AsmOperand rhs ) => Add( InstrType.Cp, rhs );
-		public void Ret( params AsmOperand[] ops ) => Add( InstrType.Ret, ops );
-		public void Reti() => Add( InstrType.Reti );
-		public void Pop( AsmOperand lhs ) => Add( InstrType.Pop, lhs );
-		public void Push( AsmOperand lhs ) => Add( InstrType.Push, lhs );
-		public void Call( params AsmOperand[] ops ) => Add( InstrType.Call, ops );
-		public void Di() => Add( InstrType.Di );
-		public void Ei() => Add( InstrType.Ei );
-		public void Rlca() => Add( InstrType.Rlca );
-		public void Rla() => Add( InstrType.Rla );
-		public void Daa() => Add( InstrType.Daa );
-		public void Scf() => Add( InstrType.Scf );
-		public void Rrca() => Add( InstrType.Rrca );
-		public void Rra() => Add( InstrType.Rra );
-		public void Cpl() => Add( InstrType.Cpl );
-		public void Ccf() => Add( InstrType.Ccf );
-		public void Rst( AsmOperand vec ) => Add( InstrType.Rst, vec );
+		protected virtual AsmInstr Add( AsmInstr instr )
+		{
+			m_instructions.Add( instr );
+			return m_instructions.Last();
+		}
+
+		protected AsmInstr Add( InstrType instr, params AsmOperand[] operands )
+		{
+			return Add( new AsmInstr( instr, operands ) );
+		}
+
+		public AsmInstr Nop() => Add( InstrType.Nop );
+		public AsmInstr Stop( params AsmOperand[] ops ) => Add( InstrType.Stop, ops );
+		public AsmInstr Halt() => Add( InstrType.Halt );
+		public AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
+		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
+		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
+		public AsmInstr Inc( AsmOperand lhs ) => Add( InstrType.Inc, lhs );
+		public AsmInstr Dec( AsmOperand lhs ) => Add( InstrType.Dec, lhs );
+		public AsmInstr Add( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Add, lhs, rhs );
+		public AsmInstr Adc( AsmOperand rhs ) => Add( InstrType.Adc, rhs );
+		public AsmInstr Sub( AsmOperand rhs ) => Add( InstrType.Sub, rhs );
+		public AsmInstr Sbc( AsmOperand rhs ) => Add( InstrType.Sbc, rhs );
+		public AsmInstr And( AsmOperand rhs ) => Add( InstrType.And, rhs );
+		public AsmInstr Or( AsmOperand rhs ) => Add( InstrType.Or, rhs );
+		public AsmInstr Xor( AsmOperand rhs ) => Add( InstrType.Xor, rhs );
+		public AsmInstr Cp( AsmOperand rhs ) => Add( InstrType.Cp, rhs );
+		public AsmInstr Ret( params AsmOperand[] ops ) => Add( InstrType.Ret, ops );
+		public AsmInstr Reti() => Add( InstrType.Reti );
+		public AsmInstr Pop( AsmOperand lhs ) => Add( InstrType.Pop, lhs );
+		public AsmInstr Push( AsmOperand lhs ) => Add( InstrType.Push, lhs );
+		public AsmInstr Call( params AsmOperand[] ops ) => Add( InstrType.Call, ops );
+		public AsmInstr Di() => Add( InstrType.Di );
+		public AsmInstr Ei() => Add( InstrType.Ei );
+		public AsmInstr Rlca() => Add( InstrType.Rlca );
+		public AsmInstr Rla() => Add( InstrType.Rla );
+		public AsmInstr Daa() => Add( InstrType.Daa );
+		public AsmInstr Scf() => Add( InstrType.Scf );
+		public AsmInstr Rrca() => Add( InstrType.Rrca );
+		public AsmInstr Rra() => Add( InstrType.Rra );
+		public AsmInstr Cpl() => Add( InstrType.Cpl );
+		public AsmInstr Ccf() => Add( InstrType.Ccf );
+		public AsmInstr Rst( AsmOperand vec ) => Add( InstrType.Rst, vec );
 
 		public IEnumerator<AsmInstr> GetEnumerator()
 		{
@@ -75,25 +85,41 @@ namespace rzr
 		}
 	}
 
-	public interface IAsmBankSwitcher 
+	public abstract class ModuleWriter : AsmRecorder
 	{
-		/// <summary>
-		/// How many bytes before the end of *bank* should the ModuleWriter request a new bank
-		/// </summary>
-		/// <param name="bank"></param>
-		/// <returns>Number of bytes</returns>
-		ushort GetInstrByteThreshold( ushort bank );
+		public ushort PC { get; private set; } = 0;
+		public ISection Bank { get; private set; } // current bank
+		public bool ThrowException { get; set; } = false;
 
-		/// <summary>
-		/// Get the next ROM section for the ModuleWriter to write to, together with the bank switching instructions
-		/// </summary>
-		/// <param name="pc">Program count in the current bank</param>
-		/// <returns>Next free ROM section to write to. Instructions to write to the end for switching the bank</returns>
-		(ISection next, IEnumerable<AsmInstr> instr) GetNextBank( ushort pc );
-	}
+		public ModuleWriter()
+		{
+			Bank = GetNextBank( out ushort pcAfterSwitching ).bank; // ignore switching for first bank
+			PC = pcAfterSwitching;
+		}
 
-	public class ModuleWriter : AsmRecorder
-	{
+		public virtual ushort InstrByteThreshold { get; } = 3;
+		protected abstract (ISection bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
+
+		protected override AsmInstr Add( AsmInstr instr )
+		{
+			ushort pc = PC;
+			if( pc + InstrByteThreshold >= Mbc.RomBankSize ) // switch to next bank
+			{
+				var (next, switching) = GetNextBank( out var pcAfterSwitching );
+				// write bank switching code to the end of this bank
+				pc = switching.Write( pc, mem: Bank, throwException: ThrowException );
+				// get new bank and possibly adjust PC
+				Bank = next;
+				pc = pcAfterSwitching;
+			}
+
+			AsmInstr newInstr = base.Add( instr );
+			newInstr.Assemble( ref pc, Bank, throwException: ThrowException );
+			PC = pc;
+
+			return newInstr;
+		}
+
 		public AsmRecorder Rst0 { get; } = new();
 		public AsmRecorder Rst8 { get; } = new();
 		public AsmRecorder Rst10 { get; } = new();
@@ -109,42 +135,33 @@ namespace rzr
 		public AsmRecorder Serial { get; } = new();	// $58
 		public AsmRecorder Joypad { get; } = new(); // $60
 
-		public ushort Write( IAsmBankSwitcher bankSwitcher, bool throwException = true )
+		public void WritePreamble()
 		{
-			ushort pc = 0; ushort bankIdx = 0;
-			ushort threshold = bankSwitcher.GetInstrByteThreshold( bank: 0 );
-			(ISection bank, IEnumerable<AsmInstr> switching) = bankSwitcher.GetNextBank( pc );
-
-			void write( IEnumerable<AsmInstr> writer, ushort _bound = 0)
+			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
-				ushort bound = _bound != 0 ? _bound : (ushort)( pc + 8 );
-				ushort end = writer.Write( pc, bank, throwException );
-				if( end > bound )
+				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
+				ushort end = writer.Write( PC, Bank, ThrowException );
+				if( end > bound  && ThrowException )
 				{
-					pc = bound; // rest pc to acceptible bounds
-					if( throwException )
-						throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
+					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
 				}
-
-				pc += 8;
+				PC = bound; // rest pc to acceptible bounds
 			}
 
-			write( Rst0);
-			write( Rst8 );
-			write( Rst10 );
-			write( Rst18 );
-			write( Rst20 );
-			write( Rst28 );
-			write( Rst30 );
-			write( Rst38 );
+			interrupt( Rst0);
+			interrupt( Rst8 );
+			interrupt( Rst10 );
+			interrupt( Rst18 );
+			interrupt( Rst20 );
+			interrupt( Rst28 );
+			interrupt( Rst30 );
+			interrupt( Rst38 );
 
-			write( VBlank );
-			write( LCDStat );
-			write( Timer );
-			write( Serial );
-			write( Joypad, 0x100 ); //$60-$100
-
-			pc = 0x100;
+			interrupt( VBlank );
+			interrupt( LCDStat );
+			interrupt( Timer );
+			interrupt( Serial );
+			interrupt( Joypad, 0x100 ); //$60-$100
 
 			// TODO:
 			//EntryPoint = 0x100,
@@ -168,43 +185,22 @@ namespace rzr
 			//RomChecksumStart = 0x14E,
 			//RomChecksumEnd = 0x14F,
 
-			pc = 0x150;
-
-			foreach( AsmInstr instr in m_instructions )
-			{
-				if( pc + threshold >= Mbc.RomBankSize ) // switch to next bank
-				{
-					threshold = bankSwitcher.GetInstrByteThreshold( ++bankIdx );
-					(ISection next, switching) = bankSwitcher.GetNextBank( pc );
-
-					// write bank switching code to the end of this bank
-					pc = switching.Write( pc, mem: bank, throwException: throwException );
-
-					bank = next;
-					pc = 0;
-				}
-
-				instr.Assemble( ref pc, bank, throwException: throwException );
-			}
-
-			return pc;
+			PC = 0x150;
 		}
 	}
 
-	public class Mbc1Switcher : IAsmBankSwitcher
+	public class Mbc1Writer : ModuleWriter
 	{
 		private List<byte[]> m_banks = new( capacity: 1);
 		public IReadOnlyList<byte[]> Banks => m_banks;
 
-		public ushort GetInstrByteThreshold( ushort bank )
-		{
-			// LD 3 byte instr vs 3 LD instructions
-			return (ushort)( bank > 0x1F ? 3 * 3 : 3 );
-		}
+		// LD 3 byte instr vs 3 LD instructions
+		public override ushort InstrByteThreshold => (ushort)( m_banks.Count > 0x1F ? 3 * 3 : 3 );
 
-		public (ISection next, IEnumerable<AsmInstr> instr) GetNextBank( ushort pc )
+		protected override (ISection bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching )
 		{
 			m_banks.Add( new byte[Mbc.RomBankSize] );
+
 			AsmRecorder sw = new();
 
 			// https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work
@@ -222,6 +218,9 @@ namespace rzr
 				sw.Ld( Asm.D16( 0x2000 ), Asm.D8( (byte)( m_banks.Count & 0b11111 ) ) );
 				sw.Ld( Asm.D16( 0x4000 ), Asm.D8( (byte)( ( m_banks.Count >> 5 ) & 0b11 ) ) );
 			}
+
+			// offset
+			pcAfterSwitching = 0;
 
 			return (new Storage( m_banks.Last() ), sw);
 		}
