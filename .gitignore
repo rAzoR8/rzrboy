@@ -5,3 +5,5 @@ rzrboy/emu/bin
 rzrboy/rzrboy/bin
 *.user
 .vs
+rzrboy/ModuleWriter/bin
+rzrboy/ModuleWriter/obj

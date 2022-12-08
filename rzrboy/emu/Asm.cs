@@ -9,7 +9,7 @@
 
 	public static class Asm
 	{
-		public static List<AsmInstr> Disassemble( byte[] rom ) 
+		public static List<AsmInstr> DisassembleRom( byte[] rom, bool throwException = true) 
 		{
 			// estimate the average instruction length as 2byte
 			List<AsmInstr> instrs = new ( rom.Length / 2);
@@ -18,7 +18,7 @@
 			for( uint i = 0; i < rom.Length; ) 
 			{
 				ushort pc = 0;
-				instrs.Add( Disassemble( ref pc, sec ) );
+				instrs.Add( Disassemble( ref pc, mem: sec, throwException: throwException ) );
 				i += pc;
 			}
 
@@ -121,7 +121,7 @@
 
 		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
 
-		public static AsmInstr Disassemble( ref ushort pc, ISection mem, bool throwExeption = true )
+		public static AsmInstr Disassemble( ref ushort pc, ISection mem, bool throwException = true )
 		{
 			ushort _pc = pc;
 			byte opcode = mem[pc++];
@@ -304,8 +304,10 @@
 				(0xF, 0xE ) => Rst( RstAdr( 0x28 ) ),
 				// 0xFF RST 38h
 				(0xF, 0xF ) => Rst( RstAdr( 0x38 ) ),
-				_ => throwExeption ? throw new UnknownOpCode( opcode: opcode, pc: _pc ) : AsmInstr.Invalid
-			};
+				// TODO: interpret as DB instruction?
+				//_ => new AsmInstr( InstrType.Db, D8( opcode ) )
+				_ => throwException ? throw new UnknownOpCode( opcode: opcode, pc: _pc ) : AsmInstr.Invalid
+			}; ;
 
 			AsmInstr Ext( ref ushort pc, ISection mem )
 			{
@@ -329,7 +331,7 @@
 					(_, _ ) when x < 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x] ),
 					(_, _ ) when x >= 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
 
-					_ => throwExeption ? throw new UnknownOpCode( opcode: extop, pc: _pc, ext: true ) : AsmInstr.Invalid
+					_ => throwException ? throw new UnknownOpCode( opcode: extop, pc: _pc, ext: true ) : AsmInstr.Invalid
 				};
 			}
 		}

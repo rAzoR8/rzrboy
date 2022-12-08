@@ -46,16 +46,16 @@ namespace rzr
 
         public bool Valid() 
         {
-            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{m_data.Count()}B] {Type} {RomBanks}|{RamBanks} Banks" );
-            Debug.WriteLine( $"Header|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4} SGB support {SGBSupport}" );
-            Debug.WriteLine( $"Manufactuer {Manufacturer} Destination {Japan}" );
+            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{m_data.Count()}B] Type: {Type} {RomBanks}|{RamBanks} Rom|Ram Banks" );
+            Debug.WriteLine( $"Manufactuer: {Manufacturer} Destination: {(Japan ? "Japan" : "Other")} SGB support: {SGBSupport}" );
 
             var hCheck = ComputeHeaderChecksum( m_data );
             var rCheck = ComputeRomChecksum( m_data );
 
-            Debug.WriteLine( $"Computed Header|Rom checksum {hCheck:X2}|{rCheck:X4}" );
+            Debug.WriteLine( $"Computed\tHeader|Rom checksum {hCheck:X2}|{rCheck:X4}" );
+			Debug.WriteLine( $"Stored\tHeader|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4}" );
 
-            return hCheck == HeaderChecksum && rCheck == RomChecksum;
+			return hCheck == HeaderChecksum && rCheck == RomChecksum;
         }
 
         public byte HeaderChecksum
@@ -101,12 +101,11 @@ namespace rzr
 
         public CartridgeType Type { get => (CartridgeType)m_data[(ushort)HeaderOffsets.Type]; set => m_data[(ushort)HeaderOffsets.Type] = (byte)value; }
 
-        public IEnumerable<byte> Logo
+		public IEnumerable<byte> Logo
         {
             get
             {
-                var len = HeaderOffsets.LogoEnd + 1 - HeaderOffsets.LogoStart;
-                return m_data.Skip( (int) HeaderOffsets.LogoStart ).Take( len );
+                return m_data.Skip( (int) HeaderOffsets.LogoStart ).Take( (int)HeaderOffsets.LogoLength );
             }
             set
             {
@@ -120,29 +119,6 @@ namespace rzr
             }
         }
 
-        private string GetHeaderString( HeaderOffsets start, HeaderOffsets end )
-        {
-            StringBuilder sb = new();
-
-            for( var i = start; i <= end; i++ )
-            {
-                char c = (char)m_data[(ushort)i];
-                if( c == 0 ) break;
-                sb.Append( c );
-            }
-
-            return sb.ToString();
-        }
-
-        private void SetHeaderString( HeaderOffsets start, HeaderOffsets len, string str )
-        {
-            var strLen = Math.Min( (int)len, str.Length );
-            for( int i = 0; i < strLen; i++ )
-            {
-                m_data[(int)start + i] = (byte)str[i];
-            }
-        }
-
         public string Title
         {
             get => GetHeaderString( HeaderOffsets.TitleStart, HeaderOffsets.TitleEnd );
@@ -153,41 +129,6 @@ namespace rzr
         {
             get => GetHeaderString( HeaderOffsets.ManufacturerStart, HeaderOffsets.ManufacturerEnd );
             set => SetHeaderString( HeaderOffsets.ManufacturerStart, HeaderOffsets.ManufacturerLength, value );
-        }
-
-        public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)HeaderOffsets.TitleStart )
-        {
-            int end = start + 25; // 0x19 length of header to validate
-            byte checksum = 0;
-            for( int i = start; i < end; i++ )
-            {
-                checksum -= header.ElementAt( i );
-                checksum--;
-            }
-            return checksum;
-        }
-
-        /// <summary>
-        /// Contains a 16 bit checksum (upper byte first) across the whole cartridge ROM.
-        /// Produced by adding all bytes of the cartridge (except for the two checksum bytes).
-        /// The Game Boy doesn’t verify this checksum.
-        /// </summary>
-        /// <param name="header"></param>
-        /// <param name="start"></param>
-        /// <returns>Checksum lsb first, needs to be byte swapped!</returns>
-        public static ushort ComputeRomChecksum( IEnumerable<byte> banks )
-        {
-            ushort checksum = 0;
-
-            foreach( byte b in banks )
-            {
-                checksum += b;
-            }
-
-            checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumStart );
-            checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumEnd );
-
-            return checksum;
         }
 
         public int RomBanks
@@ -236,5 +177,62 @@ namespace rzr
                 }
             }
         }
-    }
+
+		private string GetHeaderString( HeaderOffsets start, HeaderOffsets end )
+		{
+			StringBuilder sb = new();
+
+			for( var i = start; i <= end; i++ )
+			{
+				char c = (char)m_data[(ushort)i];
+				if( c == 0 ) break;
+				sb.Append( c );
+			}
+
+			return sb.ToString();
+		}
+
+		private void SetHeaderString( HeaderOffsets start, HeaderOffsets len, string str )
+		{
+			var strLen = Math.Min( (int)len, str.Length );
+			for( int i = 0; i < strLen; i++ )
+			{
+				m_data[(int)start + i] = (byte)str[i];
+			}
+		}
+
+		public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)HeaderOffsets.TitleStart )
+		{
+			int end = start + 25; // 0x19 length of header to validate
+			byte checksum = 0;
+			for( int i = start; i < end; i++ )
+			{
+				checksum -= header.ElementAt( i );
+				checksum--;
+			}
+			return checksum;
+		}
+
+		/// <summary>
+		/// Contains a 16 bit checksum (upper byte first) across the whole cartridge ROM.
+		/// Produced by adding all bytes of the cartridge (except for the two checksum bytes).
+		/// The Game Boy doesn’t verify this checksum.
+		/// </summary>
+		/// <param name="banks"></param>
+		/// <returns>Checksum lsb first, needs to be byte swapped!</returns>
+		public static ushort ComputeRomChecksum( IEnumerable<byte> banks )
+		{
+			ushort checksum = 0;
+
+			foreach( byte b in banks )
+			{
+				checksum += b;
+			}
+
+			checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumStart );
+			checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumEnd );
+
+			return checksum;
+		}
+	}
 }

@@ -93,7 +93,7 @@ namespace rzr
             if ( debugPrint )
             {
                 ushort pc = cpu.prevInstrPC;
-                Debug.WriteLine( $"{isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
+                Debug.WriteLine( $"{Isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
             foreach ( Callback fun in StepCallbacks )

@@ -21,28 +21,28 @@ namespace rzr
 
     public class Storage : ISection
     {
-        private IList<byte> m_storage;
+        public IList<byte> Data { get; }
 
-        /// <summary>
-        /// Wrapper over some storage to allow Section like access
-        /// </summary>
-        /// <param name="storage"></param>
-        /// <param name="storageOffset"></param>
-        /// <param name="startAddr"></param>
-        /// <param name="len"></param>
-        public Storage( IList<byte> storage, int storageOffset = 0, ushort startAddr = 0, ushort len = 0 )
+		/// <summary>
+		/// Wrapper over some storage to allow Section like access
+		/// </summary>
+		/// <param name="storage"></param>
+		/// <param name="storageOffset"></param>
+		/// <param name="startAddr"></param>
+		/// <param name="len"></param>
+		public Storage( IList<byte> storage, int storageOffset = 0, ushort startAddr = 0, ushort len = 0 )
         {
-			m_storage = storage;
+			Data = storage;
             BufferOffset = storageOffset;
             StartAddr = startAddr;
-			Length = len > 0 ? len : (ushort)( m_storage.Count - storageOffset );
+			Length = len > 0 ? len : (ushort)( Data.Count - storageOffset );
 		}
 
         public int BufferOffset { get; set; }
 		public byte this[ushort address]
         {
-			get => m_storage[BufferOffset + ( address - StartAddr )];
-			set => m_storage[BufferOffset + ( address - StartAddr )] = value;
+			get => Data[BufferOffset + ( address - StartAddr )];
+			set => Data[BufferOffset + ( address - StartAddr )] = value;
 		}
         public ushort StartAddr { get; set; }
         public ushort Length { get; set; }

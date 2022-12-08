@@ -112,7 +112,7 @@ namespace rzrboy
             {
                 int i = 0;
                 StringBuilder sb = new();
-                foreach( string instr in boy.isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
+                foreach( string instr in Isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
                 {
                     if( i++ > instructions )
                     {

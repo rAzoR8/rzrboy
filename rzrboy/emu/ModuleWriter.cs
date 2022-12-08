@@ -87,18 +87,34 @@ namespace rzr
 
 	public abstract class ModuleWriter : AsmRecorder
 	{
-		public ushort PC { get; private set; } = 0;
-		public ISection Bank { get; private set; } // current bank
+		private Storage m_curBank; // current bank
+
+		public ushort PC { get; protected set; } = 0;
 		public bool ThrowException { get; set; } = false;
+		public HeaderView Header { get; }
+
+		// Header access
+		public byte HeaderChecksum {get => Header.HeaderChecksum; set => Header.HeaderChecksum = value; }
+		public ushort RomChecksum { get => Header.RomChecksum; set => Header.RomChecksum = value; }
+		public bool Japan { get => Header.Japan; set => Header.Japan = value; }
+		public byte Version { get => Header.Version; set => Header.Version = value; }
+		public bool SGBSupport { get => Header.SGBSupport; set => Header.SGBSupport = value; }
+		public CartridgeType Type { get => Header.Type; set => Header.Type = value; }
+		public IEnumerable<byte> Logo { get => Header.Logo; set => Header.Logo = value; }
+		public string Title {get => Header.Title; set => Header.Title = value; }
+		public string Manufacturer { get => Header.Manufacturer; set => Header.Manufacturer = value; }
+		public int RomBanks { get => Header.RomBanks; set => Header.RomBanks = value; }
+		public int RamBanks { get => Header.RamBanks; set => Header.RamBanks = value; }
 
 		public ModuleWriter()
 		{
-			Bank = GetNextBank( out ushort pcAfterSwitching ).bank; // ignore switching for first bank
+			m_curBank = GetNextBank( out ushort pcAfterSwitching ).bank; // ignore switching for first bank
+			Header = new HeaderView( m_curBank.Data );
 			PC = pcAfterSwitching;
 		}
 
 		public virtual ushort InstrByteThreshold { get; } = 3;
-		protected abstract (ISection bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
+		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
 
 		protected override AsmInstr Add( AsmInstr instr )
 		{
@@ -107,14 +123,14 @@ namespace rzr
 			{
 				var (next, switching) = GetNextBank( out var pcAfterSwitching );
 				// write bank switching code to the end of this bank
-				pc = switching.Write( pc, mem: Bank, throwException: ThrowException );
+				pc = switching.Write( pc, mem: m_curBank, throwException: ThrowException );
 				// get new bank and possibly adjust PC
-				Bank = next;
+				m_curBank = next;
 				pc = pcAfterSwitching;
 			}
 
 			AsmInstr newInstr = base.Add( instr );
-			newInstr.Assemble( ref pc, Bank, throwException: ThrowException );
+			newInstr.Assemble( ref pc, m_curBank, throwException: ThrowException );
 			PC = pc;
 
 			return newInstr;
@@ -135,12 +151,12 @@ namespace rzr
 		public AsmRecorder Serial { get; } = new();	// $58
 		public AsmRecorder Joypad { get; } = new(); // $60
 
-		public void WritePreamble()
+		protected void WritePreamble()
 		{
 			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
-				ushort end = writer.Write( PC, Bank, ThrowException );
+				ushort end = writer.Write( PC, m_curBank, ThrowException );
 				if( end > bound  && ThrowException )
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
@@ -163,47 +179,36 @@ namespace rzr
 			interrupt( Serial );
 			interrupt( Joypad, 0x100 ); //$60-$100
 
-			// TODO:
-			//EntryPoint = 0x100,
-			//LogoStart = 0x104,
-			//LogoEnd = 0x133, // inclusive
-			//TitleStart = 0x134,
-			//TitleEnd = 0x143, // inclusive           
-			//ManufacturerStart = 0x13F,
-			//ManufacturerEnd = 0x142, // inclusuvie
-			//CGBFlag = 0x143,
-			//NewLicenseeCodeStart = 0x144,
-			//NewLicenseeCodeEnd = 0x145,
-			//SGBFlag = 0x146,
-			//Type = 0x147,
-			//RomBanks = 0x148,
-			//RamBanks = 0x149,
-			//DestinationCode = 0x14A, // 0 = japanese
-			//OldLicenseeCode = 0x14B,
-			//Version = 0x14C, // game version
-			//HeaderChecksum = 0x14D, // 0x134-14C
-			//RomChecksumStart = 0x14E,
-			//RomChecksumEnd = 0x14F,
-
-			PC = 0x150;
+			// skip header:
+			PC = (ushort)( HeaderOffsets.HeaderEnd + 1 );
 		}
 	}
 
-	public class Mbc1Writer : ModuleWriter
+	public class MbcWriter : ModuleWriter
 	{
-		private List<byte[]> m_banks = new( capacity: 1);
-		public IReadOnlyList<byte[]> Banks => m_banks;
+		private List<Storage> m_banks = new();
+		public IReadOnlyList<Storage> Banks => m_banks;
+		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
 		// LD 3 byte instr vs 3 LD instructions
 		public override ushort InstrByteThreshold => (ushort)( m_banks.Count > 0x1F ? 3 * 3 : 3 );
 
-		protected override (ISection bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching )
+		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching )
 		{
-			m_banks.Add( new byte[Mbc.RomBankSize] );
+			m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+
+			// offset
+			pcAfterSwitching = 0;
 
 			AsmRecorder sw = new();
 
 			// https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work
+
+			// first two banks are always mapped, so no need to switch between bank0 and bank1
+			if( m_banks.Count == 1)
+			{
+				return ( m_banks.Last(), sw);
+			}
 
 			if( m_banks.Count <= 0x1f )
 			{
@@ -219,10 +224,34 @@ namespace rzr
 				sw.Ld( Asm.D16( 0x4000 ), Asm.D8( (byte)( ( m_banks.Count >> 5 ) & 0b11 ) ) );
 			}
 
-			// offset
-			pcAfterSwitching = 0;
+			return (m_banks.Last(), sw);
+		}
 
-			return (new Storage( m_banks.Last() ), sw);
+		/// <summary>
+		/// Override this function with you game assembly producing code which will be placed after the preamble
+		/// </summary>
+		protected virtual void WriteGameCode() { }
+
+		/// <summary>
+		/// Make sure to set the header corretly before calling this function
+		/// </summary>
+		/// <param name="programStart">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
+		public void WriteAll( ushort programStart = 0x150 )
+		{
+			PC = 0;
+			// TODO: implement resetting the banks
+
+			WritePreamble();
+
+			PC = Math.Max( PC, programStart );
+			WriteGameCode();
+
+			Header.RomBanks = m_banks.Count;
+			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_banks.First().Data );
+			Header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
+#if DEBUG
+			Header.Valid();
+#endif
 		}
 	}
 }

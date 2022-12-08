@@ -365,28 +365,28 @@ namespace rzr
 		/// only advances PC if the instructions is implemented
 		/// </summary>
 		/// <param name="pc"></param>
-		/// <param name="bin"></param>
+		/// <param name="mem"></param>
 		/// <returns></returns>
-		public string Disassemble( ref ushort pc, ISection mem )
+		public static string Disassemble( ref ushort pc, ISection mem, bool throwException = true )
         {
             byte opcode = mem[pc]; 
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
 
-            AsmInstr instr = Asm.Disassemble( ref pc, mem );
+            AsmInstr instr = Asm.Disassemble( ref pc, mem, throwException: throwException );
             sb.Append( instr.ToString().ToUpper() );
 
 			return sb.ToString();
         }
 
-        public IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, Section bin )
+        public static IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection mem, bool throwException = true )
         {
             ushort prev = (ushort)( from_pc - 1 );
             while ( from_pc < to_pc && prev != from_pc )
             {
                 prev = from_pc;
-                yield return Disassemble( ref from_pc, bin );
+                yield return Disassemble( ref from_pc, mem, throwException : throwException );
             }
         }
 
