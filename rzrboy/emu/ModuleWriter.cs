@@ -105,6 +105,9 @@ namespace rzr
 		public string Manufacturer { get => Header.Manufacturer; set => Header.Manufacturer = value; }
 		public int RomBanks { get => Header.RomBanks; set => Header.RomBanks = value; }
 		public int RamBanks { get => Header.RamBanks; set => Header.RamBanks = value; }
+		public ushort NewLicenseeCode { get => Header.NewLicenseeCode; set => Header.NewLicenseeCode = value; }
+		public byte OldLicenseeCode { get => Header.OldLicenseeCode; set => Header.OldLicenseeCode = value; }
+		public byte CGBSupport { get => Header.CGBSupport; set => Header.CGBSupport = value; }
 
 		public ModuleWriter()
 		{
@@ -151,7 +154,7 @@ namespace rzr
 		public AsmRecorder Serial { get; } = new();	// $58
 		public AsmRecorder Joypad { get; } = new(); // $60
 
-		protected void WritePreamble()
+		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
 			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
@@ -179,8 +182,12 @@ namespace rzr
 			interrupt( Serial );
 			interrupt( Joypad, 0x100 ); //$60-$100
 
-			// skip header:
-			PC = (ushort)( HeaderOffsets.HeaderEnd + 1 );
+			ushort EP = (ushort)HeaderOffsets.EntryPointStart;
+			// jump to EntryPoint
+			Asm.Jp( Asm.D16( entryPoint ) ).Assemble( ref EP, m_curBank, throwException: ThrowException );
+
+			// skip header to game code:
+			PC = entryPoint;
 		}
 	}
 
@@ -235,15 +242,15 @@ namespace rzr
 		/// <summary>
 		/// Make sure to set the header corretly before calling this function
 		/// </summary>
-		/// <param name="programStart">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
-		public void WriteAll( ushort programStart = 0x150 )
+		/// <param name="entryPoint">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
+		public void WriteAll( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
-			PC = 0;
 			// TODO: implement resetting the banks
 
-			WritePreamble();
+			PC = 0;
+			WritePreamble( entryPoint: entryPoint );
 
-			PC = Math.Max( PC, programStart );
+			PC = entryPoint;
 			WriteGameCode();
 
 			Header.RomBanks = m_banks.Count;

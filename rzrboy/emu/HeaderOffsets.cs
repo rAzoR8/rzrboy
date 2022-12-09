@@ -7,18 +7,19 @@ namespace rzr
 {
     public enum HeaderOffsets : ushort
     {
-        EntryPoint = 0x100,
+        EntryPointStart = 0x100, //4b trampoline to jump to the game code
+        EntryPointEnd = 0x103,
         LogoStart = 0x104,
         LogoEnd = 0x133, // inclusive
         TitleStart = 0x134,
         TitleEnd = 0x143, // inclusive           
-        ManufacturerStart = 0x13F,
+        ManufacturerStart = 0x13F,// overlaps Title
         ManufacturerEnd = 0x142, // inclusuvie
-        CGBFlag = 0x143,
-        NewLicenseeCodeStart = 0x144,
-        NewLicenseeCodeEnd = 0x145,
+        CGBFlag = 0x143, // overlaps title
+        NewLicenseeCodeStart = 0x144, // only used if OldLicenseeCode == 0x33
+		NewLicenseeCodeEnd = 0x145,
         SGBFlag = 0x146,
-        Type = 0x147,
+        Type = 0x147, // MBC type
         RomBanks = 0x148,
         RamBanks = 0x149,
         DestinationCode = 0x14A, // 0 = japanese
@@ -29,10 +30,12 @@ namespace rzr
         RomChecksumEnd = 0x14F,
 
         HeaderEnd = RomChecksumEnd,
+        HeaderSize = HeaderEnd + 1,
 
-        LogoLength = LogoEnd + 1 - LogoStart,
-        TitleLength = TitleEnd + 1 - TitleStart,
-        ManufacturerLength = ManufacturerEnd + 1 - ManufacturerStart,
+        EntryPointLength = EntryPointEnd + 1 - EntryPointStart, // 4b
+        LogoLength = LogoEnd + 1 - LogoStart, // 48 byte
+        TitleLength = TitleEnd + 1 - TitleStart, // 16
+        ManufacturerLength = ManufacturerEnd + 1 - ManufacturerStart, // 4b
     }
 
     public class HeaderView
@@ -44,25 +47,12 @@ namespace rzr
             m_data = data;
         }
 
-        public bool Valid() 
-        {
-            Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{m_data.Count()}B] Type: {Type} {RomBanks}|{RamBanks} Rom|Ram Banks" );
-            Debug.WriteLine( $"Manufactuer: {Manufacturer} Destination: {(Japan ? "Japan" : "Other")} SGB support: {SGBSupport}" );
-
-            var hCheck = ComputeHeaderChecksum( m_data );
-            var rCheck = ComputeRomChecksum( m_data );
-
-            Debug.WriteLine( $"Computed\tHeader|Rom checksum {hCheck:X2}|{rCheck:X4}" );
-			Debug.WriteLine( $"Stored\tHeader|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4}" );
-
-			return hCheck == HeaderChecksum && rCheck == RomChecksum;
-        }
-
         public byte HeaderChecksum
         {
             get => m_data[(ushort)HeaderOffsets.HeaderChecksum];
             set => m_data[(ushort)HeaderOffsets.HeaderChecksum] = value;
         }
+
         public ushort RomChecksum
         {
             get => binutil.Combine( msb: m_data[(ushort)HeaderOffsets.RomChecksumStart], lsb: m_data[(ushort)HeaderOffsets.RomChecksumEnd] );
@@ -73,7 +63,36 @@ namespace rzr
             }
         }
 
-        public enum DestinationCode : byte
+		public ushort NewLicenseeCode
+		{
+			get => binutil.Combine( msb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeStart], lsb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeEnd] );
+			set
+			{
+				m_data[(ushort)HeaderOffsets.NewLicenseeCodeStart] = value.GetMsb();
+				m_data[(ushort)HeaderOffsets.NewLicenseeCodeEnd] = value.GetLsb();
+			}
+		}
+
+		public byte OldLicenseeCode
+		{
+			get => m_data[(ushort)HeaderOffsets.OldLicenseeCode];
+			set => m_data[(ushort)HeaderOffsets.OldLicenseeCode] = value;
+		}
+
+        public enum CGBFlag : byte
+        {
+            PGB = 0b0100_1001, // Values with bit 7 and either bit 2 or 3 set will switch the Game Boy into a special non-CGB-mode called “PGB mode”.
+		    CGBMonochrome = 0x80,
+            CGBOnly = 0xC0
+        }
+
+		public byte CGBSupport
+		{
+			get => m_data[(ushort)HeaderOffsets.CGBFlag];
+			set => m_data[(ushort)HeaderOffsets.CGBFlag] = value;
+		}
+
+		public enum DestinationCode : byte
         {
             Japan = 0,
             NotJapan = 1
@@ -177,6 +196,20 @@ namespace rzr
                 }
             }
         }
+
+		public bool Valid()
+		{
+			Debug.WriteLine( $"Loaded cartridge {Title} v{Version} [{m_data.Count()}B] Type: {Type} {RomBanks} Rom & {RamBanks} Ram Banks" );
+			Debug.WriteLine( $"Manufactuer: {Manufacturer} Destination: {( Japan ? "Japan" : "Other" )} SGB support: {SGBSupport} CGB flag: {(CGBFlag)CGBSupport}" );
+
+			var hCheck = ComputeHeaderChecksum( m_data );
+			var rCheck = ComputeRomChecksum( m_data );
+
+			Debug.WriteLine( $"Computed\tHeader|Rom checksum {hCheck:X2}|{rCheck:X4}" );
+			Debug.WriteLine( $"Stored\tHeader|Rom checksum {HeaderChecksum:X2}|{RomChecksum:X4}" );
+
+			return hCheck == HeaderChecksum && rCheck == RomChecksum;
+		}
 
 		private string GetHeaderString( HeaderOffsets start, HeaderOffsets end )
 		{
