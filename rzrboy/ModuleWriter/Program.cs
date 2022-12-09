@@ -2,7 +2,7 @@
 
 MyGame peliPoika = new();
 peliPoika.WriteAll();
-foreach( string instr in Isa.Disassemble( 0, peliPoika.PC, peliPoika.Banks[0], throwException: false ) )
+foreach( string instr in Isa.Disassemble( 0, peliPoika.PC, peliPoika.Banks[0], unknownOp: UnknownOpHandling.AsDb ) )
 {
 	Console.WriteLine( instr );
 }

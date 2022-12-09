@@ -367,26 +367,26 @@ namespace rzr
 		/// <param name="pc"></param>
 		/// <param name="mem"></param>
 		/// <returns></returns>
-		public static string Disassemble( ref ushort pc, ISection mem, bool throwException = true )
-        {
+		public static string Disassemble( ref ushort pc, ISection mem, UnknownOpHandling unknownOp = default )
+		{
             byte opcode = mem[pc]; 
 
             StringBuilder sb = new();
             sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
 
-            AsmInstr instr = Asm.Disassemble( ref pc, mem, throwException: throwException );
+            AsmInstr instr = Asm.Disassemble( ref pc, mem, unknownOp: unknownOp );
             sb.Append( instr.ToString().ToUpper() );
 
 			return sb.ToString();
         }
 
-        public static IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection mem, bool throwException = true )
+        public static IEnumerable<string> Disassemble( ushort from_pc, ushort to_pc, ISection mem, UnknownOpHandling unknownOp = default )
         {
             ushort prev = (ushort)( from_pc - 1 );
             while ( from_pc < to_pc && prev != from_pc )
             {
                 prev = from_pc;
-                yield return Disassemble( ref from_pc, mem, throwException : throwException );
+                yield return Disassemble( ref from_pc, mem, unknownOp: unknownOp );
             }
         }
 

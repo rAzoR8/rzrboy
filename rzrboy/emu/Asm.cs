@@ -7,9 +7,16 @@
 		}
 	}
 
+	public enum UnknownOpHandling
+	{
+		ThrowException = default,
+		AsInvalid, // Interpret as invalid instruction
+		AsDb,
+	}
+
 	public static class Asm
 	{
-		public static List<AsmInstr> DisassembleRom( byte[] rom, bool throwException = true) 
+		public static List<AsmInstr> DisassembleRom( byte[] rom, UnknownOpHandling unknownOp = default )
 		{
 			// estimate the average instruction length as 2byte
 			List<AsmInstr> instrs = new ( rom.Length / 2);
@@ -18,7 +25,7 @@
 			for( uint i = 0; i < rom.Length; ) 
 			{
 				ushort pc = 0;
-				instrs.Add( Disassemble( ref pc, mem: sec, throwException: throwException ) );
+				instrs.Add( Disassemble( ref pc, mem: sec, unknownOp: unknownOp ) );
 				i += pc;
 			}
 
@@ -54,6 +61,7 @@
 		public static AsmOperand SPr8(sbyte val ) => new AsmOperand( OperandType.SPr8, val );
 
 		// Instructions
+		public static AsmInstr Db( params AsmOperand[] vals ) => new AsmInstr( InstrType.Db, vals ); // not actual OpCode, just data
 		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
 		public static AsmInstr Stop( params AsmOperand[] ops ) => new AsmInstr( InstrType.Stop, ops );
 		public static AsmInstr Halt() => new AsmInstr( InstrType.Halt );
@@ -121,7 +129,7 @@
 
 		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
 
-		public static AsmInstr Disassemble( ref ushort pc, ISection mem, bool throwException = true )
+		public static AsmInstr Disassemble( ref ushort pc, ISection mem, UnknownOpHandling unknownOp = default )
 		{
 			ushort _pc = pc;
 			byte opcode = mem[pc++];
@@ -304,10 +312,10 @@
 				(0xF, 0xE ) => Rst( RstAdr( 0x28 ) ),
 				// 0xFF RST 38h
 				(0xF, 0xF ) => Rst( RstAdr( 0x38 ) ),
-				// TODO: interpret as DB instruction?
-				//_ => new AsmInstr( InstrType.Db, D8( opcode ) )
-				_ => throwException ? throw new UnknownOpCode( opcode: opcode, pc: _pc ) : AsmInstr.Invalid
-			}; ;
+				_ when unknownOp == UnknownOpHandling.AsDb => Db( D8( opcode ) ),
+				_ when unknownOp == UnknownOpHandling.AsInvalid => AsmInstr.Invalid,
+				_ => throw new UnknownOpCode( opcode: opcode, pc: _pc )
+			};
 
 			AsmInstr Ext( ref ushort pc, ISection mem )
 			{
@@ -331,8 +339,10 @@
 					(_, _ ) when x < 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x] ),
 					(_, _ ) when x >= 8 && y >= 0xC => Set( (byte)( ( extop - 0xC0 ) / 8 ), BCDEHLAdrHlA[x - 8] ),
 
-					_ => throwException ? throw new UnknownOpCode( opcode: extop, pc: _pc, ext: true ) : AsmInstr.Invalid
-				};
+					_ when unknownOp == UnknownOpHandling.AsDb => Db( D8( opcode ), D8( extop ) ),
+					_ when unknownOp == UnknownOpHandling.AsInvalid => AsmInstr.Invalid,
+					_ => throw new UnknownOpCode( opcode: extop, pc: _pc, ext: true )
+				}; ;
 			}
 		}
 
