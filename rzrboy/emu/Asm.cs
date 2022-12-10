@@ -223,9 +223,7 @@
 				// 0xF0 LD (0xFF00+db8), A
 				(0, 0xF ) => Ld( A, Io8( mem[pc++] ) ),
 				// 0xC1->0xF1 POP [BC DE HL]
-				(1, _ ) when y >= 0xC && y < 0xF => Pop( BcDeHlSp[y - 0xC] ),
-				// 0xF1 POP AF
-				(1, 0xF ) => Pop( AF ),
+				(1, _ ) when y >= 0xC && y <= 0xF => Pop( BcDeHlAf[y - 0xC] ),
 				// JP NZ, a16
 				(2, 0xC ) => Jp( condNZ, D16( mem[pc++], mem[pc++] ) ),
 				// JP NC, a16
@@ -242,10 +240,8 @@
 				(4, 0xC ) => Call( condNZ, D16( mem[pc++], mem[pc++] ) ),
 				// 0xD4 CALL NC, a16
 				(4, 0xD ) => Call( condNC, D16( mem[pc++], mem[pc++] ) ),
-				// 0xC5->0xF5 PUSH [BC DE HL]
-				(5, _ ) when y >= 0xC && y < 0xF => Push( BcDeHlSp[y - 0xC] ),
-				// 0xF5 POP AF
-				(5, 0xF ) => Push( AF ),
+				// 0xC5->0xF5 PUSH [BC DE HL AF]
+				(5, _ ) when y >= 0xC && y <= 0xF => Push( BcDeHlAf[y - 0xC] ),
 				// 0xC6 ADD A, db8
 				(6, 0xC ) => Add( A, D8( mem[pc++] ) ),
 				// 0xD6 SUB A, db8
