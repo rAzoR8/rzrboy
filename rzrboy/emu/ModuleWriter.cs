@@ -19,7 +19,7 @@ namespace rzr
 		}
 
 		public AsmInstr Nop() => Add( InstrType.Nop );
-		public AsmInstr Stop( params AsmOperand[] ops ) => Add( InstrType.Stop, ops );
+		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
 		public AsmInstr Halt() => Add( InstrType.Halt );
 		public AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
 		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );

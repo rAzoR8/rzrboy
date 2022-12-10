@@ -121,6 +121,11 @@
 
 			void Throw() { if( throwException ) throw new rzr.InvalidOperand( pc: pc, type: Type ); }
 
+			if( Count > 2 ) // no instruction has more than 2 operands
+			{
+				Throw();
+			}
+
 			void Set( byte val ) { mem[pc++] = val; }
 			void Ext( byte val ) { mem[pc++] = 0xCB; mem[pc++] = val; }
 
@@ -131,13 +136,15 @@
 
 			switch( Type )
 			{
-				case InstrType.Db:		Op1D8(); if( Count > 1 ) Op2D8(); break;
-				case InstrType.Nop:		Set(0x00); break;
-				case InstrType.Stop:	Set(0x10); if( Count > 0 ) Op1D8(); break;
-				case InstrType.Halt:	Set(0x76); break;
-				case InstrType.Di:		Set(0xF3); break;
-				case InstrType.Ei:		Set(0xFB); break;
-				case InstrType.Ld:
+				case InstrType.Db when Count == 1 && Lhs.IsD8():				Op1D8(); break; // 1 Byte
+				case InstrType.Db when Count == 1 && Lhs.IsD16():				Op1D16(); break; // 2 Byte
+				case InstrType.Db when Count == 2 && Lhs.IsD8() && Rhs.IsD8():	Op1D8(); Op2D8(); break; // 2x 1 Byte
+				case InstrType.Nop when Count == 0:		Set(0x00); break;
+				case InstrType.Stop when Count == 1:	Set(0x10); Op1D8(); break;
+				case InstrType.Halt when Count == 0:	Set(0x76); break;
+				case InstrType.Di when Count == 0: 		Set(0xF3); break;
+				case InstrType.Ei when Count == 0:		Set(0xFB); break;
+				case InstrType.Ld when Count == 2:
 					switch( Lhs )
 					{
 						// LD r8, r8
@@ -199,66 +206,66 @@
 							break;
 					}
 					break;
-				case InstrType.Inc:
+				case InstrType.Inc when Count == 1:
 					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x03 ) );
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x04 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0C ) );
 					else Throw();
 					break;
-				case InstrType.Dec:
+				case InstrType.Dec when Count == 1:
 					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x0B ) );
 					else if( Lhs.IsBCDHHl() ) Set( Lhs.YOffset( 0x05 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
 					else Throw();
 					break;
 				// ADD [B C D E H L (HL) A]
-				case InstrType.Add when Lhs.IsA() && Rhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
-				case InstrType.Adc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x88 ) ); break;
-				case InstrType.Sub when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x90 ) ); break;
-				case InstrType.Sbc when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x98 ) ); break;
-				case InstrType.And when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA0 ) ); break;
-				case InstrType.Xor when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA8 ) ); break;
-				case InstrType.Or when Lhs.IsReg8HlA():	Set( Lhs.Reg8XOffset( 0xB0 ) ); break;
-				case InstrType.Cp when Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xB8 ) ); break;
+				case InstrType.Add when Count == 2 && Lhs.IsA() && Rhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
+				case InstrType.Adc when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x88 ) ); break;
+				case InstrType.Sub when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x90 ) ); break;
+				case InstrType.Sbc when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0x98 ) ); break;
+				case InstrType.And when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA0 ) ); break;
+				case InstrType.Xor when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xA8 ) ); break;
+				case InstrType.Or when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xB0 ) ); break;
+				case InstrType.Cp when Count == 1 && Lhs.IsReg8HlA(): Set( Lhs.Reg8XOffset( 0xB8 ) ); break;
 				// ADD db8
-				case InstrType.Add when Lhs.IsA() && Rhs.IsD8(): Set( 0xC6 ); Op1D8(); break;
-				case InstrType.Sub when Lhs.IsD8(): Set( 0xD6 ); Op1D8(); break;
-				case InstrType.And when Lhs.IsD8(): Set( 0xE6 ); Op1D8(); break;
-				case InstrType.Or when Lhs.IsD8(): Set( 0xF6 ); Op1D8(); break;
-				case InstrType.Adc when Lhs.IsD8(): Set( 0xCE ); Op1D8(); break;
-				case InstrType.Sbc when Lhs.IsD8(): Set( 0xDE ); Op1D8(); break;
-				case InstrType.Xor when Lhs.IsD8(): Set( 0xEE ); Op1D8(); break;
-				case InstrType.Cp when Lhs.IsD8(): Set( 0xFE ); Op1D8(); break;
+				case InstrType.Add when Count == 2 && Lhs.IsA() && Rhs.IsD8(): Set( 0xC6 ); Op1D8(); break;
+				case InstrType.Sub when Count == 1 && Lhs.IsD8(): Set( 0xD6 ); Op1D8(); break;
+				case InstrType.And when Count == 1 && Lhs.IsD8(): Set( 0xE6 ); Op1D8(); break;
+				case InstrType.Or when Count == 1 &&  Lhs.IsD8(): Set( 0xF6 ); Op1D8(); break;
+				case InstrType.Adc when Count == 1 && Lhs.IsD8(): Set( 0xCE ); Op1D8(); break;
+				case InstrType.Sbc when Count == 1 && Lhs.IsD8(): Set( 0xDE ); Op1D8(); break;
+				case InstrType.Xor when Count == 1 && Lhs.IsD8(): Set( 0xEE ); Op1D8(); break;
+				case InstrType.Cp when  Count == 1 && Lhs.IsD8(): Set( 0xFE ); Op1D8(); break;
 				// ADD HL, [BC DE HL SP]
-				case InstrType.Add when Lhs.IsHl() && Rhs.IsBCDHHl(): Set( Rhs.YOffset( 0x09 ) ); break;
+				case InstrType.Add when Count == 2 && Lhs.IsHl() && Rhs.IsBCDHHl(): Set( Rhs.YOffset( 0x09 ) ); break;
 				// ADD SP, r8
-				case InstrType.Add when Lhs.IsSP() && Rhs.IsR8(): Set(0xE8); break;
-				case InstrType.Jp:
+				case InstrType.Add when Count == 2 && Lhs.IsSP() && Rhs.IsR8(): Set(0xE8); break;
+				case InstrType.Jp when Count == 1 && Lhs.IsD16(): Set( 0xC3 ); Op1D16(); break;
+				case InstrType.Jp when Count == 1 && Lhs.IsHl(): Set( 0xE9 ); break;
+				case InstrType.Jp when Count == 2:
 					switch( Lhs )
 					{
 						case OperandType.condNZ when Rhs.IsD16(): Set( 0xC2 ); Op2D16(); break;
 						case OperandType.condNC when Rhs.IsD16(): Set( 0xD2 ); Op2D16(); break;
-						case OperandType.d16: Set( 0xC3 ); Op1D16(); break;
 						case OperandType.condZ when Rhs.IsD16(): Set( 0x2A ); Op2D8(); break;
 						case OperandType.condC when Rhs.IsD16(): Set( 0x3A ); Op2D8(); break;
-						case OperandType.HL: Set( 0xE9 ); break;
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Jr:
+				case InstrType.Jr when Count == 1 && Lhs.IsR8(): Set( 0x18 ); Op1D8(); break;
+				case InstrType.Jr when Count == 2:
 					switch( Lhs )
 					{
 						case OperandType.condNZ when Rhs.IsR8(): Set( 0x20 ); Op2D8(); break;
 						case OperandType.condNC when Rhs.IsR8(): Set( 0x30 ); Op2D8(); break;
-						case OperandType.r8: Set( 0x18 ); Op1D8(); break;
 						case OperandType.condZ when Rhs.IsR8(): Set( 0x28 ); Op2D8(); break;
 						case OperandType.condC when Rhs.IsR8(): Set( 0x38 ); Op2D8(); break;
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Ret:
-					if( Count == 0 ) Set( 0xC9 ); 
-					else switch( Lhs )
+				case InstrType.Ret when Count == 0:	Set( 0xC9 ); break;
+				case InstrType.Ret when Count == 1:
+					switch( Lhs )
 					{
 						case OperandType.condNZ: Set( 0xC0 ); break;
 						case OperandType.condNC: Set( 0xD0 ); break;
@@ -267,10 +274,10 @@
 						default: Throw(); break;
 						}
 					break;
-				case InstrType.Reti: Set( 0xD9 ); break;
-				case InstrType.Call:
-					if( Count == 1 ) { Set( 0xCD ); Op2D16(); }
-					else if( Count == 2 ) switch( Lhs )
+				case InstrType.Reti when Count == 0: Set( 0xD9 ); break;
+				case InstrType.Call when Count == 1: Set( 0xCD ); Op1D16(); break;
+				case InstrType.Call when Count == 2:
+					switch( Lhs )
 					{
 						case OperandType.condNZ: Set( 0xC4 ); Op2D16(); break;
 						case OperandType.condNC: Set( 0xD4 ); Op2D16(); break;
@@ -279,7 +286,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Rst when Lhs == OperandType.RstAddr:
+				case InstrType.Rst when Count == 1 && Lhs == OperandType.RstAddr:
 					switch( this[0].d8 )
 					{
 						case 0x00: Set( 0xC7 ); break;
@@ -294,7 +301,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Push:
+				case InstrType.Push when Count == 1:
 					switch( Lhs )
 					{
 						case OperandType.BC: Set( 0xC1 ); break;
@@ -304,7 +311,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Pop:
+				case InstrType.Pop when Count == 1:
 					switch( Lhs )
 					{
 						case OperandType.BC: Set( 0xC5 ); break;
@@ -314,23 +321,23 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Rlca:Set( 0x07 ); break;
-				case InstrType.Rla: Set( 0x17 ); break;
-				case InstrType.Rrca:Set( 0x0F ); break;
-				case InstrType.Rra: Set( 0x1F ); break;
-				case InstrType.Daa: Set( 0x27 ); break;
-				case InstrType.Scf: Set( 0x37 ); break;
-				case InstrType.Cpl: Set( 0x2F ); break;
-				case InstrType.Ccf: Set( 0X3F ); break;
-				case InstrType.Rlc when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x00 ) ); break;
-				case InstrType.Rrc when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x08 ) ); break;
-				case InstrType.Rl when Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x10 ) ); break;
-				case InstrType.Rr when Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x18 ) ); break;
-				case InstrType.Sla when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x20 ) ); break;
-				case InstrType.Sra when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x28 ) ); break;
-				case InstrType.Swap when Lhs.IsReg8HlA():Ext( Lhs.Reg8XOffset( 0x30 ) ); break;
-				case InstrType.Srl when Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x38 ) ); break;
-				case InstrType.Bit when Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+				case InstrType.Rlca when Count == 0: Set( 0x07 ); break;
+				case InstrType.Rla when Count == 0: Set( 0x17 ); break;
+				case InstrType.Rrca when Count == 0: Set( 0x0F ); break;
+				case InstrType.Rra when Count == 0: Set( 0x1F ); break;
+				case InstrType.Daa when Count == 0: Set( 0x27 ); break;
+				case InstrType.Scf when Count == 0: Set( 0x37 ); break;
+				case InstrType.Cpl when Count == 0: Set( 0x2F ); break;
+				case InstrType.Ccf when Count == 0: Set( 0X3F ); break;
+				case InstrType.Rlc when Count == 1 && Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x00 ) ); break;
+				case InstrType.Rrc when Count == 1 && Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x08 ) ); break;
+				case InstrType.Rl when Count == 1 && Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x10 ) ); break;
+				case InstrType.Rr when Count == 1 && Lhs.IsReg8HlA():  Ext( Lhs.Reg8XOffset( 0x18 ) ); break;
+				case InstrType.Sla when Count == 1 && Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x20 ) ); break;
+				case InstrType.Sra when Count == 1 && Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x28 ) ); break;
+				case InstrType.Swap when Count == 1 && Lhs.IsReg8HlA():Ext( Lhs.Reg8XOffset( 0x30 ) ); break;
+				case InstrType.Srl when Count == 1 && Lhs.IsReg8HlA(): Ext( Lhs.Reg8XOffset( 0x38 ) ); break;
+				case InstrType.Bit when	Count == 2 && Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
 					switch( this[0].d8 )
 					{
 						case 0: Ext( Rhs.Reg8XOffset( 0x40 ) ); break;
@@ -345,7 +352,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Res when	Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+				case InstrType.Res when Count == 2 && Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
 					switch( this[0].d8 )
 					{
 						case 0: Ext( Rhs.Reg8XOffset( 0x80 ) ); break;
@@ -360,7 +367,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Set when Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
+				case InstrType.Set when Count == 2 && Lhs == OperandType.BitIdx && Rhs.IsReg8HlA():
 					switch( this[0].d8 )
 					{
 						case 0: Ext( Rhs.Reg8XOffset( 0xC0 ) ); break;

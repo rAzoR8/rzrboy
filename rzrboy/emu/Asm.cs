@@ -63,7 +63,7 @@
 		// Instructions
 		public static AsmInstr Db( params AsmOperand[] vals ) => new AsmInstr( InstrType.Db, vals ); // not actual OpCode, just data
 		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
-		public static AsmInstr Stop( params AsmOperand[] ops ) => new AsmInstr( InstrType.Stop, ops );
+		public static AsmInstr Stop( AsmOperand val ) => new AsmInstr( InstrType.Stop, val );
 		public static AsmInstr Halt() => new AsmInstr( InstrType.Halt );
 		public static AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => new AsmInstr( InstrType.Ld, lhs, rhs );
 		public static AsmInstr Jr( params AsmOperand[] ops ) => new AsmInstr( InstrType.Jr, ops );
@@ -139,7 +139,7 @@
 				// 0x00 NOP
 				(0, 0 ) => Nop(),
 				// 0x10 STOP
-				(0, 1 ) => Stop(),
+				(0, 1 ) => Stop( D8( mem[pc++] ) ),
 				// 0x20 JR NZ, r8
 				(0, 2 ) => Jr( condNZ, R8( mem[pc++] ) ),
 				// 0x30 JR NC, r8
