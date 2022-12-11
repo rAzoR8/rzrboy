@@ -62,7 +62,7 @@
 				case OperandType.SP:
 				case OperandType.AF:
 					return type.ToString();
-				case OperandType.io8: return "($FF00+r8)";
+				case OperandType.io8: return "($FF00+d8)";
 				case OperandType.ioC: return "($FF00+C)";
 				case OperandType.SPr8: return "SP+r8";
 				case OperandType.AdrHL: return "(HL)";

@@ -4,8 +4,11 @@ namespace rzr
 {
 	public class AsmRecorder : IEnumerable<AsmInstr>
 	{
-		protected List<AsmInstr> m_instructions = new List<AsmInstr>();
+		protected List<AsmInstr> m_instructions = new ();
 		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
+
+		public AsmRecorder() { }
+		public AsmRecorder( IEnumerable<AsmInstr> instructions ) { m_instructions = new( instructions ); }
 
 		protected virtual AsmInstr Add( AsmInstr instr )
 		{
@@ -18,10 +21,54 @@ namespace rzr
 			return Add( new AsmInstr( instr, operands ) );
 		}
 
+		protected enum Adr : byte
+		{
+			BC = OperandType.AdrBC, // (BC)
+			DE = OperandType.AdrDE, // (DE)
+			HL = OperandType.AdrHL, // (HL)
+			HLi = OperandType.AdrHLi, // (HL+)
+			HLd = OperandType.AdrHLd, // (HL-)
+		}
+
+		protected enum Cond : byte
+		{
+			Z = OperandType.condZ,
+			NZ = OperandType.condNZ,
+			C = OperandType.condC,
+			NC = OperandType.condNC,
+		}
+
+		protected const Reg8 A = Reg8.A;
+		protected const Reg8 B = Reg8.B;
+		protected const Reg8 C = Reg8.C;
+		protected const Reg8 D = Reg8.D;
+		protected const Reg8 E = Reg8.E;
+		protected const Reg8 H = Reg8.H;
+		protected const Reg8 L = Reg8.L;
+
+		protected const Reg16 BC = Reg16.BC;
+		protected const Reg16 DE = Reg16.DE;
+		protected const Reg16 HL = Reg16.HL;
+		protected const Reg16 SP = Reg16.SP;
+		protected const Reg16 AF = Reg16.AF;
+
+		protected const Adr adrBC = Adr.BC;
+		protected const Adr adrDe = Adr.DE;
+		protected const Adr adrHL = Adr.HL;
+		protected const Adr adrHLi = Adr.HLi;
+		protected const Adr adrHLd = Adr.HLd;
+
+		protected const Cond condZ = Cond.Z;
+		protected const Cond condNZ = Cond.NZ;
+		protected const Cond condC = Cond.C;
+		protected const Cond condNC = Cond.NC;
+
 		public AsmInstr Nop() => Add( InstrType.Nop );
 		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
 		public AsmInstr Halt() => Add( InstrType.Halt );
 		public AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
+		//protected AsmInstr LdhIoC( Reg8 A,  );
+		
 		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
 		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
 		public AsmInstr Inc( AsmOperand lhs ) => Add( InstrType.Inc, lhs );

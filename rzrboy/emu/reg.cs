@@ -2,12 +2,12 @@
 {
     public enum Reg8 : int
     {
-        A = 0, F, B, C, D, E, H, L, Max
+        A = 0, F, B, C, D, E, H, L
     }
 
     public enum Reg16 : int
     {
-       AF = Reg8.Max, BC, DE, HL, PC, SP
+       AF = Reg8.L + 1, BC, DE, HL, PC, SP
     }
 
     public enum RegX : int
@@ -18,9 +18,9 @@
 
     static class RegExtensions
     {
-        public static bool Is8(this Reg16 reg) => (int)reg < (int)Reg8.Max;
-        public static bool Is8(this RegX reg) => (int)reg < (int)Reg8.Max;
-        public static bool Is16(this RegX reg) => (int)reg >= (int)Reg8.Max;
+        public static bool Is8(this Reg16 reg) => (int)reg <= (int)Reg8.L;
+        public static bool Is8(this RegX reg) => (int)reg <= (int)Reg8.L;
+        public static bool Is16(this RegX reg) => (int)reg >= (int)Reg16.AF;
 
         public static Reg8 To8( this RegX reg ) => (Reg8)reg;
         public static Reg16 To16( this RegX reg ) => (Reg16)reg;

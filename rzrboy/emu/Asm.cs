@@ -116,8 +116,10 @@
 		public const OperandType SP = OperandType.SP;
 		public const OperandType AF = OperandType.AF;
 
-		public const OperandType IoC = OperandType.ioC;
+		public const OperandType ioC = OperandType.ioC;
 
+		public const OperandType adrBC = OperandType.AdrBC;
+		public const OperandType adrDE = OperandType.AdrDE;
 		public const OperandType adrHL = OperandType.AdrHL;
 		public const OperandType adrHLi = OperandType.AdrHLi;
 		public const OperandType adrHLd = OperandType.AdrHLd;
@@ -229,9 +231,9 @@
 				// JP NC, a16
 				(2, 0xD ) => Jp( condNC, D16( mem[pc++], mem[pc++] ) ),
 				// 0xE2 LD (0xFF00+C), A
-				(2, 0xE ) => Ld( IoC, A ),
+				(2, 0xE ) => Ld( ioC, A ),
 				// 0xF2 LD A, (0xFF00+C)
-				(2, 0xF ) => Ld( A, IoC ),
+				(2, 0xF ) => Ld( A, ioC ),
 				// 0xC3 JP a16
 				(3, 0xC ) => Jp( D16( mem[pc++], mem[pc++] ) ),
 				// 0xF3 DI
