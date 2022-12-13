@@ -134,44 +134,47 @@ namespace rzr
 
 	public abstract class ModuleWriter : AsmRecorder
 	{
-		private Storage m_curBank; // current bank
+		private Storage? m_curBank = null; // current bank
 
 		public ushort PC { get; protected set; } = 0;
 		public bool ThrowException { get; set; } = false;
-		public HeaderView Header { get; }
 
 		// Header access
-		public byte HeaderChecksum {get => Header.HeaderChecksum; set => Header.HeaderChecksum = value; }
-		public ushort RomChecksum { get => Header.RomChecksum; set => Header.RomChecksum = value; }
-		public bool Japan { get => Header.Japan; set => Header.Japan = value; }
-		public byte Version { get => Header.Version; set => Header.Version = value; }
-		public bool SGBSupport { get => Header.SGBSupport; set => Header.SGBSupport = value; }
-		public CartridgeType Type { get => Header.Type; set => Header.Type = value; }
-		public IEnumerable<byte> Logo { get => Header.Logo; set => Header.Logo = value; }
-		public string Title {get => Header.Title; set => Header.Title = value; }
-		public string Manufacturer { get => Header.Manufacturer; set => Header.Manufacturer = value; }
-		public int RomBanks { get => Header.RomBanks; set => Header.RomBanks = value; }
-		public int RamBanks { get => Header.RamBanks; set => Header.RamBanks = value; }
-		public ushort NewLicenseeCode { get => Header.NewLicenseeCode; set => Header.NewLicenseeCode = value; }
-		public byte OldLicenseeCode { get => Header.OldLicenseeCode; set => Header.OldLicenseeCode = value; }
-		public byte CGBSupport { get => Header.CGBSupport; set => Header.CGBSupport = value; }
-
-		public ModuleWriter()
-		{
-			m_curBank = GetNextBank( out ushort pcAfterSwitching ).bank; // ignore switching for first bank
-			Header = new HeaderView( m_curBank.Data );
-			PC = pcAfterSwitching;
-		}
+		public bool Japan { get; set; }
+		public byte Version { get; set; }
+		public bool SGBSupport { get; set; }
+		public abstract CartridgeType Type { get; } // to be set by the implementing class
+		public IEnumerable<byte> Logo { get; set; } = new byte[]{
+			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D , 0x00 , 0x0B , 0x03 , 0x73 , 0x00 , 0x83 , 0x00 , 0x0C , 0x00 , 0x0D,
+			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89 , 0x00 , 0x0E , 0xDC , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00,
+		};
+		public string Title { get; set; } = "rzrboy";
+		public string Manufacturer { get; set; } = "FABI";
+		public int RamBanks { get; set; }
+		public ushort NewLicenseeCode { get; set; } = 0;
+		public byte OldLicenseeCode { get; set; } = 0x33;
+		public byte CGBSupport { get; set; }
 
 		public virtual ushort InstrByteThreshold { get; } = 3;
 		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
 
+		public ModuleWriter()
+		{
+
+		}
+
 		protected override AsmInstr Add( AsmInstr instr )
 		{
 			ushort pc = PC;
-			if( pc + InstrByteThreshold >= Mbc.RomBankSize ) // switch to next bank
+
+			if( m_curBank == null )
 			{
-				var (next, switching) = GetNextBank( out var pcAfterSwitching );
+				m_curBank = GetNextBank( out _ ).bank; // ignore switching for first bank
+			}
+			else if( pc + InstrByteThreshold >= Mbc.RomBankSize ) // switch to next bank
+			{
+				var (next, switching) = GetNextBank( out ushort pcAfterSwitching );
 				// write bank switching code to the end of this bank
 				pc = switching.Write( pc, mem: m_curBank, throwException: ThrowException );
 				// get new bank and possibly adjust PC
@@ -203,6 +206,11 @@ namespace rzr
 
 		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
+			if( m_curBank == null )
+			{
+				m_curBank = GetNextBank( out _ ).bank; // ignore switching for first bank
+			}
+
 			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
@@ -233,6 +241,21 @@ namespace rzr
 			// jump to EntryPoint
 			Asm.Jp( Asm.D16( entryPoint ) ).Assemble( ref EP, m_curBank, throwException: ThrowException );
 
+			HeaderView header = new( m_curBank.Data );
+
+			header.Manufacturer = Manufacturer;
+			header.Version = Version;
+			header.NewLicenseeCode = NewLicenseeCode;
+			header.OldLicenseeCode = OldLicenseeCode;
+			header.Japan = Japan;
+			header.RamBanks = RamBanks;
+			header.CGBSupport = CGBSupport;
+			header.SGBSupport = SGBSupport;
+			header.Logo = Logo;
+			header.Title = Title;
+			header.Version = Version;
+			header.Type = Type;
+
 			// skip header to game code:
 			PC = entryPoint;
 		}
@@ -246,6 +269,8 @@ namespace rzr
 
 		// LD 3 byte instr vs 3 LD instructions
 		public override ushort InstrByteThreshold => (ushort)( m_banks.Count > 0x1F ? 3 * 3 : 3 );
+
+		public override CartridgeType Type => CartridgeType.MBC1_RAM;
 
 		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching )
 		{
@@ -292,19 +317,23 @@ namespace rzr
 		/// <param name="entryPoint">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
 		public void WriteAll( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
-			// TODO: implement resetting the banks
-
+			// reset banks
+			m_banks.Clear();
 			PC = 0;
+
 			WritePreamble( entryPoint: entryPoint );
 
 			PC = entryPoint;
 			WriteGameCode();
 
-			Header.RomBanks = m_banks.Count;
-			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_banks.First().Data );
-			Header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
+			var bank0 = m_banks.First();
+			HeaderView header = new HeaderView( bank0.Data );
+
+			header.RomBanks = m_banks.Count;
+			header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( bank0.Data );
+			header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
 #if DEBUG
-			Header.Valid();
+			header.Valid();
 #endif
 		}
 	}
