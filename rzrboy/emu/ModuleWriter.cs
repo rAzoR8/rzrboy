@@ -21,7 +21,7 @@ namespace rzr
 			return Add( new AsmInstr( instr, operands ) );
 		}
 
-		protected enum Adr : byte
+		public enum Adr : byte
 		{
 			BC = OperandType.AdrBC, // (BC)
 			DE = OperandType.AdrDE, // (DE)
@@ -30,7 +30,7 @@ namespace rzr
 			HLd = OperandType.AdrHLd, // (HL-)
 		}
 
-		protected enum Cond : byte
+		public enum Cond : byte
 		{
 			Z = OperandType.condZ,
 			NZ = OperandType.condNZ,
@@ -50,7 +50,7 @@ namespace rzr
 		protected const Reg16 DE = Reg16.DE;
 		protected const Reg16 HL = Reg16.HL;
 		protected const Reg16 SP = Reg16.SP;
-		protected const Reg16 AF = Reg16.AF;
+		protected const Reg16 AF = Reg16.AF; // Push/Pop only
 
 		protected const Adr adrBC = Adr.BC;
 		protected const Adr adrDe = Adr.DE;
@@ -67,8 +67,13 @@ namespace rzr
 		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
 		public AsmInstr Halt() => Add( InstrType.Halt );
 		public AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
-		//protected AsmInstr LdhIoC( Reg8 A,  );
-		
+		// LD [BC DE HL SP], d16
+		public AsmInstr Ld( Reg16 lhs, ushort rhs ) => Add( InstrType.Ld, lhs.ToOp(), new AsmOperand(rhs) );
+		// LD [(BC) (DE) (HL+) (HL-)], A
+		public AsmInstr Ld( Adr lhs, Reg8 A ) => Add( InstrType.Ld, (OperandType)lhs, OperandType.A );
+		// LD A, [(BC) (DE) (HL+) (HL-)]
+		public AsmInstr Ld( Reg8 A, Adr rhs ) => Add( InstrType.Ld, OperandType.A, (OperandType)rhs );
+
 		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
 		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
 		public AsmInstr Inc( AsmOperand lhs ) => Add( InstrType.Inc, lhs );
@@ -158,11 +163,6 @@ namespace rzr
 
 		public virtual ushort InstrByteThreshold { get; } = 3;
 		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
-
-		public ModuleWriter()
-		{
-
-		}
 
 		protected override AsmInstr Add( AsmInstr instr )
 		{

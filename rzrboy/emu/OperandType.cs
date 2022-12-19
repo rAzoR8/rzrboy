@@ -2,28 +2,31 @@
 {
 	public enum OperandType : byte
 	{
-		d8, // data / unsigned
-		r8, // relative addr / signed
-		d16, // unsigned / addr
-		io8, // 0xFF00 + d8
-		ioC, // 0xFF00 + C
+		A = Reg8.A, // F not direclty accessible
+		B = Reg8.B,
+		C = Reg8.C,
+		D = Reg8.D,
+		E = Reg8.E,
+		H = Reg8.H,
+		L = Reg8.L,
 
-		B, C,
-		D, E,
-		H, L,
+		AF = Reg16.AF, // only for Push & Pop
+		BC = Reg16.BC,
+		DE = Reg16.DE,
+		HL = Reg16.HL,
+		SP = Reg16.SP,
+
 		AdrHL, // (HL)
-		A, // F not direclty accessible
-
 		AdrBC, // (BC)
 		AdrDE, // (DE)
 		AdrHLi, // (HL+)
 		AdrHLd, // (HL-)
 
-		BC,
-		DE,
-		HL,
-		SP,
-		AF, // only for Push & Pop
+		d8, // data / unsigned
+		r8, // relative addr / signed
+		d16, // unsigned / addr
+		io8, // 0xFF00 + d8
+		ioC, // 0xFF00 + C
 
 		SPr8, // SP + r8
 
@@ -40,6 +43,12 @@
 
 	public static class OperandExtensions
 	{
+		public static Reg8 To8( this OperandType type ) => (Reg8)type;
+		public static Reg16 To16( this OperandType type ) => (Reg16)type;
+
+		public static OperandType ToOp( this Reg8 type ) => (OperandType)type;
+		public static OperandType ToOp( this Reg16 type ) => (OperandType)type;
+
 		public static string ToString( this OperandType type )
 		{
 			switch( type )

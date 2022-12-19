@@ -1,16 +1,16 @@
 ﻿namespace rzr
 {
-    public enum Reg8 : int
+    public enum Reg8 : byte
     {
         A = 0, F, B, C, D, E, H, L
     }
 
-    public enum Reg16 : int
+    public enum Reg16 : byte
     {
        AF = Reg8.L + 1, BC, DE, HL, PC, SP
     }
 
-    public enum RegX : int
+    public enum RegX : byte
     {
         A = 0, F, B, C, D, E, H, L,
         AF, BC, DE, HL, PC, SP,
@@ -18,9 +18,9 @@
 
     static class RegExtensions
     {
-        public static bool Is8(this Reg16 reg) => (int)reg <= (int)Reg8.L;
-        public static bool Is8(this RegX reg) => (int)reg <= (int)Reg8.L;
-        public static bool Is16(this RegX reg) => (int)reg >= (int)Reg16.AF;
+        public static bool Is8(this Reg16 reg) => (byte)reg <= (byte)Reg8.L;
+        public static bool Is8(this RegX reg) => (byte)reg <= (byte)Reg8.L;
+        public static bool Is16(this RegX reg) => (byte)reg >= (byte)Reg16.AF;
 
         public static Reg8 To8( this RegX reg ) => (Reg8)reg;
         public static Reg16 To16( this RegX reg ) => (Reg16)reg;

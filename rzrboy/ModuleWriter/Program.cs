@@ -24,5 +24,6 @@ public class MyGame : rzr.MbcWriter
 	protected override void WriteGameCode() 
 	{
 		Ld( Asm.A, Asm.D8( 42 ) );
+		Ld( A, adrBC ); // LD A, (BC)
 	}
 }
