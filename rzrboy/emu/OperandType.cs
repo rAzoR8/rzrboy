@@ -16,9 +16,9 @@
 		HL = Reg16.HL,
 		SP = Reg16.SP,
 
-		AdrHL, // (HL)
 		AdrBC, // (BC)
 		AdrDE, // (DE)
+		AdrHL, // (HL)
 		AdrHLi, // (HL+)
 		AdrHLd, // (HL-)
 
@@ -112,11 +112,11 @@
 		// is SP
 		public static bool IsSP( this OperandType type ) => type == OperandType.SP;
 		// is B C D E H L (HL) A
-		public static bool IsReg8HlA( this OperandType type ) { return type >= OperandType.B && type <= OperandType.A; }
-		// is (BC) (DE) (HL+) (HL-)
+		public static bool IsReg8hl( this OperandType type ) { return type == OperandType.AdrHL || ( type >= OperandType.A && type <= OperandType.L ); }
+		// is (BC) (DE) (HL+) (HL-), excluding (HL)
 		public static bool IsReg16Adr( this OperandType type ) { return type >= OperandType.AdrBC && type <= OperandType.AdrHLd; }
 		// is B D H (HL)
-		public static bool IsBCDHHl( this OperandType type )
+		public static bool IsBCDHhl( this OperandType type )
 		{
 			return
 				type == OperandType.B ||

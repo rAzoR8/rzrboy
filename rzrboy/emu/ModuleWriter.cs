@@ -38,13 +38,28 @@ namespace rzr
 			NC = OperandType.condNC,
 		}
 
-		protected const Reg8 A = Reg8.A;
-		protected const Reg8 B = Reg8.B;
-		protected const Reg8 C = Reg8.C;
-		protected const Reg8 D = Reg8.D;
-		protected const Reg8 E = Reg8.E;
-		protected const Reg8 H = Reg8.H;
-		protected const Reg8 L = Reg8.L;
+		public interface IOpType { OperandType Type { get; } }
+
+		public interface BDHhl : IOpType { } // LD lhs
+		public interface CELA : IOpType { }// LD lhs
+		public interface BCDEHLhlA : BDHhl, CELA { }
+
+		public struct Atype : BCDEHLhlA { public OperandType Type => OperandType.A; }
+		public struct Btype : BCDEHLhlA { public OperandType Type => OperandType.B; }
+		public struct Ctype : BCDEHLhlA { public OperandType Type => OperandType.C; }
+		public struct Dtype : BCDEHLhlA { public OperandType Type => OperandType.D; }
+		public struct Etype : BCDEHLhlA { public OperandType Type => OperandType.E; }
+		public struct Htype : BCDEHLhlA { public OperandType Type => OperandType.H; }
+		public struct Ltype : BCDEHLhlA { public OperandType Type => OperandType.L; }
+		public struct AdrHLtype : BCDEHLhlA { public OperandType Type => OperandType.AdrHL; }
+
+		protected static Atype A;
+		protected static Btype B;
+		protected static Ctype C;
+		protected static Dtype D;
+		protected static Etype E;
+		protected static Htype H;
+		protected static Ltype L;
 
 		protected const Reg16 BC = Reg16.BC;
 		protected const Reg16 DE = Reg16.DE;
@@ -73,6 +88,19 @@ namespace rzr
 		public AsmInstr Ld( Adr lhs, Reg8 A ) => Add( InstrType.Ld, (OperandType)lhs, OperandType.A );
 		// LD A, [(BC) (DE) (HL+) (HL-)]
 		public AsmInstr Ld( Reg8 A, Adr rhs ) => Add( InstrType.Ld, OperandType.A, (OperandType)rhs );
+
+		// LD [B D H L (HL)], [B C D E H L (HL) A]
+		public AsmInstr Ld( BDHhl lhs, BCDEHLhlA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+
+		// ADD A, [B C D E H L (HL) A]
+		public AsmInstr Add ( Atype a, BCDEHLhlA rhs ) => Add ( InstrType.Add, a.Type, rhs.Type );
+
+		// ADD A, d8
+		public AsmInstr Add( Atype a, byte d8 ) => Add( InstrType.Add, a.Type, Asm.D8(d8) );
+
+		// TODO:
+		// ADD HL, BC DE HL SP
+		// ADD SP, r8
 
 		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
 		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
@@ -142,7 +170,7 @@ namespace rzr
 		private Storage? m_curBank = null; // current bank
 
 		public ushort PC { get; protected set; } = 0;
-		public bool ThrowException { get; set; } = false;
+		public bool ThrowException { get; set; } = true;
 
 		// Header access
 		public bool Japan { get; set; }
@@ -215,7 +243,7 @@ namespace rzr
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
 				ushort end = writer.Write( PC, m_curBank, ThrowException );
-				if( end > bound  && ThrowException )
+				if( end > bound && ThrowException )
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
 				}
