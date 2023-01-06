@@ -28,6 +28,7 @@
 				case OperandType.d8: return $"${d8:X2}";
 				case OperandType.r8: return $"${r8:X2}";
 				case OperandType.d16: return $"${d16:X4}";
+				case OperandType.a16: return $"(${d16:X4})";
 				case OperandType.io8: return $"($FF00+{d8:X2})";
 				case OperandType.ioC: return $"($FF00+C)";
 				case OperandType.A:

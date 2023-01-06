@@ -24,7 +24,8 @@
 
 		d8, // data / unsigned
 		r8, // relative addr / signed
-		d16, // unsigned / addr
+		d16, // unsigned
+		a16, // unsgined addr (a16)
 		io8, // 0xFF00 + d8
 		ioC, // 0xFF00 + C
 
@@ -173,6 +174,7 @@
 
 		public static bool IsD8( this OperandType type ) => type == OperandType.d8;
 		public static bool IsD16( this OperandType type ) => type == OperandType.d16;
+		public static bool IsA16( this OperandType type ) => type == OperandType.a16;
 		public static bool IsR8( this OperandType type ) => type == OperandType.r8;
 		public static bool IsIo8( this OperandType type ) => type == OperandType.io8;
 

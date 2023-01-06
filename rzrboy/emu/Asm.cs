@@ -55,10 +55,12 @@
 		public static AsmOperand R8( byte val ) => new AsmOperand( OperandType.r8, val );
 		public static AsmOperand D16( byte lsb, byte msb ) => new AsmOperand( OperandType.d16, msb.Combine( lsb ) );
 		public static AsmOperand D16( ushort val ) => new AsmOperand( OperandType.d16, val );
+		public static AsmOperand A16( ushort adr ) => new AsmOperand( OperandType.a16, adr );
+		public static AsmOperand A16( byte lsb, byte msb ) => new AsmOperand( OperandType.a16, msb.Combine( lsb ) );
 		public static AsmOperand Io8( byte val ) => new AsmOperand( OperandType.io8, val );
 		public static AsmOperand RstAdr( byte val ) => new AsmOperand( OperandType.RstAddr, val );
 		public static AsmOperand BitIdx( byte idx ) => new AsmOperand( OperandType.BitIdx, idx );
-		public static AsmOperand SPr8(sbyte val ) => new AsmOperand( OperandType.SPr8, val );
+		public static AsmOperand SPr8( sbyte val ) => new AsmOperand( OperandType.SPr8, val );
 
 		// Instructions
 		public static AsmInstr Db( params AsmOperand[] vals ) => new AsmInstr( InstrType.Db, vals ); // not actual OpCode, just data
@@ -167,7 +169,7 @@
 				// 0x37
 				(7, 3 ) => Scf(),
 				// 0x08 LD (a16), SP
-				(8, 0 ) => Ld( D16( mem[pc++], mem[pc++] ), SP ),
+				(8, 0 ) => Ld( A16( mem[pc++], mem[pc++] ), SP ),
 				// 0x18 JR r8
 				(8, 1 ) => Jr( R8( mem[pc++] ) ),
 				// 0x28 JR Z, r8
@@ -227,21 +229,21 @@
 				// 0xC1->0xF1 POP [BC DE HL]
 				(1, _ ) when y >= 0xC && y <= 0xF => Pop( BcDeHlAf[y - 0xC] ),
 				// JP NZ, a16
-				(2, 0xC ) => Jp( condNZ, D16( mem[pc++], mem[pc++] ) ),
+				(2, 0xC ) => Jp( condNZ, A16( mem[pc++], mem[pc++] ) ),
 				// JP NC, a16
-				(2, 0xD ) => Jp( condNC, D16( mem[pc++], mem[pc++] ) ),
+				(2, 0xD ) => Jp( condNC, A16( mem[pc++], mem[pc++] ) ),
 				// 0xE2 LD (0xFF00+C), A
 				(2, 0xE ) => Ld( ioC, A ),
 				// 0xF2 LD A, (0xFF00+C)
 				(2, 0xF ) => Ld( A, ioC ),
 				// 0xC3 JP a16
-				(3, 0xC ) => Jp( D16( mem[pc++], mem[pc++] ) ),
+				(3, 0xC ) => Jp( A16( mem[pc++], mem[pc++] ) ),
 				// 0xF3 DI
 				(3, 0xF ) => Di(),
 				// 0xC4 CALL NZ, a16
-				(4, 0xC ) => Call( condNZ, D16( mem[pc++], mem[pc++] ) ),
+				(4, 0xC ) => Call( condNZ, A16( mem[pc++], mem[pc++] ) ),
 				// 0xD4 CALL NC, a16
-				(4, 0xD ) => Call( condNC, D16( mem[pc++], mem[pc++] ) ),
+				(4, 0xD ) => Call( condNC, A16( mem[pc++], mem[pc++] ) ),
 				// 0xC5->0xF5 PUSH [BC DE HL AF]
 				(5, _ ) when y >= 0xC && y <= 0xF => Push( BcDeHlAf[y - 0xC] ),
 				// 0xC6 ADD A, db8
@@ -267,7 +269,7 @@
 				// 0xE8 ADD SP, r8
 				(8, 0xE ) => Add( SP, R8( mem[pc++] ) ),
 				// 0xF8 LD HL, SP + r8
-				(8, 0xF ) => Ld( HL, new AsmOperand( OperandType.SPr8, mem[pc++] ) ),
+				(8, 0xF ) => Ld( HL, SPr8( (sbyte)mem[pc++] ) ),
 				// 0xC9 RET
 				(9, 0xC ) => Ret(),
 				// 0xD9 RETI
@@ -277,23 +279,23 @@
 				// 0xF9 LD SP, HL
 				(9, 0xF ) => Ld( SP, HL ),
 				// 0xCA JP Z, A16
-				(0xA, 0xC ) => Jp( condZ, D16( mem[pc++], mem[pc++] ) ),
+				(0xA, 0xC ) => Jp( condZ, A16( mem[pc++], mem[pc++] ) ),
 				// 0xCA JP C, A16
-				(0xA, 0xD ) => Jp( condC, D16( mem[pc++], mem[pc++] ) ),
+				(0xA, 0xD ) => Jp( condC, A16( mem[pc++], mem[pc++] ) ),
 				// 0xEA LD (a16), A
-				(0xA, 0xE ) => Ld( D16( mem[pc++], mem[pc++] ), A ),
+				(0xA, 0xE ) => Ld( A16( mem[pc++], mem[pc++] ), A ),
 				// 0xEA LD A, (a16)
-				(0xA, 0xF ) => Ld( A, D16( mem[pc++], mem[pc++] ) ),
+				(0xA, 0xF ) => Ld( A, A16( mem[pc++], mem[pc++] ) ),
 				// 0xCB PREFIX / EXT
 				(0xB, 0xC ) => Ext( ref pc, mem ),
 				// 0xFB EI
 				(0xB, 0xF ) => Ei(),
 				// 0xCC CALL Z, a16
-				(0xC, 0xC ) => Call( condZ, D16( mem[pc++], mem[pc++] ) ),
+				(0xC, 0xC ) => Call( condZ, A16( mem[pc++], mem[pc++] ) ),
 				// 0xDC CALL C, a16
-				(0xC, 0xD ) => Call( condC, D16( mem[pc++], mem[pc++] ) ),
+				(0xC, 0xD ) => Call( condC, A16( mem[pc++], mem[pc++] ) ),
 				// 0xCD CALL a16
-				(0xD, 0xC ) => Call( D16( mem[pc++], mem[pc++] ) ),
+				(0xD, 0xC ) => Call( A16( mem[pc++], mem[pc++] ) ),
 				// 0xCE ADC A, db8
 				(0xE, 0xC ) => Adc( D8( mem[pc++] ) ),
 				// 0xDE SBC A, db8

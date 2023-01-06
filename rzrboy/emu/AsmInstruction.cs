@@ -184,7 +184,7 @@
 						case OperandType.L when Rhs.IsD8(): Set( 0x2E ); Op2D8(); break;
 						case OperandType.A when Rhs.IsD8(): Set( 0x3E ); Op2D8(); break;
 						// LD (a16) sp
-						case OperandType.d16 when Rhs == OperandType.SP: Set( 0x08 ); Op1D16(); break;
+						case OperandType.a16 when Rhs == OperandType.SP: Set( 0x08 ); Op1D16(); break;
 						// LD 0xFF00+r8, A
 						case OperandType.io8 when Rhs == OperandType.A: Set( 0xE0 ); Op1D8(); break;
 						// LD A, 0xFF00+r8
@@ -198,9 +198,9 @@
 						// LD SP, HL
 						case OperandType.SP when Rhs == OperandType.HL: Set( 0xF9 ); break;
 						// LD (a16), A
-						case OperandType.d16 when Rhs == OperandType.A: Set( 0xEA ); Op1D16(); break;
+						case OperandType.a16 when Rhs == OperandType.A: Set( 0xEA ); Op1D16(); break;
 						// LD A, (a16)
-						case OperandType.A when Rhs.IsD16(): Set( 0xFA ); Op2D16(); break;
+						case OperandType.A when Rhs.IsA16(): Set( 0xFA ); Op2D16(); break;
 						default:
 							Throw();
 							break;
@@ -240,26 +240,26 @@
 				case InstrType.Add when Count == 2 && Lhs.IsHl() && Rhs.IsBCDHhl(): Set( Rhs.YOffset( 0x09 ) ); break;
 				// ADD SP, r8
 				case InstrType.Add when Count == 2 && Lhs.IsSP() && Rhs.IsR8(): Set(0xE8); Op2D8(); break;
-				case InstrType.Jp when Count == 1 && Lhs.IsD16(): Set( 0xC3 ); Op1D16(); break;
+				case InstrType.Jp when Count == 1 && Lhs.IsA16(): Set( 0xC3 ); Op1D16(); break;
 				case InstrType.Jp when Count == 1 && Lhs.IsHl(): Set( 0xE9 ); break;
-				case InstrType.Jp when Count == 2:
+				case InstrType.Jp when Count == 2 && Rhs.IsA16():
 					switch( Lhs )
 					{
-						case OperandType.condNZ when Rhs.IsD16(): Set( 0xC2 ); Op2D16(); break;
-						case OperandType.condNC when Rhs.IsD16(): Set( 0xD2 ); Op2D16(); break;
-						case OperandType.condZ when Rhs.IsD16(): Set( 0x2A ); Op2D8(); break;
-						case OperandType.condC when Rhs.IsD16(): Set( 0x3A ); Op2D8(); break;
+						case OperandType.condNZ: Set( 0xC2 ); Op2D16(); break;
+						case OperandType.condNC: Set( 0xD2 ); Op2D16(); break;
+						case OperandType.condZ: Set( 0x2A ); Op2D8(); break;
+						case OperandType.condC: Set( 0x3A ); Op2D8(); break;
 						default: Throw(); break;
 					}
 					break;
 				case InstrType.Jr when Count == 1 && Lhs.IsR8(): Set( 0x18 ); Op1D8(); break;
-				case InstrType.Jr when Count == 2:
+				case InstrType.Jr when Count == 2 && Rhs.IsR8():
 					switch( Lhs )
 					{
-						case OperandType.condNZ when Rhs.IsR8(): Set( 0x20 ); Op2D8(); break;
-						case OperandType.condNC when Rhs.IsR8(): Set( 0x30 ); Op2D8(); break;
-						case OperandType.condZ when Rhs.IsR8(): Set( 0x28 ); Op2D8(); break;
-						case OperandType.condC when Rhs.IsR8(): Set( 0x38 ); Op2D8(); break;
+						case OperandType.condNZ: Set( 0x20 ); Op2D8(); break;
+						case OperandType.condNC: Set( 0x30 ); Op2D8(); break;
+						case OperandType.condZ: Set( 0x28 ); Op2D8(); break;
+						case OperandType.condC: Set( 0x38 ); Op2D8(); break;
 						default: Throw(); break;
 					}
 					break;
@@ -275,8 +275,8 @@
 						}
 					break;
 				case InstrType.Reti when Count == 0: Set( 0xD9 ); break;
-				case InstrType.Call when Count == 1: Set( 0xCD ); Op1D16(); break;
-				case InstrType.Call when Count == 2:
+				case InstrType.Call when Count == 1 && Rhs.IsA16(): Set( 0xCD ); Op1D16(); break;
+				case InstrType.Call when Count == 2 && Rhs.IsA16():
 					switch( Lhs )
 					{
 						case OperandType.condNZ: Set( 0xC4 ); Op2D16(); break;

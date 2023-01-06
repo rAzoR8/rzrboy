@@ -18,14 +18,18 @@ public class MyGame : rzr.MbcWriter
 		Rst0.Xor( Asm.A );
 		Rst10.Xor( Asm.B );
 
-		Joypad.Ld( Asm.H, Asm.A );
+		Joypad.Ld( H, A );
 	}
 
 	protected override void WriteGameCode() 
 	{
-		Ld( Asm.A, Asm.D8( 42 ) );
+		Ld( A, 0x42 );
 		//Ld( A, adrBC ); // LD A, (BC)
 		Add( A, B );
 		Add( A, 6 );
+
+		Ld( 0x6000, 0 );
+		Ld( 0x2000, (byte)( Banks.Count & 0b11111 ) );
+		Ld( 0x4000, (byte)( ( Banks.Count >> 5 ) & 0b11 ) );
 	}
 }

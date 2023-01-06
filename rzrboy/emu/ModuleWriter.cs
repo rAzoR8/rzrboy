@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Reflection.Emit;
 
 namespace rzr
 {
@@ -40,9 +41,15 @@ namespace rzr
 
 		public interface IOpType { OperandType Type { get; } }
 
-		public interface BDHhl : IOpType { } // LD lhs
-		public interface CELA : IOpType { }// LD lhs
+		// B D H (HL)
+		public interface BDHhl : IOpType { }
+		// C E L A
+		public interface CELA : IOpType { }
+		// B C D E H L (HL) A
 		public interface BCDEHLhlA : BDHhl, CELA { }
+
+		public interface BcDeHlSp : IOpType { } // LD lhs
+		public interface AdrBcDeHliHld : IOpType { } // LD lhs
 
 		public struct Atype : BCDEHLhlA { public OperandType Type => OperandType.A; }
 		public struct Btype : BCDEHLhlA { public OperandType Type => OperandType.B; }
@@ -53,25 +60,40 @@ namespace rzr
 		public struct Ltype : BCDEHLhlA { public OperandType Type => OperandType.L; }
 		public struct AdrHLtype : BCDEHLhlA { public OperandType Type => OperandType.AdrHL; }
 
-		protected static Atype A;
-		protected static Btype B;
-		protected static Ctype C;
-		protected static Dtype D;
-		protected static Etype E;
-		protected static Htype H;
-		protected static Ltype L;
+		public struct AdrBCtype : AdrBcDeHliHld { public OperandType Type => OperandType.BC; }
+		public struct AdrDEtype : AdrBcDeHliHld { public OperandType Type => OperandType.DE; }
+		public struct AdrHLitype : AdrBcDeHliHld { public OperandType Type => OperandType.HL; }
+		public struct AdrHLdtype : AdrBcDeHliHld { public OperandType Type => OperandType.SP; }
+		// IoC
+		public struct AdrCtype : IOpType { public OperandType Type => OperandType.ioC; }
 
-		protected const Reg16 BC = Reg16.BC;
-		protected const Reg16 DE = Reg16.DE;
-		protected const Reg16 HL = Reg16.HL;
-		protected const Reg16 SP = Reg16.SP;
-		protected const Reg16 AF = Reg16.AF; // Push/Pop only
+		public struct BCtype : BcDeHlSp { public OperandType Type => OperandType.BC; public AdrBCtype Adr => adrBC;  }
+		public struct DEtype : BcDeHlSp { public OperandType Type => OperandType.DE; public AdrDEtype Adr => adrDE; }
+		public struct HLtype : BcDeHlSp { public OperandType Type => OperandType.HL; public AdrHLtype Adr => adrHL; }
+		public struct SPtype : BcDeHlSp { public OperandType Type => OperandType.SP; }
+		
+		public struct AFtype : IOpType { public OperandType Type => OperandType.AF; }
 
-		protected const Adr adrBC = Adr.BC;
-		protected const Adr adrDe = Adr.DE;
-		protected const Adr adrHL = Adr.HL;
-		protected const Adr adrHLi = Adr.HLi;
-		protected const Adr adrHLd = Adr.HLd;
+		protected static readonly Atype A;
+		protected static readonly Btype B;
+		protected static readonly Ctype C;
+		protected static readonly Dtype D;
+		protected static readonly Etype E;
+		protected static readonly Htype H;
+		protected static readonly Ltype L;
+
+		protected static readonly BCtype BC;
+		protected static readonly DEtype DE;
+		protected static readonly HLtype HL;
+		protected static readonly SPtype SP;
+		protected static readonly AFtype AF; // Push/Pop only
+
+		protected static readonly AdrBCtype adrBC;
+		protected static readonly AdrDEtype adrDE;
+		protected static readonly AdrHLtype adrHL;
+		protected static readonly AdrHLitype adrHLi;
+		protected static readonly AdrHLdtype adrHLd;
+		protected static readonly AdrCtype adrC; // IoC
 
 		protected const Cond condZ = Cond.Z;
 		protected const Cond condNZ = Cond.NZ;
@@ -81,26 +103,47 @@ namespace rzr
 		public AsmInstr Nop() => Add( InstrType.Nop );
 		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
 		public AsmInstr Halt() => Add( InstrType.Halt );
-		public AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Ld, lhs, rhs );
-		// LD [BC DE HL SP], d16
-		public AsmInstr Ld( Reg16 lhs, ushort rhs ) => Add( InstrType.Ld, lhs.ToOp(), new AsmOperand(rhs) );
-		// LD [(BC) (DE) (HL+) (HL-)], A
-		public AsmInstr Ld( Adr lhs, Reg8 A ) => Add( InstrType.Ld, (OperandType)lhs, OperandType.A );
-		// LD A, [(BC) (DE) (HL+) (HL-)]
-		public AsmInstr Ld( Reg8 A, Adr rhs ) => Add( InstrType.Ld, OperandType.A, (OperandType)rhs );
 
+		// LD [BC DE HL SP], d16
+		public AsmInstr Ld( BcDeHlSp lhs, ushort rhs ) => Add( InstrType.Ld, lhs.Type, Asm.D16( rhs ) );
+		// LD [(BC) (DE) (HL+) (HL-)], A
+		public AsmInstr Ld( AdrBcDeHliHld lhs, Atype A ) => Add( InstrType.Ld, lhs.Type, A.Type );
+		// LD [B C D E H L (HL) A], d8
+		public AsmInstr Ld( BCDEHLhlA lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8(d8) );
+		// LD (a16), SP
+		public AsmInstr Ld( ushort adr, SPtype SP ) => Add( InstrType.Ld, Asm.A16( adr ), SP.Type );
+		// LD A, [(BC) (DE) (HL+) (HL-)]
+		public AsmInstr Ld( Atype A, AdrBcDeHliHld rhs ) => Add( InstrType.Ld, A.Type, rhs.Type );
 		// LD [B D H L (HL)], [B C D E H L (HL) A]
 		public AsmInstr Ld( BDHhl lhs, BCDEHLhlA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		// LDH (a8), A
+		public AsmInstr Ldh( byte ioAdr, Atype A ) => Add( InstrType.Ld, Asm.Io8( ioAdr ), A.Type );
+		// LDH A, (a8)
+		public AsmInstr Ldh( Atype A, byte ioAdr ) => Add( InstrType.Ld, A.Type, Asm.Io8( ioAdr ) );
+		// LD (C), A (LDH)
+		public AsmInstr Ld( AdrCtype adrC, Atype A ) => Add( InstrType.Ld, adrC.Type, A.Type );
+		// LD A, (C) (LDH)
+		public AsmInstr Ld( Atype A, AdrCtype adrC ) => Add( InstrType.Ld, A.Type, adrC.Type );
+		// LD (a16), A
+		public AsmInstr Ld( ushort adr, Atype A ) => Add( InstrType.Ld, Asm.A16(adr), A.Type );
+		// LD A, (a16)
+		public AsmInstr Ld( Atype A, ushort adr ) => Add( InstrType.Ld, A.Type, Asm.A16( adr ) );
+
+		// Helper for LD (a16), d8
+		public void Ld( ushort adr, byte val ) 
+		{
+			Ld( A, val );
+			Ld( adr, A );
+		}
 
 		// ADD A, [B C D E H L (HL) A]
-		public AsmInstr Add ( Atype a, BCDEHLhlA rhs ) => Add ( InstrType.Add, a.Type, rhs.Type );
-
+		public AsmInstr Add ( Atype A, BCDEHLhlA rhs ) => Add ( InstrType.Add, A.Type, rhs.Type );
 		// ADD A, d8
-		public AsmInstr Add( Atype a, byte d8 ) => Add( InstrType.Add, a.Type, Asm.D8(d8) );
-
-		// TODO:
-		// ADD HL, BC DE HL SP
+		public AsmInstr Add( Atype A, byte d8 ) => Add( InstrType.Add, A.Type, Asm.D8(d8) );
+		// ADD HL, [BC DE HL SP]
+		public AsmInstr Add( HLtype HL, BcDeHlSp rhs ) => Add( InstrType.Add, HL.Type, rhs.Type );
 		// ADD SP, r8
+		public AsmInstr Add( SPtype SP, sbyte rhs ) => Add( InstrType.Add, SP.Type, Asm.R8( rhs ) );
 
 		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
 		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
@@ -267,7 +310,7 @@ namespace rzr
 
 			ushort EP = (ushort)HeaderOffsets.EntryPointStart;
 			// jump to EntryPoint
-			Asm.Jp( Asm.D16( entryPoint ) ).Assemble( ref EP, m_curBank, throwException: ThrowException );
+			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, m_curBank, throwException: ThrowException );
 
 			HeaderView header = new( m_curBank.Data );
 
@@ -319,16 +362,16 @@ namespace rzr
 
 			if( m_banks.Count <= 0x1f )
 			{
-				sw.Ld( Asm.D16( 0x2000 ), Asm.D8( (byte)m_banks.Count ) );
+				sw.Ld( 0x2000, (byte)m_banks.Count );
 			}
 			else
 			{
 				//ld $6000, $00; Set ROM mode
 				//ld $2000, $06; Set lower 5 bits, could also use $46
 				//ld $4000, $02; Set upper 2 bits
-				sw.Ld( Asm.D16( 0x6000 ), Asm.D8( 0 ) );
-				sw.Ld( Asm.D16( 0x2000 ), Asm.D8( (byte)( m_banks.Count & 0b11111 ) ) );
-				sw.Ld( Asm.D16( 0x4000 ), Asm.D8( (byte)( ( m_banks.Count >> 5 ) & 0b11 ) ) );
+				sw.Ld( 0x6000, 0 );
+				sw.Ld( 0x2000, (byte)( m_banks.Count & 0b11111 ) );
+				sw.Ld( 0x4000, (byte)( ( m_banks.Count >> 5 ) & 0b11 ) );
 			}
 
 			return (m_banks.Last(), sw);
