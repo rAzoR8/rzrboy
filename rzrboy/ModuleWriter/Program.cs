@@ -31,5 +31,8 @@ public class MyGame : rzr.MbcWriter
 		Ld( 0x6000, 0 );
 		Ld( 0x2000, (byte)( Banks.Count & 0b11111 ) );
 		Ld( 0x4000, (byte)( ( Banks.Count >> 5 ) & 0b11 ) );
+
+		Inc( BC );
+		Dec( SP );
 	}
 }

@@ -2,16 +2,6 @@
 
 namespace rzr
 {
-	public static class AddressExt
-	{
-		public static Address Adr( this ushort adr ) => new( adr );
-	}
-
-	public record struct Address( ushort adr ) 
-	{
-		public static implicit operator ushort( Address adr ) => adr.adr;
-	}
-
 	public class AsmRecorder : IEnumerable<AsmInstr>
 	{
 		protected List<AsmInstr> m_instructions = new ();
@@ -142,11 +132,33 @@ namespace rzr
 		public AsmInstr Add( HLtype HL, BcDeHlSp rhs ) => Add( InstrType.Add, HL.Type, rhs.Type );
 		// ADD SP, r8
 		public AsmInstr Add( SPtype SP, sbyte rhs ) => Add( InstrType.Add, SP.Type, Asm.R8( rhs ) );
+		
+		// JR r8
+		public AsmInstr Jr( sbyte r8 ) => Add( InstrType.Jr, Asm.R8( r8 ) );
+		// JR Z, r8
+		public AsmInstr Jr( Condtype cond, sbyte r8 ) => Add( InstrType.Jr, cond.Type, Asm.R8( r8 ) );
 
-		public AsmInstr Jr( params AsmOperand[] ops ) => Add( InstrType.Jr, ops );
-		public AsmInstr Jp( params AsmOperand[] ops ) => Add( InstrType.Jp, ops );
-		public AsmInstr Inc( AsmOperand lhs ) => Add( InstrType.Inc, lhs );
-		public AsmInstr Dec( AsmOperand lhs ) => Add( InstrType.Dec, lhs );
+		// JP a16
+		public AsmInstr Jp( ushort adr ) => Add( InstrType.Jp, Asm.A16( adr ) );
+		// JP Z, a16
+		public AsmInstr Jp( Condtype cond, ushort adr ) => Add( InstrType.Jp, cond.Type, Asm.A16( adr ) );
+		// JP HL
+		public AsmInstr Jp( HLtype HL ) => Add( InstrType.Jp, HL.Type );
+
+		// INC [BC DE HL SP]
+		public AsmInstr Inc( BcDeHlSp lhs ) => Add( InstrType.Inc, lhs.Type );
+		// INC [B D H (HL)]
+		public AsmInstr Inc( BDHhl lhs ) => Add( InstrType.Inc, lhs.Type );
+		// INC [C E L A]
+		public AsmInstr Inc( CELA lhs ) => Add( InstrType.Inc, lhs.Type );
+
+		// INC [BC DE HL SP]
+		public AsmInstr Dec( BcDeHlSp lhs ) => Add( InstrType.Dec, lhs.Type );
+		// INC [B D H (HL)]
+		public AsmInstr Dec( BDHhl lhs ) => Add( InstrType.Dec, lhs.Type );
+		// INC [C E L A]
+		public AsmInstr Dec( CELA lhs ) => Add( InstrType.Dec, lhs.Type );
+
 		public AsmInstr Add( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Add, lhs, rhs );
 		public AsmInstr Adc( AsmOperand rhs ) => Add( InstrType.Adc, rhs );
 		public AsmInstr Sub( AsmOperand rhs ) => Add( InstrType.Sub, rhs );

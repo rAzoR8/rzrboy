@@ -65,7 +65,7 @@
 
 	public class InvalidOperand : rzr.AsmException
 	{
-		public InvalidOperand( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at {pc:X4}" )
+		public InvalidOperand( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at 0x{pc:X4}" )
 		{
 		}
 	}
@@ -207,13 +207,13 @@
 					}
 					break;
 				case InstrType.Inc when Count == 1:
-					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x03 ) );
+					if( Lhs.IsBcDeHlSp() ) Set( Lhs.YOffset( 0x03 ) );
 					else if( Lhs.IsBCDHhl() ) Set( Lhs.YOffset( 0x04 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0C ) );
 					else Throw();
 					break;
 				case InstrType.Dec when Count == 1:
-					if( Lhs.IsReg16Adr() ) Set( Lhs.YOffset( 0x0B ) );
+					if( Lhs.IsBcDeHlSp() ) Set( Lhs.YOffset( 0x0B ) );
 					else if( Lhs.IsBCDHhl() ) Set( Lhs.YOffset( 0x05 ) );
 					else if( Lhs.IsCELA() ) Set( Lhs.YOffset( 0x0D ) );
 					else Throw();

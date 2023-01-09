@@ -1,5 +1,15 @@
 ﻿namespace rzr
 {
+	public static class AddressExt
+	{
+		public static Address Adr( this ushort adr ) => new( adr );
+	}
+
+	public record struct Address( ushort adr )
+	{
+		public static implicit operator ushort( Address adr ) => adr.adr;
+	}
+
 	public class AsmOperand : IEquatable<AsmOperand>
 	{
 		public AsmOperand( OperandType type ) { Type = type; }
@@ -10,6 +20,7 @@
 		public AsmOperand( byte d8 ) { Type = OperandType.d8; d16 = d8; }
 		public AsmOperand( sbyte r8 ) { Type = OperandType.r8; d16 = (byte)r8; }
 		public AsmOperand( ushort d16 ) { Type = OperandType.d16; this.d16 = d16; }
+		public AsmOperand( Address adr ) { Type = OperandType.a16; this.d16 = adr; }
 
 		public static implicit operator AsmOperand( OperandType type ) { return new AsmOperand( type ); }
 		public static implicit operator OperandType( AsmOperand op ) { return op.Type; }
