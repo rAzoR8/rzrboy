@@ -1,8 +1,17 @@
 ﻿using System.Collections;
-using System.Reflection.Emit;
 
 namespace rzr
 {
+	public static class AddressExt
+	{
+		public static Address Adr( this ushort adr ) => new( adr );
+	}
+
+	public record struct Address( ushort adr ) 
+	{
+		public static implicit operator ushort( Address adr ) => adr.adr;
+	}
+
 	public class AsmRecorder : IEnumerable<AsmInstr>
 	{
 		protected List<AsmInstr> m_instructions = new ();
@@ -20,23 +29,6 @@ namespace rzr
 		protected AsmInstr Add( InstrType instr, params AsmOperand[] operands )
 		{
 			return Add( new AsmInstr( instr, operands ) );
-		}
-
-		public enum Adr : byte
-		{
-			BC = OperandType.AdrBC, // (BC)
-			DE = OperandType.AdrDE, // (DE)
-			HL = OperandType.AdrHL, // (HL)
-			HLi = OperandType.AdrHLi, // (HL+)
-			HLd = OperandType.AdrHLd, // (HL-)
-		}
-
-		public enum Cond : byte
-		{
-			Z = OperandType.condZ,
-			NZ = OperandType.condNZ,
-			C = OperandType.condC,
-			NC = OperandType.condNC,
 		}
 
 		public interface IOpType { OperandType Type { get; } }
@@ -74,6 +66,12 @@ namespace rzr
 		
 		public struct AFtype : IOpType { public OperandType Type => OperandType.AF; }
 
+		public interface Condtype : IOpType { }
+		public struct CondZtype : Condtype { public OperandType Type => OperandType.condZ; }
+		public struct CondNZtype : Condtype { public OperandType Type => OperandType.condNZ; }
+		public struct CondCtype : Condtype { public OperandType Type => OperandType.condC; }
+		public struct CondNCtype : Condtype { public OperandType Type => OperandType.condNC; }
+
 		protected static readonly Atype A;
 		protected static readonly Btype B;
 		protected static readonly Ctype C;
@@ -95,10 +93,10 @@ namespace rzr
 		protected static readonly AdrHLdtype adrHLd;
 		protected static readonly AdrCtype adrC; // IoC
 
-		protected const Cond condZ = Cond.Z;
-		protected const Cond condNZ = Cond.NZ;
-		protected const Cond condC = Cond.C;
-		protected const Cond condNC = Cond.NC;
+		protected static readonly CondZtype condZ;
+		protected static readonly CondNZtype condNZ;
+		protected static readonly CondCtype condC;
+		protected static readonly CondNCtype condNC;
 
 		public AsmInstr Nop() => Add( InstrType.Nop );
 		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
@@ -111,7 +109,7 @@ namespace rzr
 		// LD [B C D E H L (HL) A], d8
 		public AsmInstr Ld( BCDEHLhlA lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8(d8) );
 		// LD (a16), SP
-		public AsmInstr Ld( ushort adr, SPtype SP ) => Add( InstrType.Ld, Asm.A16( adr ), SP.Type );
+		public AsmInstr Ld( Address adr, SPtype SP ) => Add( InstrType.Ld, Asm.A16( adr ), SP.Type );
 		// LD A, [(BC) (DE) (HL+) (HL-)]
 		public AsmInstr Ld( Atype A, AdrBcDeHliHld rhs ) => Add( InstrType.Ld, A.Type, rhs.Type );
 		// LD [B D H L (HL)], [B C D E H L (HL) A]
@@ -125,15 +123,15 @@ namespace rzr
 		// LD A, (C) (LDH)
 		public AsmInstr Ld( Atype A, AdrCtype adrC ) => Add( InstrType.Ld, A.Type, adrC.Type );
 		// LD (a16), A
-		public AsmInstr Ld( ushort adr, Atype A ) => Add( InstrType.Ld, Asm.A16(adr), A.Type );
+		public AsmInstr Ld( Address adr, Atype A ) => Add( InstrType.Ld, Asm.A16(adr), A.Type );
 		// LD A, (a16)
-		public AsmInstr Ld( Atype A, ushort adr ) => Add( InstrType.Ld, A.Type, Asm.A16( adr ) );
+		public AsmInstr Ld( Atype A, Address adr ) => Add( InstrType.Ld, A.Type, Asm.A16( adr ) );
 
 		// Helper for LD (a16), d8
 		public void Ld( ushort adr, byte val ) 
 		{
 			Ld( A, val );
-			Ld( adr, A );
+			Ld( adr.Adr(), A );
 		}
 
 		// ADD A, [B C D E H L (HL) A]
