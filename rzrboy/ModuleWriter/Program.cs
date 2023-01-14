@@ -24,15 +24,27 @@ public class MyGame : rzr.MbcWriter
 	protected override void WriteGameCode() 
 	{
 		Ld( A, 0x42 );
-		//Ld( A, adrBC ); // LD A, (BC)
-		Add( A, B );
-		Add( A, 6 );
+		Ld( A, adrBC ); // LD A, (BC)
+		Ld( A, DE.Adr ); // LD A, (DE)
 
+		Ld( 0x6000.Adr(), A );
 		Ld( 0x6000, 0 );
 		Ld( 0x2000, (byte)( Banks.Count & 0b11111 ) );
 		Ld( 0x4000, (byte)( ( Banks.Count >> 5 ) & 0b11 ) );
 
-		Inc( BC );
+		Inc( B );
 		Dec( SP );
+
+		Add( A, B );
+		Add( A, 6 );
+
+		Adc( D );
+		Adc( 3 );
+
+		Sub( L );
+		Sub( 155 );
+
+		Sbc( E );
+		Sbc( 255 );
 	}
 }

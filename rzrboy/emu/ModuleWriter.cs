@@ -27,26 +27,28 @@ namespace rzr
 		public interface BDHhl : IOpType { }
 		// C E L A
 		public interface CELA : IOpType { }
-		// B C D E H L (HL) A
-		public interface BCDEHLhlA : BDHhl, CELA { }
+		// BC DE HL SP
+		public interface BcDeHlSp : IOpType { }
+		// (BC) (DE) (HL+) (HL-)
+		public interface AdrBcDeHliHld : IOpType { }
 
-		public interface BcDeHlSp : IOpType { } // LD lhs
-		public interface AdrBcDeHliHld : IOpType { } // LD lhs
+		public struct Atype : CELA { public OperandType Type => OperandType.A; }
+		public struct Btype : BDHhl { public OperandType Type => OperandType.B; }
+		public struct Ctype : CELA { public OperandType Type => OperandType.C; }
+		public struct Dtype : BDHhl { public OperandType Type => OperandType.D; }
+		public struct Etype : CELA { public OperandType Type => OperandType.E; }
+		public struct Htype : BDHhl { public OperandType Type => OperandType.H; }
+		public struct Ltype : CELA { public OperandType Type => OperandType.L; }
 
-		public struct Atype : BCDEHLhlA { public OperandType Type => OperandType.A; }
-		public struct Btype : BCDEHLhlA { public OperandType Type => OperandType.B; }
-		public struct Ctype : BCDEHLhlA { public OperandType Type => OperandType.C; }
-		public struct Dtype : BCDEHLhlA { public OperandType Type => OperandType.D; }
-		public struct Etype : BCDEHLhlA { public OperandType Type => OperandType.E; }
-		public struct Htype : BCDEHLhlA { public OperandType Type => OperandType.H; }
-		public struct Ltype : BCDEHLhlA { public OperandType Type => OperandType.L; }
-		public struct AdrHLtype : BCDEHLhlA { public OperandType Type => OperandType.AdrHL; }
+		// (HL)
+		public struct AdrHLtype : BDHhl { public OperandType Type => OperandType.AdrHL; }
 
-		public struct AdrBCtype : AdrBcDeHliHld { public OperandType Type => OperandType.BC; }
-		public struct AdrDEtype : AdrBcDeHliHld { public OperandType Type => OperandType.DE; }
-		public struct AdrHLitype : AdrBcDeHliHld { public OperandType Type => OperandType.HL; }
-		public struct AdrHLdtype : AdrBcDeHliHld { public OperandType Type => OperandType.SP; }
-		// IoC
+		public struct AdrBCtype : AdrBcDeHliHld { public OperandType Type => OperandType.AdrBC; }
+		public struct AdrDEtype : AdrBcDeHliHld { public OperandType Type => OperandType.AdrDE; }
+		public struct AdrHLitype : AdrBcDeHliHld { public OperandType Type => OperandType.AdrHLi; }
+		public struct AdrHLdtype : AdrBcDeHliHld { public OperandType Type => OperandType.AdrHLd; }
+
+		// IoC 0xFF00+C
 		public struct AdrCtype : IOpType { public OperandType Type => OperandType.ioC; }
 
 		public struct BCtype : BcDeHlSp { public OperandType Type => OperandType.BC; public AdrBCtype Adr => adrBC;  }
@@ -96,14 +98,22 @@ namespace rzr
 		public AsmInstr Ld( BcDeHlSp lhs, ushort rhs ) => Add( InstrType.Ld, lhs.Type, Asm.D16( rhs ) );
 		// LD [(BC) (DE) (HL+) (HL-)], A
 		public AsmInstr Ld( AdrBcDeHliHld lhs, Atype A ) => Add( InstrType.Ld, lhs.Type, A.Type );
-		// LD [B C D E H L (HL) A], d8
-		public AsmInstr Ld( BCDEHLhlA lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8(d8) );
+		// LD [B D H (HL)], d8
+		public AsmInstr Ld( BDHhl lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8(d8) );
+		// LD [C E L A], d8
+		public AsmInstr Ld( CELA lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8( d8 ) );
 		// LD (a16), SP
 		public AsmInstr Ld( Address adr, SPtype SP ) => Add( InstrType.Ld, Asm.A16( adr ), SP.Type );
 		// LD A, [(BC) (DE) (HL+) (HL-)]
 		public AsmInstr Ld( Atype A, AdrBcDeHliHld rhs ) => Add( InstrType.Ld, A.Type, rhs.Type );
-		// LD [B D H L (HL)], [B C D E H L (HL) A]
-		public AsmInstr Ld( BDHhl lhs, BCDEHLhlA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		// LD [B D H (HL)], [B D H (HL)]
+		public AsmInstr Ld( BDHhl lhs, BDHhl rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		// LD [B D H (HL)], [C E L A]
+		public AsmInstr Ld( BDHhl lhs, CELA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		// LD [C E L A], [B D H (HL)]
+		public AsmInstr Ld( CELA lhs, BDHhl rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		// LD [C E L A], [C E L A]
+		public AsmInstr Ld( CELA lhs, CELA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
 		// LDH (a8), A
 		public AsmInstr Ldh( byte ioAdr, Atype A ) => Add( InstrType.Ld, Asm.Io8( ioAdr ), A.Type );
 		// LDH A, (a8)
@@ -124,27 +134,6 @@ namespace rzr
 			Ld( adr.Adr(), A );
 		}
 
-		// ADD A, [B C D E H L (HL) A]
-		public AsmInstr Add ( Atype A, BCDEHLhlA rhs ) => Add ( InstrType.Add, A.Type, rhs.Type );
-		// ADD A, d8
-		public AsmInstr Add( Atype A, byte d8 ) => Add( InstrType.Add, A.Type, Asm.D8(d8) );
-		// ADD HL, [BC DE HL SP]
-		public AsmInstr Add( HLtype HL, BcDeHlSp rhs ) => Add( InstrType.Add, HL.Type, rhs.Type );
-		// ADD SP, r8
-		public AsmInstr Add( SPtype SP, sbyte rhs ) => Add( InstrType.Add, SP.Type, Asm.R8( rhs ) );
-		
-		// JR r8
-		public AsmInstr Jr( sbyte r8 ) => Add( InstrType.Jr, Asm.R8( r8 ) );
-		// JR Z, r8
-		public AsmInstr Jr( Condtype cond, sbyte r8 ) => Add( InstrType.Jr, cond.Type, Asm.R8( r8 ) );
-
-		// JP a16
-		public AsmInstr Jp( ushort adr ) => Add( InstrType.Jp, Asm.A16( adr ) );
-		// JP Z, a16
-		public AsmInstr Jp( Condtype cond, ushort adr ) => Add( InstrType.Jp, cond.Type, Asm.A16( adr ) );
-		// JP HL
-		public AsmInstr Jp( HLtype HL ) => Add( InstrType.Jp, HL.Type );
-
 		// INC [BC DE HL SP]
 		public AsmInstr Inc( BcDeHlSp lhs ) => Add( InstrType.Inc, lhs.Type );
 		// INC [B D H (HL)]
@@ -159,10 +148,50 @@ namespace rzr
 		// INC [C E L A]
 		public AsmInstr Dec( CELA lhs ) => Add( InstrType.Dec, lhs.Type );
 
-		public AsmInstr Add( AsmOperand lhs, AsmOperand rhs ) => Add( InstrType.Add, lhs, rhs );
-		public AsmInstr Adc( AsmOperand rhs ) => Add( InstrType.Adc, rhs );
-		public AsmInstr Sub( AsmOperand rhs ) => Add( InstrType.Sub, rhs );
-		public AsmInstr Sbc( AsmOperand rhs ) => Add( InstrType.Sbc, rhs );
+		// ADD A, [B D H (HL)]
+		public AsmInstr Add ( Atype A, BDHhl rhs ) => Add ( InstrType.Add, A.Type, rhs.Type );
+		// ADD A, [C E L A]
+		public AsmInstr Add( Atype A, CELA rhs ) => Add( InstrType.Add, A.Type, rhs.Type );
+		// ADD A, d8
+		public AsmInstr Add( Atype A, byte d8 ) => Add( InstrType.Add, A.Type, Asm.D8(d8) );
+		// ADD HL, [BC DE HL SP]
+		public AsmInstr Add( HLtype HL, BcDeHlSp rhs ) => Add( InstrType.Add, HL.Type, rhs.Type );
+		// ADD SP, r8
+		public AsmInstr Add( SPtype SP, sbyte rhs ) => Add( InstrType.Add, SP.Type, Asm.R8( rhs ) );
+
+		// ADC A, [B D H (HL)]
+		public AsmInstr Adc( BDHhl rhs ) => Add( InstrType.Adc, rhs.Type );
+		// ADC A, [C E L A]
+		public AsmInstr Adc( CELA rhs ) => Add( InstrType.Adc, rhs.Type );
+		// ADC A, d8
+		public AsmInstr Adc( byte d8 ) => Add( InstrType.Adc, Asm.D8( d8 ) );
+
+		// SUB A, [B D H (HL)]
+		public AsmInstr Sub( BDHhl rhs ) => Add( InstrType.Sub, rhs.Type );
+		// SUB A, [C E L A]
+		public AsmInstr Sub( CELA rhs ) => Add( InstrType.Sub, rhs.Type );
+		// SUB A, d8
+		public AsmInstr Sub( byte d8 ) => Add( InstrType.Sub, Asm.D8( d8 ) );
+
+		// SBC A, [B D H (HL)]
+		public AsmInstr Sbc( BDHhl rhs ) => Add( InstrType.Sbc, rhs.Type );
+		// SBC A, [C E L A]
+		public AsmInstr Sbc( CELA rhs ) => Add( InstrType.Sbc, rhs.Type );
+		// SBC A, d8
+		public AsmInstr Sbc( byte d8 ) => Add( InstrType.Sbc, Asm.D8( d8 ) );
+
+		// JR r8
+		public AsmInstr Jr( sbyte r8 ) => Add( InstrType.Jr, Asm.R8( r8 ) );
+		// JR Z, r8
+		public AsmInstr Jr( Condtype cond, sbyte r8 ) => Add( InstrType.Jr, cond.Type, Asm.R8( r8 ) );
+
+		// JP a16
+		public AsmInstr Jp( ushort adr ) => Add( InstrType.Jp, Asm.A16( adr ) );
+		// JP Z, a16
+		public AsmInstr Jp( Condtype cond, ushort adr ) => Add( InstrType.Jp, cond.Type, Asm.A16( adr ) );
+		// JP HL
+		public AsmInstr Jp( HLtype HL ) => Add( InstrType.Jp, HL.Type );
+
 		public AsmInstr And( AsmOperand rhs ) => Add( InstrType.And, rhs );
 		public AsmInstr Or( AsmOperand rhs ) => Add( InstrType.Or, rhs );
 		public AsmInstr Xor( AsmOperand rhs ) => Add( InstrType.Xor, rhs );

@@ -3,6 +3,7 @@
 	public static class AddressExt
 	{
 		public static Address Adr( this ushort adr ) => new( adr );
+		public static Address Adr( this int adr ) => new( (ushort)adr );
 	}
 
 	public record struct Address( ushort adr )
