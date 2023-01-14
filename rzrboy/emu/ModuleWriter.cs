@@ -423,6 +423,8 @@ namespace rzr
 		public IReadOnlyList<Storage> Banks => m_banks;
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
+		public ushort Label => (ushort)( m_banks.Count > 1 ? Mbc.RomBankSize + PC : PC );
+
 		// LD 3 byte instr vs 3 LD instructions
 		public override ushort InstrByteThreshold => (ushort)( m_banks.Count > 0x1F ? 3 * 3 : 3 );
 

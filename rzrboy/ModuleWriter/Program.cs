@@ -41,16 +41,18 @@ public class MyGame : rzr.MbcWriter
 		Adc( D );
 		Adc( 3 );
 
+var lbl = Label;
 		Sub( L );
 		Sub( 155 );
 
 		Sbc( E );
 		Sbc( 255 );
 
-		Jr( -4 );
-		Jr( condNZ, 4 );
+		Jr( condNZ, (sbyte)( Label - lbl ) );
+		Jr( 2 );
 
 		Jp( 0x1234 );
+		Jp( lbl );
 		Jp( condC, 0x2000 );
 		Jp( HL );
 
