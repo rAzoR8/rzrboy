@@ -275,7 +275,7 @@
 						}
 					break;
 				case InstrType.Reti when Count == 0: Set( 0xD9 ); break;
-				case InstrType.Call when Count == 1 && Rhs.IsA16(): Set( 0xCD ); Op1D16(); break;
+				case InstrType.Call when Count == 1 && Lhs.IsA16(): Set( 0xCD ); Op1D16(); break;
 				case InstrType.Call when Count == 2 && Rhs.IsA16():
 					switch( Lhs )
 					{

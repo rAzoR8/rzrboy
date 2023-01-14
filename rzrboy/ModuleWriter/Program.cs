@@ -15,8 +15,8 @@ public class MyGame : rzr.MbcWriter
 		Version = 1;
 		CGBSupport = (byte)HeaderView.CGBFlag.CGBOnly;
 
-		Rst0.Xor( Asm.A );
-		Rst10.Xor( Asm.B );
+		Rst0.Xor( A );
+		Rst10.Xor( B );
 
 		Joypad.Ld( H, A );
 	}
@@ -46,5 +46,50 @@ public class MyGame : rzr.MbcWriter
 
 		Sbc( E );
 		Sbc( 255 );
+
+		Jr( -4 );
+		Jr( condNZ, 4 );
+
+		Jp( 0x1234 );
+		Jp( condC, 0x2000 );
+		Jp( HL );
+
+		And( HL.Adr );
+		And( C );
+
+		Or( H );
+		Or( L );
+
+		Xor( B );
+		Xor( E );
+
+		Cp( A );
+		Cp( D );
+
+		Ret();
+		Ret( condZ );
+		Reti();
+
+		Push( BC );
+		Pop( AF );
+
+		Call( 0x4000 );
+		Call( condNC, 0x3000 );
+
+		Di();
+		Ei();
+		Rlca();
+		Rla();
+		Daa();
+		Scf();
+		Rrca();
+		Rra();
+		Cpl();
+		Ccf();
+
+		Rst( 0 );
+		//Rst( 3 ); // error
+
+		Db( 0x00, 0x01, 0x02, 0x03 );
 	}
 }

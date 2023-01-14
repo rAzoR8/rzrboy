@@ -192,15 +192,51 @@ namespace rzr
 		// JP HL
 		public AsmInstr Jp( HLtype HL ) => Add( InstrType.Jp, HL.Type );
 
-		public AsmInstr And( AsmOperand rhs ) => Add( InstrType.And, rhs );
-		public AsmInstr Or( AsmOperand rhs ) => Add( InstrType.Or, rhs );
-		public AsmInstr Xor( AsmOperand rhs ) => Add( InstrType.Xor, rhs );
-		public AsmInstr Cp( AsmOperand rhs ) => Add( InstrType.Cp, rhs );
-		public AsmInstr Ret( params AsmOperand[] ops ) => Add( InstrType.Ret, ops );
+		// AND A, [B D H (HL)]
+		public AsmInstr And( BDHhl rhs ) => Add( InstrType.And, rhs.Type );
+		// AND A, [C E L A]
+		public AsmInstr And( CELA rhs ) => Add( InstrType.And, rhs.Type );
+
+		// OR A, [B D H (HL)]
+		public AsmInstr Or( BDHhl rhs ) => Add( InstrType.Or, rhs.Type );
+		// OR A, [C E L A]
+		public AsmInstr Or( CELA rhs ) => Add( InstrType.Or, rhs.Type );
+
+		// XOR A, [B D H (HL)]
+		public AsmInstr Xor( BDHhl rhs ) => Add( InstrType.Xor, rhs.Type );
+		// XOR A, [C E L A]
+		public AsmInstr Xor( CELA rhs ) => Add( InstrType.Xor, rhs.Type );
+
+		// CP A, [B D H (HL)]
+		public AsmInstr Cp( BDHhl rhs ) => Add( InstrType.Cp, rhs.Type );
+		// CP A, [C E L A]
+		public AsmInstr Cp( CELA rhs ) => Add( InstrType.Cp, rhs.Type );
+
+		// RET
+		public AsmInstr Ret() => Add( InstrType.Ret );
+		// RET NZ
+		public AsmInstr Ret( Condtype cond ) => Add( InstrType.Ret, cond.Type );
+		
+		// RETI
 		public AsmInstr Reti() => Add( InstrType.Reti );
-		public AsmInstr Pop( AsmOperand lhs ) => Add( InstrType.Pop, lhs );
-		public AsmInstr Push( AsmOperand lhs ) => Add( InstrType.Push, lhs );
-		public AsmInstr Call( params AsmOperand[] ops ) => Add( InstrType.Call, ops );
+
+		// POP [BC DE HL AF]
+		public AsmInstr Pop( BCtype rhs ) => Add( InstrType.Pop, rhs.Type );
+		public AsmInstr Pop( DEtype rhs ) => Add( InstrType.Pop, rhs.Type );
+		public AsmInstr Pop( HLtype rhs ) => Add( InstrType.Pop, rhs.Type );
+		public AsmInstr Pop( AFtype rhs ) => Add( InstrType.Pop, rhs.Type );
+
+		// PUSH [BC DE HL AF]
+		public AsmInstr Push( BCtype rhs ) => Add( InstrType.Push, rhs.Type );
+		public AsmInstr Push( DEtype rhs ) => Add( InstrType.Push, rhs.Type );
+		public AsmInstr Push( HLtype rhs ) => Add( InstrType.Push, rhs.Type );
+		public AsmInstr Push( AFtype rhs ) => Add( InstrType.Push, rhs.Type );
+
+		// CALL a16
+		public AsmInstr Call( ushort adr ) => Add( InstrType.Call, Asm.A16( adr ) );
+		// CALL C, a16
+		public AsmInstr Call( Condtype cond, ushort adr ) => Add( InstrType.Call, cond.Type, Asm.A16( adr ) );
+
 		public AsmInstr Di() => Add( InstrType.Di );
 		public AsmInstr Ei() => Add( InstrType.Ei );
 		public AsmInstr Rlca() => Add( InstrType.Rlca );
@@ -211,7 +247,17 @@ namespace rzr
 		public AsmInstr Rra() => Add( InstrType.Rra );
 		public AsmInstr Cpl() => Add( InstrType.Cpl );
 		public AsmInstr Ccf() => Add( InstrType.Ccf );
-		public AsmInstr Rst( AsmOperand vec ) => Add( InstrType.Rst, vec );
+		public AsmInstr Rst( byte vec ) => Add( InstrType.Rst, Asm.RstAdr( vec ) );
+
+		public AsmInstr Db( params byte[] vals ) 
+		{
+			foreach( byte val in vals )
+			{
+				Add( InstrType.Db, Asm.D8( val ) );
+			}
+
+			return m_instructions.Last();
+		}
 
 		public IEnumerator<AsmInstr> GetEnumerator()
 		{
