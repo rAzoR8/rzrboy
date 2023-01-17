@@ -2,24 +2,14 @@
 
 namespace rzr
 {
-	public class AsmRecorder : IEnumerable<AsmInstr>
+	public abstract class AsmConsumer
 	{
-		protected List<AsmInstr> m_instructions = new ();
-		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
-
-		public AsmRecorder() { }
-		public AsmRecorder( IEnumerable<AsmInstr> instructions ) { m_instructions = new( instructions ); }
-
-		protected virtual AsmInstr Add( AsmInstr instr )
+		private ushort Instr( InstrType instr, params AsmOperand[] operands )
 		{
-			m_instructions.Add( instr );
-			return m_instructions.Last();
+			return Consume( new AsmInstr( instr, operands ) );
 		}
 
-		protected AsmInstr Add( InstrType instr, params AsmOperand[] operands )
-		{
-			return Add( new AsmInstr( instr, operands ) );
-		}
+		public abstract ushort Consume( AsmInstr instr );
 
 		public interface IOpType { OperandType Type { get; } }
 
@@ -85,179 +75,190 @@ namespace rzr
 		protected static readonly AdrHLdtype adrHLd;
 		protected static readonly AdrCtype adrC; // IoC
 
-		protected static readonly CondZtype condZ;
-		protected static readonly CondNZtype condNZ;
-		protected static readonly CondCtype condC;
-		protected static readonly CondNCtype condNC;
+		protected static readonly CondZtype isZ;
+		protected static readonly CondNZtype isNZ;
+		protected static readonly CondCtype isC;
+		protected static readonly CondNCtype isNC;
 
-		public AsmInstr Nop() => Add( InstrType.Nop );
-		public AsmInstr Stop( byte corrupt = 0x00 ) => Add( InstrType.Stop, Asm.D8( corrupt ) );
-		public AsmInstr Halt() => Add( InstrType.Halt );
+		public ushort Nop() => Instr( InstrType.Nop );
+		public ushort Stop( byte corrupt = 0x00 ) => Instr( InstrType.Stop, Asm.D8( corrupt ) );
+		public ushort Halt() => Instr( InstrType.Halt );
 
 		// LD [BC DE HL SP], d16
-		public AsmInstr Ld( BcDeHlSp lhs, ushort rhs ) => Add( InstrType.Ld, lhs.Type, Asm.D16( rhs ) );
+		public ushort Ld( BcDeHlSp lhs, ushort rhs ) => Instr( InstrType.Ld, lhs.Type, Asm.D16( rhs ) );
 		// LD [(BC) (DE) (HL+) (HL-)], A
-		public AsmInstr Ld( AdrBcDeHliHld lhs, Atype A ) => Add( InstrType.Ld, lhs.Type, A.Type );
+		public ushort Ld( AdrBcDeHliHld lhs, Atype A ) => Instr( InstrType.Ld, lhs.Type, A.Type );
 		// LD [B D H (HL)], d8
-		public AsmInstr Ld( BDHhl lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8(d8) );
+		public ushort Ld( BDHhl lhs, byte d8 ) => Instr( InstrType.Ld, lhs.Type, Asm.D8(d8) );
 		// LD [C E L A], d8
-		public AsmInstr Ld( CELA lhs, byte d8 ) => Add( InstrType.Ld, lhs.Type, Asm.D8( d8 ) );
+		public ushort Ld( CELA lhs, byte d8 ) => Instr( InstrType.Ld, lhs.Type, Asm.D8( d8 ) );
 		// LD (a16), SP
-		public AsmInstr Ld( Address adr, SPtype SP ) => Add( InstrType.Ld, Asm.A16( adr ), SP.Type );
+		public ushort Ld( Address adr, SPtype SP ) => Instr( InstrType.Ld, Asm.A16( adr ), SP.Type );
 		// LD A, [(BC) (DE) (HL+) (HL-)]
-		public AsmInstr Ld( Atype A, AdrBcDeHliHld rhs ) => Add( InstrType.Ld, A.Type, rhs.Type );
+		public ushort Ld( Atype A, AdrBcDeHliHld rhs ) => Instr( InstrType.Ld, A.Type, rhs.Type );
 		// LD [B D H (HL)], [B D H (HL)]
-		public AsmInstr Ld( BDHhl lhs, BDHhl rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		public ushort Ld( BDHhl lhs, BDHhl rhs ) => Instr( InstrType.Ld, lhs.Type, rhs.Type );
 		// LD [B D H (HL)], [C E L A]
-		public AsmInstr Ld( BDHhl lhs, CELA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		public ushort Ld( BDHhl lhs, CELA rhs ) => Instr( InstrType.Ld, lhs.Type, rhs.Type );
 		// LD [C E L A], [B D H (HL)]
-		public AsmInstr Ld( CELA lhs, BDHhl rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		public ushort Ld( CELA lhs, BDHhl rhs ) => Instr( InstrType.Ld, lhs.Type, rhs.Type );
 		// LD [C E L A], [C E L A]
-		public AsmInstr Ld( CELA lhs, CELA rhs ) => Add( InstrType.Ld, lhs.Type, rhs.Type );
+		public ushort Ld( CELA lhs, CELA rhs ) => Instr( InstrType.Ld, lhs.Type, rhs.Type );
 		// LDH (a8), A
-		public AsmInstr Ldh( byte ioAdr, Atype A ) => Add( InstrType.Ld, Asm.Io8( ioAdr ), A.Type );
+		public ushort Ldh( byte ioAdr, Atype A ) => Instr( InstrType.Ld, Asm.Io8( ioAdr ), A.Type );
 		// LDH A, (a8)
-		public AsmInstr Ldh( Atype A, byte ioAdr ) => Add( InstrType.Ld, A.Type, Asm.Io8( ioAdr ) );
+		public ushort Ldh( Atype A, byte ioAdr ) => Instr( InstrType.Ld, A.Type, Asm.Io8( ioAdr ) );
 		// LD (C), A (LDH)
-		public AsmInstr Ld( AdrCtype adrC, Atype A ) => Add( InstrType.Ld, adrC.Type, A.Type );
+		public ushort Ld( AdrCtype adrC, Atype A ) => Instr( InstrType.Ld, adrC.Type, A.Type );
 		// LD A, (C) (LDH)
-		public AsmInstr Ld( Atype A, AdrCtype adrC ) => Add( InstrType.Ld, A.Type, adrC.Type );
+		public ushort Ld( Atype A, AdrCtype adrC ) => Instr( InstrType.Ld, A.Type, adrC.Type );
 		// LD (a16), A
-		public AsmInstr Ld( Address adr, Atype A ) => Add( InstrType.Ld, Asm.A16(adr), A.Type );
+		public ushort Ld( Address adr, Atype A ) => Instr( InstrType.Ld, Asm.A16(adr), A.Type );
 		// LD A, (a16)
-		public AsmInstr Ld( Atype A, Address adr ) => Add( InstrType.Ld, A.Type, Asm.A16( adr ) );
+		public ushort Ld( Atype A, Address adr ) => Instr( InstrType.Ld, A.Type, Asm.A16( adr ) );
 
 		// Helper for LD (a16), d8
-		public void Ld( ushort adr, byte val ) 
+		public ushort Ld( ushort adr, byte val ) 
 		{
-			Ld( A, val );
+			var label = Ld( A, val );
 			Ld( adr.Adr(), A );
+			return label;
 		}
 
 		// INC [BC DE HL SP]
-		public AsmInstr Inc( BcDeHlSp lhs ) => Add( InstrType.Inc, lhs.Type );
+		public ushort Inc( BcDeHlSp lhs ) => Instr( InstrType.Inc, lhs.Type );
 		// INC [B D H (HL)]
-		public AsmInstr Inc( BDHhl lhs ) => Add( InstrType.Inc, lhs.Type );
+		public ushort Inc( BDHhl lhs ) => Instr( InstrType.Inc, lhs.Type );
 		// INC [C E L A]
-		public AsmInstr Inc( CELA lhs ) => Add( InstrType.Inc, lhs.Type );
+		public ushort Inc( CELA lhs ) => Instr( InstrType.Inc, lhs.Type );
 
 		// INC [BC DE HL SP]
-		public AsmInstr Dec( BcDeHlSp lhs ) => Add( InstrType.Dec, lhs.Type );
+		public ushort Dec( BcDeHlSp lhs ) => Instr( InstrType.Dec, lhs.Type );
 		// INC [B D H (HL)]
-		public AsmInstr Dec( BDHhl lhs ) => Add( InstrType.Dec, lhs.Type );
+		public ushort Dec( BDHhl lhs ) => Instr( InstrType.Dec, lhs.Type );
 		// INC [C E L A]
-		public AsmInstr Dec( CELA lhs ) => Add( InstrType.Dec, lhs.Type );
+		public ushort Dec( CELA lhs ) => Instr( InstrType.Dec, lhs.Type );
 
 		// ADD A, [B D H (HL)]
-		public AsmInstr Add ( Atype A, BDHhl rhs ) => Add ( InstrType.Add, A.Type, rhs.Type );
+		public ushort Add ( Atype A, BDHhl rhs ) => Instr ( InstrType.Add, A.Type, rhs.Type );
 		// ADD A, [C E L A]
-		public AsmInstr Add( Atype A, CELA rhs ) => Add( InstrType.Add, A.Type, rhs.Type );
+		public ushort Add( Atype A, CELA rhs ) => Instr( InstrType.Add, A.Type, rhs.Type );
 		// ADD A, d8
-		public AsmInstr Add( Atype A, byte d8 ) => Add( InstrType.Add, A.Type, Asm.D8(d8) );
+		public ushort Add( Atype A, byte d8 ) => Instr( InstrType.Add, A.Type, Asm.D8(d8) );
 		// ADD HL, [BC DE HL SP]
-		public AsmInstr Add( HLtype HL, BcDeHlSp rhs ) => Add( InstrType.Add, HL.Type, rhs.Type );
+		public ushort Add( HLtype HL, BcDeHlSp rhs ) => Instr( InstrType.Add, HL.Type, rhs.Type );
 		// ADD SP, r8
-		public AsmInstr Add( SPtype SP, sbyte rhs ) => Add( InstrType.Add, SP.Type, Asm.R8( rhs ) );
+		public ushort Add( SPtype SP, sbyte rhs ) => Instr( InstrType.Add, SP.Type, Asm.R8( rhs ) );
 
 		// ADC A, [B D H (HL)]
-		public AsmInstr Adc( BDHhl rhs ) => Add( InstrType.Adc, rhs.Type );
+		public ushort Adc( BDHhl rhs ) => Instr( InstrType.Adc, rhs.Type );
 		// ADC A, [C E L A]
-		public AsmInstr Adc( CELA rhs ) => Add( InstrType.Adc, rhs.Type );
+		public ushort Adc( CELA rhs ) => Instr( InstrType.Adc, rhs.Type );
 		// ADC A, d8
-		public AsmInstr Adc( byte d8 ) => Add( InstrType.Adc, Asm.D8( d8 ) );
+		public ushort Adc( byte d8 ) => Instr( InstrType.Adc, Asm.D8( d8 ) );
 
 		// SUB A, [B D H (HL)]
-		public AsmInstr Sub( BDHhl rhs ) => Add( InstrType.Sub, rhs.Type );
+		public ushort Sub( BDHhl rhs ) => Instr( InstrType.Sub, rhs.Type );
 		// SUB A, [C E L A]
-		public AsmInstr Sub( CELA rhs ) => Add( InstrType.Sub, rhs.Type );
+		public ushort Sub( CELA rhs ) => Instr( InstrType.Sub, rhs.Type );
 		// SUB A, d8
-		public AsmInstr Sub( byte d8 ) => Add( InstrType.Sub, Asm.D8( d8 ) );
+		public ushort Sub( byte d8 ) => Instr( InstrType.Sub, Asm.D8( d8 ) );
 
 		// SBC A, [B D H (HL)]
-		public AsmInstr Sbc( BDHhl rhs ) => Add( InstrType.Sbc, rhs.Type );
+		public ushort Sbc( BDHhl rhs ) => Instr( InstrType.Sbc, rhs.Type );
 		// SBC A, [C E L A]
-		public AsmInstr Sbc( CELA rhs ) => Add( InstrType.Sbc, rhs.Type );
+		public ushort Sbc( CELA rhs ) => Instr( InstrType.Sbc, rhs.Type );
 		// SBC A, d8
-		public AsmInstr Sbc( byte d8 ) => Add( InstrType.Sbc, Asm.D8( d8 ) );
+		public ushort Sbc( byte d8 ) => Instr( InstrType.Sbc, Asm.D8( d8 ) );
 
 		// JR r8
-		public AsmInstr Jr( sbyte r8 ) => Add( InstrType.Jr, Asm.R8( r8 ) );
+		public ushort Jr( sbyte r8 ) => Instr( InstrType.Jr, Asm.R8( r8 ) );
 		// JR Z, r8
-		public AsmInstr Jr( Condtype cond, sbyte r8 ) => Add( InstrType.Jr, cond.Type, Asm.R8( r8 ) );
+		public ushort Jr( Condtype cond, sbyte r8 ) => Instr( InstrType.Jr, cond.Type, Asm.R8( r8 ) );
 
 		// JP a16
-		public AsmInstr Jp( ushort adr ) => Add( InstrType.Jp, Asm.A16( adr ) );
+		public ushort Jp( ushort adr ) => Instr( InstrType.Jp, Asm.A16( adr ) );
 		// JP Z, a16
-		public AsmInstr Jp( Condtype cond, ushort adr ) => Add( InstrType.Jp, cond.Type, Asm.A16( adr ) );
+		public ushort Jp( Condtype cond, ushort adr ) => Instr( InstrType.Jp, cond.Type, Asm.A16( adr ) );
 		// JP HL
-		public AsmInstr Jp( HLtype HL ) => Add( InstrType.Jp, HL.Type );
+		public ushort Jp( HLtype HL ) => Instr( InstrType.Jp, HL.Type );
 
 		// AND A, [B D H (HL)]
-		public AsmInstr And( BDHhl rhs ) => Add( InstrType.And, rhs.Type );
+		public ushort And( BDHhl rhs ) => Instr( InstrType.And, rhs.Type );
 		// AND A, [C E L A]
-		public AsmInstr And( CELA rhs ) => Add( InstrType.And, rhs.Type );
+		public ushort And( CELA rhs ) => Instr( InstrType.And, rhs.Type );
 
 		// OR A, [B D H (HL)]
-		public AsmInstr Or( BDHhl rhs ) => Add( InstrType.Or, rhs.Type );
+		public ushort Or( BDHhl rhs ) => Instr( InstrType.Or, rhs.Type );
 		// OR A, [C E L A]
-		public AsmInstr Or( CELA rhs ) => Add( InstrType.Or, rhs.Type );
+		public ushort Or( CELA rhs ) => Instr( InstrType.Or, rhs.Type );
 
 		// XOR A, [B D H (HL)]
-		public AsmInstr Xor( BDHhl rhs ) => Add( InstrType.Xor, rhs.Type );
+		public ushort Xor( BDHhl rhs ) => Instr( InstrType.Xor, rhs.Type );
 		// XOR A, [C E L A]
-		public AsmInstr Xor( CELA rhs ) => Add( InstrType.Xor, rhs.Type );
+		public ushort Xor( CELA rhs ) => Instr( InstrType.Xor, rhs.Type );
 
 		// CP A, [B D H (HL)]
-		public AsmInstr Cp( BDHhl rhs ) => Add( InstrType.Cp, rhs.Type );
+		public ushort Cp( BDHhl rhs ) => Instr( InstrType.Cp, rhs.Type );
 		// CP A, [C E L A]
-		public AsmInstr Cp( CELA rhs ) => Add( InstrType.Cp, rhs.Type );
+		public ushort Cp( CELA rhs ) => Instr( InstrType.Cp, rhs.Type );
 
 		// RET
-		public AsmInstr Ret() => Add( InstrType.Ret );
+		public ushort Ret() => Instr( InstrType.Ret );
 		// RET NZ
-		public AsmInstr Ret( Condtype cond ) => Add( InstrType.Ret, cond.Type );
+		public ushort Ret( Condtype cond ) => Instr( InstrType.Ret, cond.Type );
 		
 		// RETI
-		public AsmInstr Reti() => Add( InstrType.Reti );
+		public ushort Reti() => Instr( InstrType.Reti );
 
 		// POP [BC DE HL AF]
-		public AsmInstr Pop( BCtype rhs ) => Add( InstrType.Pop, rhs.Type );
-		public AsmInstr Pop( DEtype rhs ) => Add( InstrType.Pop, rhs.Type );
-		public AsmInstr Pop( HLtype rhs ) => Add( InstrType.Pop, rhs.Type );
-		public AsmInstr Pop( AFtype rhs ) => Add( InstrType.Pop, rhs.Type );
+		public ushort Pop( BCtype rhs ) => Instr( InstrType.Pop, rhs.Type );
+		public ushort Pop( DEtype rhs ) => Instr( InstrType.Pop, rhs.Type );
+		public ushort Pop( HLtype rhs ) => Instr( InstrType.Pop, rhs.Type );
+		public ushort Pop( AFtype rhs ) => Instr( InstrType.Pop, rhs.Type );
 
 		// PUSH [BC DE HL AF]
-		public AsmInstr Push( BCtype rhs ) => Add( InstrType.Push, rhs.Type );
-		public AsmInstr Push( DEtype rhs ) => Add( InstrType.Push, rhs.Type );
-		public AsmInstr Push( HLtype rhs ) => Add( InstrType.Push, rhs.Type );
-		public AsmInstr Push( AFtype rhs ) => Add( InstrType.Push, rhs.Type );
+		public ushort Push( BCtype rhs ) => Instr( InstrType.Push, rhs.Type );
+		public ushort Push( DEtype rhs ) => Instr( InstrType.Push, rhs.Type );
+		public ushort Push( HLtype rhs ) => Instr( InstrType.Push, rhs.Type );
+		public ushort Push( AFtype rhs ) => Instr( InstrType.Push, rhs.Type );
 
 		// CALL a16
-		public AsmInstr Call( ushort adr ) => Add( InstrType.Call, Asm.A16( adr ) );
+		public ushort Call( ushort adr ) => Instr( InstrType.Call, Asm.A16( adr ) );
 		// CALL C, a16
-		public AsmInstr Call( Condtype cond, ushort adr ) => Add( InstrType.Call, cond.Type, Asm.A16( adr ) );
+		public ushort Call( Condtype cond, ushort adr ) => Instr( InstrType.Call, cond.Type, Asm.A16( adr ) );
 
-		public AsmInstr Di() => Add( InstrType.Di );
-		public AsmInstr Ei() => Add( InstrType.Ei );
-		public AsmInstr Rlca() => Add( InstrType.Rlca );
-		public AsmInstr Rla() => Add( InstrType.Rla );
-		public AsmInstr Daa() => Add( InstrType.Daa );
-		public AsmInstr Scf() => Add( InstrType.Scf );
-		public AsmInstr Rrca() => Add( InstrType.Rrca );
-		public AsmInstr Rra() => Add( InstrType.Rra );
-		public AsmInstr Cpl() => Add( InstrType.Cpl );
-		public AsmInstr Ccf() => Add( InstrType.Ccf );
-		public AsmInstr Rst( byte vec ) => Add( InstrType.Rst, Asm.RstAdr( vec ) );
+		public ushort Di() => Instr( InstrType.Di );
+		public ushort Ei() => Instr( InstrType.Ei );
+		public ushort Rlca() => Instr( InstrType.Rlca );
+		public ushort Rla() => Instr( InstrType.Rla );
+		public ushort Daa() => Instr( InstrType.Daa );
+		public ushort Scf() => Instr( InstrType.Scf );
+		public ushort Rrca() => Instr( InstrType.Rrca );
+		public ushort Rra() => Instr( InstrType.Rra );
+		public ushort Cpl() => Instr( InstrType.Cpl );
+		public ushort Ccf() => Instr( InstrType.Ccf );
+		public ushort Rst( byte vec ) => Instr( InstrType.Rst, Asm.RstAdr( vec ) );
 
-		public AsmInstr Db( params byte[] vals ) 
+		public ushort Db( params byte[] vals ) 
 		{
-			foreach( byte val in vals )
+			var label = Instr( InstrType.Db, Asm.D8( vals[0] ) );
+			foreach( byte val in vals.Skip(1) )
 			{
-				Add( InstrType.Db, Asm.D8( val ) );
+				Instr( InstrType.Db, Asm.D8( val ) );
 			}
 
-			return m_instructions.Last();
+			return label;
 		}
+	}
+
+	public class AsmRecorder : AsmConsumer, IEnumerable<AsmInstr>
+	{
+		protected List<AsmInstr> m_instructions = new();
+		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
+
+		public AsmRecorder() { }
+		public AsmRecorder( IEnumerable<AsmInstr> instructions ) { m_instructions = new( instructions ); }
 
 		public IEnumerator<AsmInstr> GetEnumerator()
 		{
@@ -267,6 +268,12 @@ namespace rzr
 		IEnumerator IEnumerable.GetEnumerator()
 		{
 			return ( (IEnumerable)Instructions ).GetEnumerator();
+		}
+
+		public override ushort Consume( AsmInstr instr )
+		{
+			m_instructions.Add( instr );
+			return (ushort)m_instructions.Count;
 		}
 	}
 
@@ -293,11 +300,22 @@ namespace rzr
 		}
 	}
 
-	public abstract class ModuleWriter : AsmRecorder
+	public abstract class ModuleWriter : AsmConsumer
 	{
-		private Storage? m_curBank = null; // current bank
+		public class FixedConsumer : AsmRecorder
+		{
+			public delegate ushort Consumer( AsmInstr instr );
+			private Consumer m_consumer;
+			public FixedConsumer( Consumer consumer ) { m_consumer = consumer; }
+			public override ushort Consume( AsmInstr instr )
+			{
+				base.Consume( instr );
+				return m_consumer( instr );
+			}
+		}
 
-		public ushort PC { get; protected set; } = 0;
+		public uint IP { get; protected set; }
+		public ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + IP % Mbc.RomBankSize );
 		public bool ThrowException { get; set; } = true;
 
 		// Header access
@@ -317,65 +335,74 @@ namespace rzr
 		public byte OldLicenseeCode { get; set; } = 0x33;
 		public byte CGBSupport { get; set; }
 
-		public virtual ushort InstrByteThreshold { get; } = 3;
-		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching );
+		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP );
 
-		protected override AsmInstr Add( AsmInstr instr )
+		public override ushort Consume( AsmInstr instr )
 		{
-			ushort pc = PC;
+			ushort prev = PC;
 
-			if( m_curBank == null )
+			var (bank, switching) = GetBank( IP: IP );
+
+			// write bank switching code to the end of this bank
+			ushort pc = switching.Write( prev, mem: bank, throwException: ThrowException );
+
+			if( pc > prev )
 			{
-				m_curBank = GetNextBank( out _ ).bank; // ignore switching for first bank
-			}
-			else if( pc + InstrByteThreshold >= Mbc.RomBankSize ) // switch to next bank
-			{
-				var (next, switching) = GetNextBank( out ushort pcAfterSwitching );
-				// write bank switching code to the end of this bank
-				pc = switching.Write( pc, mem: m_curBank, throwException: ThrowException );
-				// get new bank and possibly adjust PC
-				m_curBank = next;
-				pc = pcAfterSwitching;
+				(bank,_) = GetBank( IP: IP + (uint)(pc-prev)  );
 			}
 
-			AsmInstr newInstr = base.Add( instr );
-			newInstr.Assemble( ref pc, m_curBank, throwException: ThrowException );
-			PC = pc;
+			instr.Assemble( ref pc, bank, throwException: ThrowException );
 
-			return newInstr;
+			IP += (uint)( pc - prev );
+
+			return prev;
 		}
 
-		public AsmRecorder Rst0 { get; } = new();
-		public AsmRecorder Rst8 { get; } = new();
-		public AsmRecorder Rst10 { get; } = new();
-		public AsmRecorder Rst18 { get; } = new();
-		public AsmRecorder Rst20 { get; } = new();
-		public AsmRecorder Rst28 { get; } = new();
-		public AsmRecorder Rst30 { get; } = new();
-		public AsmRecorder Rst38 { get; } = new();
+		public ModuleWriter() 
+		{
+			Rst0 = new( Consume );
+			Rst8 = new( Consume );
+			Rst10 = new( Consume );
+			Rst18 = new( Consume );
+			Rst20 = new( Consume );
+			Rst28 = new( Consume );
+			Rst30 = new( Consume );
+			Rst38 = new( Consume );
 
-		public AsmRecorder VBlank { get; } = new(); // $40
-		public AsmRecorder LCDStat { get; } = new();// $48
-		public AsmRecorder Timer { get; } = new();	// $50
-		public AsmRecorder Serial { get; } = new();	// $58
-		public AsmRecorder Joypad { get; } = new(); // $60
+			VBlank = new( Consume );
+			LCDStat = new( Consume );
+			Timer = new( Consume );
+			Serial = new( Consume );
+			Joypad = new( Consume );
+		}
+
+		public FixedConsumer Rst0 { get; }
+		public FixedConsumer Rst8 { get; }
+		public FixedConsumer Rst10 { get; }
+		public FixedConsumer Rst18 { get; }
+		public FixedConsumer Rst20 { get; }
+		public FixedConsumer Rst28 { get; }
+		public FixedConsumer Rst30 { get; }
+		public FixedConsumer Rst38 { get; }
+
+		public FixedConsumer VBlank { get; }	// $40
+		public FixedConsumer LCDStat { get; }	// $48
+		public FixedConsumer Timer { get; }		// $50
+		public FixedConsumer Serial { get; }	// $58
+		public FixedConsumer Joypad { get; }	// $60
 
 		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
-			if( m_curBank == null )
-			{
-				m_curBank = GetNextBank( out _ ).bank; // ignore switching for first bank
-			}
-
+			var (bank0,_) = GetBank( IP );
 			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
-				ushort end = writer.Write( PC, m_curBank, ThrowException );
+				ushort end = writer.Write( PC, bank0, ThrowException );
 				if( end > bound && ThrowException )
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
 				}
-				PC = bound; // rest pc to acceptible bounds
+				IP = bound; // rest pc to acceptible bounds
 			}
 
 			interrupt( Rst0);
@@ -395,9 +422,9 @@ namespace rzr
 
 			ushort EP = (ushort)HeaderOffsets.EntryPointStart;
 			// jump to EntryPoint
-			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, m_curBank, throwException: ThrowException );
+			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, bank0, throwException: ThrowException );
 
-			HeaderView header = new( m_curBank.Data );
+			HeaderView header = new( bank0.Data );
 
 			header.Manufacturer = Manufacturer;
 			header.Version = Version;
@@ -413,7 +440,7 @@ namespace rzr
 			header.Type = Type;
 
 			// skip header to game code:
-			PC = entryPoint;
+			IP = entryPoint;
 		}
 	}
 
@@ -423,45 +450,43 @@ namespace rzr
 		public IReadOnlyList<Storage> Banks => m_banks;
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
-		public ushort Label => (ushort)( m_banks.Count > 1 ? Mbc.RomBankSize + PC : PC );
-
-		// LD 3 byte instr vs 3 LD instructions
-		public override ushort InstrByteThreshold => (ushort)( m_banks.Count > 0x1F ? 3 * 3 : 3 );
-
 		public override CartridgeType Type => CartridgeType.MBC1_RAM;
 
-		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetNextBank( out ushort pcAfterSwitching )
+		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP )
 		{
-			m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+			int i = (int)( IP / Mbc.RomBankSize );
+			// LD 3 byte instr vs 3 LD instructions
 
-			// offset
-			pcAfterSwitching = 0;
+			var threshold = ( m_banks.Count > 0x1F ? 3 * 3 : 3 );
+			bool switching = IP - threshold > ( m_banks.Count * Mbc.RomBankSize );
+
+			if( i >= m_banks.Count || switching )
+			{
+				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+			}
 
 			AsmRecorder sw = new();
 
 			// https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work
 
-			// first two banks are always mapped, so no need to switch between bank0 and bank1
-			if( m_banks.Count == 1)
+			if( switching )
 			{
-				return ( m_banks.Last(), sw);
+				if( m_banks.Count <= 0x1f )
+				{
+					sw.Ld( 0x2000, (byte)m_banks.Count );
+				}
+				else
+				{
+					//ld $6000, $00; Set ROM mode
+					//ld $2000, $06; Set lower 5 bits, could also use $46
+					//ld $4000, $02; Set upper 2 bits
+					sw.Ld( 0x6000, 0 );
+					sw.Ld( 0x2000, (byte)( m_banks.Count & 0b11111 ) );
+					sw.Ld( 0x4000, (byte)( ( m_banks.Count >> 5 ) & 0b11 ) );
+				}
 			}
 
-			if( m_banks.Count <= 0x1f )
-			{
-				sw.Ld( 0x2000, (byte)m_banks.Count );
-			}
-			else
-			{
-				//ld $6000, $00; Set ROM mode
-				//ld $2000, $06; Set lower 5 bits, could also use $46
-				//ld $4000, $02; Set upper 2 bits
-				sw.Ld( 0x6000, 0 );
-				sw.Ld( 0x2000, (byte)( m_banks.Count & 0b11111 ) );
-				sw.Ld( 0x4000, (byte)( ( m_banks.Count >> 5 ) & 0b11 ) );
-			}
-
-			return (m_banks.Last(), sw);
+			return (m_banks[i], sw);
 		}
 
 		/// <summary>
@@ -477,11 +502,11 @@ namespace rzr
 		{
 			// reset banks
 			m_banks.Clear();
-			PC = 0;
+			IP = 0;
 
 			WritePreamble( entryPoint: entryPoint );
 
-			PC = entryPoint;
+			IP = entryPoint;
 			WriteGameCode();
 
 			var bank0 = m_banks.First();
