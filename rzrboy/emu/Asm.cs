@@ -156,8 +156,8 @@
 				(3, _ ) when y < 4 => Inc( BcDeHlSp[y] ),
 				// 0x04->0x34 INC [B D H (HL)]
 				(4, _ ) when y < 4 => Inc( BDHAdrHl[y] ),
-				// 0x05->0x35 DEC [BC DE HL SP]
-				(5, _ ) when y < 4 => Dec( BcDeHlSp[y] ),
+				// 0x05->0x35 DEC [B D H (HL)]
+				(5, _ ) when y < 4 => Dec( BDHAdrHl[y] ),
 				// 0x6->0x36 LD [B D H (HL)], db8
 				(6, _ ) when y < 4 => Ld( BDHAdrHl[y], D8( mem[pc++] ) ),
 				// 0x07

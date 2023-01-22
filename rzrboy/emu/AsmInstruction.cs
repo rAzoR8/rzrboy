@@ -247,8 +247,8 @@
 					{
 						case OperandType.condNZ: Set( 0xC2 ); Op2D16(); break;
 						case OperandType.condNC: Set( 0xD2 ); Op2D16(); break;
-						case OperandType.condZ: Set( 0x2A ); Op2D8(); break;
-						case OperandType.condC: Set( 0x3A ); Op2D8(); break;
+						case OperandType.condZ: Set( 0xCA ); Op2D8(); break;
+						case OperandType.condC: Set( 0xDA ); Op2D8(); break;
 						default: Throw(); break;
 					}
 					break;
@@ -301,7 +301,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Push when Count == 1:
+				case InstrType.Pop when Count == 1:
 					switch( Lhs )
 					{
 						case OperandType.BC: Set( 0xC1 ); break;
@@ -311,7 +311,7 @@
 						default: Throw(); break;
 					}
 					break;
-				case InstrType.Pop when Count == 1:
+				case InstrType.Push when Count == 1:
 					switch( Lhs )
 					{
 						case OperandType.BC: Set( 0xC5 ); break;
