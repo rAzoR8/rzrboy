@@ -369,13 +369,17 @@ namespace rzr
 		/// <returns></returns>
 		public static string Disassemble( ref ushort pc, ISection mem, UnknownOpHandling unknownOp = default )
 		{
-            byte opcode = mem[pc]; 
+            ushort _pc = pc;
 
-            StringBuilder sb = new();
-            sb.Append( $"[0x{pc:X4}:0x{opcode:X2}] " );
+			AsmInstr instr = Asm.Disassemble( ref pc, mem, unknownOp: unknownOp );
+			StringBuilder sb = new();
 
-            AsmInstr instr = Asm.Disassemble( ref pc, mem, unknownOp: unknownOp );
-            sb.Append( instr.ToString().ToUpper() );
+			byte op0 = mem[_pc];
+			string op1 = pc > _pc + 1 ? $"{mem[(ushort)( _pc + 1 )]:X2}" : "__";
+			string op2 = pc > _pc + 2 ? $"{mem[(ushort)( _pc + 2 )]:X2}" : "__";
+
+			sb.Append( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] " );
+			sb.Append( instr.ToString( _pc ).ToUpper() );
 
 			return sb.ToString();
         }

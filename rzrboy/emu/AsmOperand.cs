@@ -31,14 +31,15 @@
 		public sbyte r8 { get => (sbyte)d16.GetLsb(); set => d16 = (byte)value; }
 		public byte d8 { get => d16.GetLsb(); set => d16 = value; }
 
-		public override string ToString()
+		public string ToString( ushort? pc )
 		{
 			switch( Type )
 			{
 				case OperandType.BitIdx:
 				case OperandType.RstAddr:
 				case OperandType.d8: return $"${d8:X2}";
-				case OperandType.r8: return $"${r8:X2}";
+				case OperandType.r8 when !pc.HasValue: return $"${r8:X2}";
+				case OperandType.r8 when pc.HasValue: return $"{r8} (->${pc + r8:X4})";
 				case OperandType.d16: return $"${d16:X4}";
 				case OperandType.a16: return $"(${d16:X4})";
 				case OperandType.io8: return $"($FF00+{d8:X2})";
@@ -56,7 +57,7 @@
 				case OperandType.SP:
 				case OperandType.AF:
 					return Type.ToString();
-				case OperandType.SPr8: return $"SP+{r8:X2}";
+				case OperandType.SPr8: return $"SP+{r8:X2} ({r8})";
 				case OperandType.AdrHL: return "(HL)";
 				case OperandType.AdrHLi: return "(HL+)";
 				case OperandType.AdrHLd: return "(HL-)";
@@ -69,6 +70,11 @@
 				case OperandType.none: return "";
 				default: return "?";
 			}
+		}
+
+		public override string ToString()
+		{
+			return ToString( null );
 		}
 
 		public bool Equals( AsmOperand? other )

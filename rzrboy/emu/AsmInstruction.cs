@@ -219,7 +219,7 @@
 					else Throw();
 					break;
 				// ADD [B C D E H L (HL) A]
-				case InstrType.Add when Count == 2 && Lhs.IsA() && Rhs.IsReg8hl(): Set( Lhs.Reg8XOffset( 0x80 ) ); break;
+				case InstrType.Add when Count == 2 && Lhs.IsA() && Rhs.IsReg8hl(): Set( Rhs.Reg8XOffset( 0x80 ) ); break;
 				case InstrType.Adc when Count == 1 && Lhs.IsReg8hl(): Set( Lhs.Reg8XOffset( 0x88 ) ); break;
 				case InstrType.Sub when Count == 1 && Lhs.IsReg8hl(): Set( Lhs.Reg8XOffset( 0x90 ) ); break;
 				case InstrType.Sbc when Count == 1 && Lhs.IsReg8hl(): Set( Lhs.Reg8XOffset( 0x98 ) ); break;
@@ -247,8 +247,8 @@
 					{
 						case OperandType.condNZ: Set( 0xC2 ); Op2D16(); break;
 						case OperandType.condNC: Set( 0xD2 ); Op2D16(); break;
-						case OperandType.condZ: Set( 0xCA ); Op2D8(); break;
-						case OperandType.condC: Set( 0xDA ); Op2D8(); break;
+						case OperandType.condZ: Set( 0xCA ); Op2D16(); break;
+						case OperandType.condC: Set( 0xDA ); Op2D16(); break;
 						default: Throw(); break;
 					}
 					break;
@@ -389,14 +389,19 @@
 			_pc = pc;
 		}
 
-		public override string ToString()
+		public string ToString( ushort? pc )
 		{
 			switch( Count )
 			{
-				case 2: return $"{Type} {this[0]}, {this[1]}";
-				case 1: return $"{Type} {this[0]}";
+				case 2: return $"{Type} {this[0].ToString( pc )}, {this[1].ToString( pc )}";
+				case 1: return $"{Type} {this[0].ToString( pc )}";
 				case 0: default: return Type.ToString();
 			}
+		}
+
+		public override string ToString()
+		{
+			return ToString( null );
 		}
 	}
 }

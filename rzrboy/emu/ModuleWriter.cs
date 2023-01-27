@@ -4,7 +4,7 @@ namespace rzr
 {
 	public abstract class AsmConsumer
 	{
-		private ushort Instr( InstrType instr, params AsmOperand[] operands )
+		public ushort Instr( InstrType instr, params AsmOperand[] operands )
 		{
 			return Consume( new AsmInstr( instr, operands ) );
 		}
@@ -54,31 +54,31 @@ namespace rzr
 		public struct CondCtype : Condtype { public OperandType Type => OperandType.condC; }
 		public struct CondNCtype : Condtype { public OperandType Type => OperandType.condNC; }
 
-		protected static readonly Atype A;
-		protected static readonly Btype B;
-		protected static readonly Ctype C;
-		protected static readonly Dtype D;
-		protected static readonly Etype E;
-		protected static readonly Htype H;
-		protected static readonly Ltype L;
+		public static readonly Atype A;
+		public static readonly Btype B;
+		public static readonly Ctype C;
+		public static readonly Dtype D;
+		public static readonly Etype E;
+		public static readonly Htype H;
+		public static readonly Ltype L;
 
-		protected static readonly BCtype BC;
-		protected static readonly DEtype DE;
-		protected static readonly HLtype HL;
-		protected static readonly SPtype SP;
-		protected static readonly AFtype AF; // Push/Pop only
+		public static readonly BCtype BC;
+		public static readonly DEtype DE;
+		public static readonly HLtype HL;
+		public static readonly SPtype SP;
+		public static readonly AFtype AF; // Push/Pop only
 
-		protected static readonly AdrBCtype adrBC;
-		protected static readonly AdrDEtype adrDE;
-		protected static readonly AdrHLtype adrHL;
-		protected static readonly AdrHLitype adrHLi;
-		protected static readonly AdrHLdtype adrHLd;
-		protected static readonly AdrCtype adrC; // IoC
+		public static readonly AdrBCtype adrBC;
+		public static readonly AdrDEtype adrDE;
+		public static readonly AdrHLtype adrHL;
+		public static readonly AdrHLitype adrHLi;
+		public static readonly AdrHLdtype adrHLd;
+		public static readonly AdrCtype adrC; // IoC
 
-		protected static readonly CondZtype isZ;
-		protected static readonly CondNZtype isNZ;
-		protected static readonly CondCtype isC;
-		protected static readonly CondNCtype isNC;
+		public static readonly CondZtype isZ;
+		public static readonly CondNZtype isNZ;
+		public static readonly CondCtype isC;
+		public static readonly CondNCtype isNC;
 
 		public ushort Nop() => Instr( InstrType.Nop );
 		public ushort Stop( byte corrupt = 0x00 ) => Instr( InstrType.Stop, Asm.D8( corrupt ) );
@@ -116,14 +116,6 @@ namespace rzr
 		public ushort Ld( Address adr, Atype A ) => Instr( InstrType.Ld, Asm.A16(adr), A.Type );
 		// LD A, (a16)
 		public ushort Ld( Atype A, Address adr ) => Instr( InstrType.Ld, A.Type, Asm.A16( adr ) );
-
-		// Helper for LD (a16), d8
-		public ushort Ld( ushort adr, byte val ) 
-		{
-			var label = Ld( A, val );
-			Ld( adr.Adr(), A );
-			return label;
-		}
 
 		// INC [BC DE HL SP]
 		public ushort Inc( BcDeHlSp lhs ) => Instr( InstrType.Inc, lhs.Type );
@@ -187,21 +179,29 @@ namespace rzr
 		public ushort And( BDHhl rhs ) => Instr( InstrType.And, rhs.Type );
 		// AND A, [C E L A]
 		public ushort And( CELA rhs ) => Instr( InstrType.And, rhs.Type );
+		// AND A, d8
+		public ushort And( byte rhs ) => Instr( InstrType.And, Asm.D8( rhs ) );
 
 		// OR A, [B D H (HL)]
 		public ushort Or( BDHhl rhs ) => Instr( InstrType.Or, rhs.Type );
 		// OR A, [C E L A]
 		public ushort Or( CELA rhs ) => Instr( InstrType.Or, rhs.Type );
+		// Or A, d8
+		public ushort Or( byte rhs ) => Instr( InstrType.Or, Asm.D8( rhs ) );
 
 		// XOR A, [B D H (HL)]
 		public ushort Xor( BDHhl rhs ) => Instr( InstrType.Xor, rhs.Type );
 		// XOR A, [C E L A]
 		public ushort Xor( CELA rhs ) => Instr( InstrType.Xor, rhs.Type );
+		// XOR A, d8
+		public ushort Xor( byte rhs ) => Instr( InstrType.Xor, Asm.D8( rhs ) );
 
 		// CP A, [B D H (HL)]
 		public ushort Cp( BDHhl rhs ) => Instr( InstrType.Cp, rhs.Type );
 		// CP A, [C E L A]
 		public ushort Cp( CELA rhs ) => Instr( InstrType.Cp, rhs.Type );
+		// CP A, d8
+		public ushort Cp( byte rhs ) => Instr( InstrType.Cp, Asm.D8( rhs ) );
 
 		// RET
 		public ushort Ret() => Instr( InstrType.Ret );
@@ -240,16 +240,7 @@ namespace rzr
 		public ushort Ccf() => Instr( InstrType.Ccf );
 		public ushort Rst( byte vec ) => Instr( InstrType.Rst, Asm.RstAdr( vec ) );
 
-		public ushort Db( params byte[] vals ) 
-		{
-			var label = Instr( InstrType.Db, Asm.D8( vals[0] ) );
-			foreach( byte val in vals.Skip(1) )
-			{
-				Instr( InstrType.Db, Asm.D8( val ) );
-			}
-
-			return label;
-		}
+		public ushort Db( byte val ) => Instr( InstrType.Db, Asm.D8( val ) );
 	}
 
 	public class AsmRecorder : AsmConsumer, IEnumerable<AsmInstr>
@@ -275,6 +266,42 @@ namespace rzr
 			m_instructions.Add( instr );
 			return (ushort)m_instructions.Count;
 		}
+	}
+
+	public static class AsmConsumerExtensions
+	{
+		// Helper for LD (a16), d8
+		public static ushort Ld( this AsmConsumer self, ushort adr, byte val )
+		{
+			var label = self.Ld( AsmConsumer.A, val );
+			self.Ld( adr.Adr(), AsmConsumer.A );
+			return label;
+		}
+
+		public static ushort Db( this AsmConsumer self, byte first, params byte[] vals )
+		{
+			var label = self.Db( first );
+			foreach( byte val in vals )
+			{
+				self.Db( val );
+			}
+
+			return label;
+		}
+
+		private static ushort Not( this AsmConsumer self, AsmOperand rhs )
+		{
+			ushort ret = self.Ld( AsmConsumer.A, 255 );
+			self.Instr( InstrType.Sub, rhs );
+			return ret;
+		}
+
+		// NOT A, [B D H (HL)]
+		public static ushort Not( this AsmConsumer self, AsmConsumer.BDHhl rhs ) => Not( self, rhs.Type );
+		// NOT A, [C E L A]
+		public static ushort Not( this AsmConsumer self, AsmConsumer.CELA rhs ) => Not( self, rhs.Type );
+		// NOT A, d8
+		public static ushort Not( this AsmConsumer self, byte rhs ) => Not( self, Asm.D8( rhs ) );
 	}
 
 	public static class AsmWriter 
@@ -324,9 +351,9 @@ namespace rzr
 		public bool SGBSupport { get; set; }
 		public abstract CartridgeType Type { get; } // to be set by the implementing class
 		public IEnumerable<byte> Logo { get; set; } = new byte[]{
-			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D , 0x00 , 0x0B , 0x03 , 0x73 , 0x00 , 0x83 , 0x00 , 0x0C , 0x00 , 0x0D,
-			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89 , 0x00 , 0x0E , 0xDC , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00,
+			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+			0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E
 		};
 		public string Title { get; set; } = "rzrboy";
 		public string Manufacturer { get; set; } = "FABI";
@@ -336,27 +363,6 @@ namespace rzr
 		public byte CGBSupport { get; set; }
 
 		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP );
-
-		public override ushort Consume( AsmInstr instr )
-		{
-			ushort prev = PC;
-
-			var (bank, switching) = GetBank( IP: IP );
-
-			// write bank switching code to the end of this bank
-			ushort pc = switching.Write( prev, mem: bank, throwException: ThrowException );
-
-			if( pc > prev )
-			{
-				(bank,_) = GetBank( IP: IP + (uint)(pc-prev)  );
-			}
-
-			instr.Assemble( ref pc, bank, throwException: ThrowException );
-
-			IP += (uint)( pc - prev );
-
-			return prev;
-		}
 
 		public ModuleWriter() 
 		{
@@ -389,7 +395,56 @@ namespace rzr
 		public FixedConsumer LCDStat { get; }	// $48
 		public FixedConsumer Timer { get; }		// $50
 		public FixedConsumer Serial { get; }	// $58
-		public FixedConsumer Joypad { get; }	// $60
+		public FixedConsumer Joypad { get; }    // $60
+
+		public override ushort Consume( AsmInstr instr )
+		{
+			ushort prev = PC;
+
+			var (bank, switching) = GetBank( IP: IP );
+
+			// write bank switching code to the end of this bank
+			ushort pc = switching.Write( prev, mem: bank, throwException: ThrowException );
+
+			if( pc > prev )
+			{
+				(bank, _) = GetBank( IP: IP + (uint)( pc - prev ) );
+			}
+
+			instr.Assemble( ref pc, bank, throwException: ThrowException );
+
+			IP += (uint)( pc - prev );
+
+			return prev;
+		}
+
+		// direct write through to current rom bank, ignores any switching
+		public void Write( byte[] data, uint ip )
+		{
+			var (bank, _) = GetBank( IP: ip );
+			for( uint i = 0; i < data.Length; ++i, ++ip )
+			{
+				uint pc = ip % Mbc.RomBankSize;
+
+				if( pc == 0 ) // get next bank
+				{
+					(bank, _) = GetBank( IP: ip );
+				}
+
+				bank[(ushort)pc] = data[i];
+			}
+		}
+
+		public ushort Write( params byte[] data )
+		{
+			ushort prev = PC;
+
+			Write( data, IP );
+
+			IP += (uint)data.Length;
+
+			return prev;
+		}
 
 		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
