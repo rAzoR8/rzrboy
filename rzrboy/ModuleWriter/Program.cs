@@ -4,21 +4,22 @@ MyGame peliPoika = new();
 
 while(true)
 {
+	Console.WriteLine( "publish?" );
+	int key = Console.In.Read();
+	if( key == 'q' || key == 'n' )
+		break;
+
 	peliPoika.WriteAll();
 	byte[] rom = peliPoika.Rom();
 	foreach( string instr in Isa.Disassemble( 0x150, peliPoika.PC, new Storage( rom ) ) )
 	{
 		Console.WriteLine( instr );
 	}
-	Console.WriteLine( "publish?" );
-	int key = Console.In.Read();
-	if( key == 'q' || key == 'n' )
-		break;
 
 	try
 	{
 		File.WriteAllBytes( $"{peliPoika.Title}.gb", rom ); // local
-		Console.WriteLine( $"Written {peliPoika.Title} v{peliPoika.Version} {rom.Length}B");
+		Console.WriteLine( $"Written {peliPoika.Title} v{peliPoika.Version} {rom.Length}B HeaderChk {peliPoika.HeaderChecksum:X2} RomChk {peliPoika.RomChecksum:X4}");
 		File.WriteAllBytes( $"D:\\Assets\\gbc\\common\\{peliPoika.Title}.gb", rom ); // pocket
 	}
 	catch( System.Exception e )
@@ -164,8 +165,8 @@ ushort CopyTiles = Ld( A, adrDE );
 		Jp(isNZ, CopyTiles );
 
 		Ld( DE, TileMapStart );
-		Ld( HL, 0x9800 );
-		Ld( BC, (ushort)TileMap.Length );
+		Ld( HL, 0x9800 ); // 0x9800
+		Ld( BC, (ushort)(TileMap.Length) );
 
 ushort CopyTilemap = Ld( A, adrDE );
 		Ld( adrHLi, A );
@@ -180,10 +181,22 @@ ushort CopyTilemap = Ld( A, adrDE );
 		Ldh( 0x40, A );
 
 		// During the first( blank ) frame, initialize display registers
-		Ld( A, 0b11100100 );
-		Ldh( 0x47, A );
 
-		Jp( PC ); // while true
+		Ld( A, 0xe4 );
+		Ldh( 0x47, A ); // BGP palette
+		Inc( A );
+
+		Jp( PC );// while true
+
+var resetB = Ld( B, 0 );
+var start = Ldh( A, 0x44 );
+		Cp( 144 );
+		Jp( isC, start );
+
+		Ld( A, B );
+		Ldh( 0x47, A );
+		Inc( B );
+		Jp( start );
 
 		Write( TileData, ip: TileDataStart );
 		Write( TileMap, ip: TileMapStart );

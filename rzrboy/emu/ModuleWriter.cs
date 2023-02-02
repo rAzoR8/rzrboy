@@ -507,6 +507,9 @@ namespace rzr
 
 		public override CartridgeType Type => CartridgeType.MBC1_RAM;
 
+		public byte HeaderChecksum { get; private set; } = 0;
+		public ushort RomChecksum { get; private set; } = 0;
+
 		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP )
 		{
 			int i = (int)( IP / Mbc.RomBankSize );
@@ -568,8 +571,8 @@ namespace rzr
 			HeaderView header = new HeaderView( bank0.Data );
 
 			header.RomBanks = m_banks.Count;
-			header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( bank0.Data );
-			header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
+			HeaderChecksum = header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( bank0.Data );
+			RomChecksum = header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
 #if DEBUG
 			header.Valid();
 #endif
