@@ -2,13 +2,11 @@
 {
     public class Apu
     {
-        private Mem mem;
-        public Apu( Mem memory )
+        public Apu()
         {
-            mem = memory;
         }
 
-        public void Tick()
+        public void Tick( Reg reg, Mem mem )
         {
         }
     }

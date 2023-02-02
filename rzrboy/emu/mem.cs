@@ -2,7 +2,7 @@
 {
 	public class AddressNotMappedException : rzr.ExecException
 	{
-		public AddressNotMappedException( ushort address, Reg? state = null ) :
+		public AddressNotMappedException( ushort address ) :
 			base( $"0x{address.ToString( "X4" )} not mapped to any memory section" )
 		{ }
 	}
@@ -33,15 +33,20 @@
         // helper sections:
         public CombiSection wram { get; }
 
-        public Mem( Section mbc ) : base( start: 0, name: "Mem" )
+        private readonly int m_romIndex;
+		private readonly int m_eRamIndex;
+
+		public Mem( Section mbc ) : base( start: 0, name: "Mem" )
 		{
             cart = mbc;
 			wram = new( wram0, wramx );
 			echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
 
-            Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
+			m_romIndex =
+			Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
             Add( vram,   0x8000 ); // 8000-9FFF 8KiB
-            Add( cart,   0xA000 ); // A000-BFFF 8KiB external ram
+			m_eRamIndex =
+			Add( cart,   0xA000 ); // A000-BFFF 8KiB external ram
             Add( wram0,  0xC000 ); // C000-CFFF 4KiB
             Add( wramx,  0xD000 ); // D000-DFFF 4KiB
             Add( echo,   0xE000 ); // E000-FE00 7680B
@@ -57,8 +62,8 @@
         public void SwitchCart( Section mbc )
         {
             cart = mbc;
-            Exchange( 0, cart );
-            Exchange( 2, cart );
+            Set( m_romIndex, cart );
+            Set( m_eRamIndex, cart );
         }
     }
 }

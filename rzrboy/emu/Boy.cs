@@ -4,7 +4,6 @@ namespace rzr
 {
     public class Boy
     {
-		public Isa isa { get; }
 		public Mem mem { get; }
 		public Ppu ppu { get; }
 		public Cpu cpu { get; }
@@ -20,17 +19,15 @@ namespace rzr
 
         public List<Callback> StepCallbacks { get; } = new();
 
-        public Boy()
+		public Boy()
         {
             cart = new Cartridge();
-            mem = new Mem();
-
+            mem = new Mem(); // TODO: move outside
             reg = new Reg();
-            isa = new Isa();
 
-            cpu = new Cpu( reg, mem, isa );
-            ppu = new Ppu( mem );
-            apu = new Apu( mem );
+            cpu = new Cpu();
+            ppu = new Ppu();
+            apu = new Apu();
         }
 
         public void LoadBootRom( byte[] boot )
@@ -70,13 +67,11 @@ namespace rzr
 
         public bool Tick() 
         {
-            // TODO: handle interupts
+            bool cont = cpu.Tick( reg, mem );
+			ppu.Tick( reg, mem );
+			apu.Tick( reg, mem );
 
-            bool cont = cpu.Tick();
-            ppu.Tick();
-            apu.Tick();
-
-            return cont;
+			return cont;
         }
 
         /// <summary>

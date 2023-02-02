@@ -208,7 +208,7 @@ namespace rzr
             return m_sections.Count - 1;
         }
 
-		protected void Exchange( int index, Section section )
+		protected void Set( int index, Section section )
 		{
 			m_sections[index].Section = section;
 		}
@@ -289,7 +289,7 @@ namespace rzr
         public delegate void OnReadByte ( byte val );
         public delegate void OnWriteByte ( byte oldVal, byte newVal );
 
-		public  override byte this[ushort address] { get => Value; set => Value = value; }
+		public override byte this[ushort address] { get => Value; set => Value = value; }
 
         public static implicit operator byte( ByteSection sec ) { return sec.Value; }
     }

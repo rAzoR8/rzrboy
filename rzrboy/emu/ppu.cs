@@ -2,14 +2,12 @@
 {
     public class Ppu
     {
-        private Mem mem;
-        public Ppu( Mem memory )
+        public Ppu()
         {
-            mem = memory;
         }
 
-        public void Tick()
-        {
+        public void Tick( Reg reg, Mem mem )
+		{
         }
     }
 }
