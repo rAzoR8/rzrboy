@@ -24,7 +24,7 @@ while(true)
 	}
 	catch( System.Exception e )
 	{
-		Console.WriteLine( e );
+		Console.WriteLine( $">> {e.Message}" );
 	}
 }
 

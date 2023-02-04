@@ -241,6 +241,65 @@ namespace rzr
 		public ushort Rst( byte vec ) => Instr( InstrType.Rst, Asm.RstAdr( vec ) );
 
 		public ushort Db( byte val ) => Instr( InstrType.Db, Asm.D8( val ) );
+
+		///
+		/// EXTENSION INSTRUCTIONS
+		/// 
+
+		// RLC [B D H (HL)]
+		public ushort Rlc( BDHhl rhs ) => Instr( InstrType.Rlc, rhs.Type );
+		// RLC [C E L A]
+		public ushort Rlc( CELA rhs ) => Instr( InstrType.Rlc, rhs.Type );
+
+		// RRC [B D H (HL)]
+		public ushort Rrc( BDHhl rhs ) => Instr( InstrType.Rrc, rhs.Type );
+		// RRC [C E L A]
+		public ushort Rrc( CELA rhs ) => Instr( InstrType.Rrc, rhs.Type );
+
+		// RL [B D H (HL)]
+		public ushort Rl( BDHhl rhs ) => Instr( InstrType.Rl, rhs.Type );
+		// RL [C E L A]
+		public ushort Rl( CELA rhs ) => Instr( InstrType.Rl, rhs.Type );
+
+		// RR [B D H (HL)]
+		public ushort Rr( BDHhl rhs ) => Instr( InstrType.Rr, rhs.Type );
+		// RR [C E L A]
+		public ushort Rr( CELA rhs ) => Instr( InstrType.Rr, rhs.Type );
+
+		// SLA [B D H (HL)]
+		public ushort Sla( BDHhl rhs ) => Instr( InstrType.Sla, rhs.Type );
+		// SLA [C E L A]
+		public ushort Sla( CELA rhs ) => Instr( InstrType.Sla, rhs.Type );
+
+		// SRA [B D H (HL)]
+		public ushort Sra( BDHhl rhs ) => Instr( InstrType.Sra, rhs.Type );
+		// SRA [C E L A]
+		public ushort Sra( CELA rhs ) => Instr( InstrType.Sra, rhs.Type );
+
+		// SWAP [B D H (HL)]
+		public ushort Swap( BDHhl rhs ) => Instr( InstrType.Swap, rhs.Type );
+		// SWAP [C E L A]
+		public ushort Swap( CELA rhs ) => Instr( InstrType.Swap, rhs.Type );
+
+		// SRL [B D H (HL)]
+		public ushort Srl( BDHhl rhs ) => Instr( InstrType.Srl, rhs.Type );
+		// SRL [C E L A]
+		public ushort Srl( CELA rhs ) => Instr( InstrType.Srl, rhs.Type );
+
+		// BIT BitIdx, [B D H (HL)]
+		public ushort Bit( byte idx, BDHhl rhs ) => Instr( InstrType.Bit, Asm.BitIdx( idx ), rhs.Type );
+		// BIT BitIdx, [C E L A]
+		public ushort Bit( byte idx, CELA rhs ) => Instr( InstrType.Bit, Asm.BitIdx( idx ), rhs.Type );
+
+		// RES BitIdx, [B D H (HL)]
+		public ushort Res( byte idx, BDHhl rhs ) => Instr( InstrType.Res, Asm.BitIdx( idx ), rhs.Type );
+		// RES BitIdx, [C E L A]
+		public ushort Res( byte idx, CELA rhs ) => Instr( InstrType.Res, Asm.BitIdx( idx ), rhs.Type );
+
+		// SET BitIdx, [B D H (HL)]
+		public ushort Set( byte idx, BDHhl rhs ) => Instr( InstrType.Set, Asm.BitIdx( idx ), rhs.Type );
+		// SET BitIdx, [C E L A]
+		public ushort Set( byte idx, CELA rhs ) => Instr( InstrType.Set, Asm.BitIdx( idx ), rhs.Type );
 	}
 
 	public class AsmRecorder : AsmConsumer, IEnumerable<AsmInstr>
