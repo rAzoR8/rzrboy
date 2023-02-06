@@ -28,6 +28,30 @@ while(true)
 	}
 }
 
+public static class Tiles
+{
+	public static IEnumerable<byte> FromColor( params ushort[] rows ) 
+	{
+		foreach( ushort r in rows )
+		{
+			int l = 0;
+			l |= ( ( r >> 1) & 1 );
+			l |= ( ( r >> 3 ) & 1 );
+			l |= ( ( r >> 5 ) & 1 );
+			l |= ( ( r >> 7) & 1 );
+
+			yield return (byte)l;
+
+			l = 0;
+			l |= ( ( r >> 0 ) & 1 );
+			l |= ( ( r >> 2 ) & 1 );
+			l |= ( ( r >> 4 ) & 1 );
+			l |= ( ( r >> 6 ) & 1 );
+			yield return (byte)l;
+		}
+	}
+}
+
 public class MyGame : rzr.MbcWriter
 {
 	public MyGame() {
