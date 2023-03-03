@@ -79,7 +79,7 @@ namespace rzr
             }
 		}
 
-        public virtual bool Contains(ushort address )
+        public virtual bool Contains( ushort address )
         {
             return address >= StartAddr && address < ( StartAddr + Length );
         }
