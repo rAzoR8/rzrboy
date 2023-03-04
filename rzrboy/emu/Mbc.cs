@@ -2,50 +2,6 @@
 
 namespace rzr
 {
-    public class BootRom 
-    {
-        public readonly byte[] Rom;
-        private (ushort start, ushort len)[] m_ranges;
-
-        public delegate bool IsBooting();
-
-        private IsBooting m_booting;
-
-        public BootRom( IsBooting booting, byte[] data, params (ushort start, ushort len)[] ranges )
-        {
-            m_booting = booting;
-            Rom = data;
-            m_ranges = ranges;
-
-            if( m_ranges == null || m_ranges.Count() == 0 )
-            {
-                if( data.Length == 0x100 ) // dmg
-                {
-                    m_ranges = new (ushort, ushort)[] { (0, 0x100) };
-                }
-                else if( data.Length == 0x800 ) // cgb
-                {
-                    m_ranges = new (ushort, ushort)[] { (0, 0x100), (0x200, 0x900) };
-                }
-                else // unknown,map everything and hope for the best
-                {
-                    m_ranges = new (ushort, ushort)[] { (0, (ushort)data.Length) };
-                }
-            }
-        }
-
-        public bool Accepts( ushort address ) 
-        {
-            if ( m_booting() == false ) return false;
-			foreach( (ushort start, ushort len) in m_ranges )
-			{
-                if(address >= start && address < start + len)
-                    return true;
-			}
-            return false;
-        }
-    }
-
 	public class Mbc : Section
 	{
         public const ushort RomBankSize = 0x4000; // 16KiB

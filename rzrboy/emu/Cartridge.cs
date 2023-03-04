@@ -107,7 +107,7 @@
 			Mbc = new();
 		}
 
-		public void Load( byte[] cart, BootRom? boot = null )
+		public void Load( byte[] cart )
 		{
 			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 			if( type == Header.Type )
