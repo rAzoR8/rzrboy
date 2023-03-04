@@ -2,13 +2,15 @@
 
 namespace rzr
 {
-    public class SectionReadAccessViolationException : System.AccessViolationException
-    {
-        public SectionReadAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be read from section {section.Name}" ) { }
+    public class SectionReadAccessViolationException : rzr.ExecException
+	{
+        public SectionReadAccessViolationException(string message) : base(message) { }
+		public SectionReadAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be read from section {section.Name}" ) { }
     }
 
-    public class SectionWriteAccessViolationException : System.AccessViolationException
-    {
+    public class SectionWriteAccessViolationException : rzr.ExecException
+	{
+        public SectionWriteAccessViolationException( string message ) : base(message) { }
         public SectionWriteAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
     }
 

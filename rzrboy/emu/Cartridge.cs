@@ -1,4 +1,6 @@
-﻿namespace rzr
+﻿using System.Diagnostics;
+
+namespace rzr
 {
 	public enum CartridgeType : byte
     {
@@ -94,7 +96,6 @@
 		public HeaderView Header => Mbc.Header;
 
 		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
-        public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
 
 		public Cartridge( byte[] cart ) 
@@ -147,7 +148,7 @@
 				case CartridgeType.ROM_ONLY:
 				case CartridgeType.ROM_RAM:
 				case CartridgeType.ROM_RAM_BATTERY:
-					mbc = new( cart );
+					mbc = new Mbc( cart );
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_RAM:
@@ -192,8 +193,10 @@
 
 			if( mbc == null )
 			{
-				mbc = new( cart ); // unkown cart type			
+				mbc = new Mbc( cart ); // unkown cart type			
 			}
+
+			Debug.Assert( mbc.Header.Type == type );
 
 			// TODO: restore ram
 			mbc.Header.Valid();

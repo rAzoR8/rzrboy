@@ -2,6 +2,7 @@
 
 namespace rzr
 {
+    // MBC Memory Banking Controller
 	public class Mbc : Section
 	{
         public const ushort RomBankSize = 0x4000; // 16KiB
@@ -136,7 +137,7 @@ namespace rzr
                 if( address < 0x8000 ) // rom
                 {
                     var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
-                    throw new System.AccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+                    throw new SectionWriteAccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
                 else if( RamEnabled )
                 {
@@ -146,7 +147,7 @@ namespace rzr
                 else
                 {
                     var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
-                    throw new System.AccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+                    throw new SectionWriteAccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
             }
         }
