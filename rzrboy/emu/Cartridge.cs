@@ -97,10 +97,9 @@
         public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
 
-		public Cartridge( byte[] cart, BootRom? boot = null ) 
+		public Cartridge( byte[] cart ) 
         {
 			Mbc = CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
-			Mbc.BootRom = boot;
 		}
 
 		public Cartridge( )
@@ -119,18 +118,11 @@
 			{
 				Mbc = CreateMbc( type, cart );			
 			}
-
-			if( boot != null )
-			{
-				Mbc.BootRom = boot;
-			}
 		}
 
 		public void ChangeType( CartridgeType type )
 		{
-			var boot = Mbc.BootRom;
 			Mbc = CreateMbc( type, Mbc.Rom() );
-			Mbc.BootRom = boot;
 			Header.Type = type;
 		}
 

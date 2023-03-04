@@ -138,7 +138,10 @@ namespace rzr
     public delegate byte ReadFunc( ushort address );
     public delegate void WriteFunc( ushort address, byte value );
 
-    public class RemapSection : Section
+	public delegate void OnRead( ISection section, ushort address );
+	public delegate void OnWrite( ISection section, ushort address, byte value );
+
+	public class RemapSection : Section
     {
         public delegate ushort MapFunc(ushort address);
         public static MapFunc Identity = (ushort address) => address;

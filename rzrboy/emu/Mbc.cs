@@ -64,7 +64,6 @@ namespace rzr
         public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
 
         public HeaderView Header { get; }
-        public BootRom? BootRom { get; set; }
 
         public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
@@ -166,9 +165,6 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-					if( BootRom != null && BootRom.Accepts( address ) )
-						return BootRom.Rom[address];
-
 					var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
                 }

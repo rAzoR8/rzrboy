@@ -32,13 +32,12 @@ namespace rzr
 
         public void LoadBootRom( byte[] boot )
         {
-            cart.Mbc.BootRom = new BootRom( () => mem.io[0xFF50] == 0, boot );
+            mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", boot );
         }
 
         public void LoadRom( byte[] rom )
         {
-            cart.Load( rom, cart.Mbc.BootRom );
-            mem.SwitchCart( cart );
+            cart.Load( rom );
         }
 
         public async Task<ulong> Execute( CancellationToken token = default )

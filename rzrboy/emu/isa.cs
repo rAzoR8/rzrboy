@@ -394,44 +394,6 @@ namespace rzr
             }
         }
 
-        // TODO: remove
-        private void DebugReport( ushort expected )
-        {
-            Mem mem = new( new Section(0, Mem.RomBankSize * 2 ) );
-
-            int count = 1; // 0xCB
-
-            void Print( byte pc, byte ext )
-            {
-                mem[pc] = pc;
-                mem[(ushort)( pc + 1 )] = ext;
-                ushort dis_pc = pc;
-                Debug.WriteLine( Disassemble( ref dis_pc, mem ) );
-
-                if ( ( pc != 0xCB && m_instructions[pc] != null ) ||
-                    ( pc == 0xCB && m_extInstructions[ext] != null ) )
-                {
-                    count++;
-                }
-            }
-
-            for (ushort pc = 0; pc <= 255; pc++)
-            {  
-                if(pc != 0xCB)
-                {
-                    Print((byte)pc, 0);
-                }
-            }
-
-            for ( ushort j = 0; j <= 255; j++ )
-            {
-                Print( 0xCB, (byte)j );
-            }
-
-			Debug.WriteLine( $"{count} out of 512 Instructions implemented: {100.0f * count / 512.0f}%" );
-			Debug.Assert( count == expected );
-		}
-        
         // HELPERS
         private static void Fill<Y, X>( ExecInstr[] target, byte offsetX, BuildFunc<Y, X> builder, IEnumerable<Y> ys, IEnumerable<X> xs )
         {

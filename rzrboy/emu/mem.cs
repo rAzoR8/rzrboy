@@ -37,48 +37,51 @@
 		// TODO: remove wram0 and wramx and just have on wram section, and switching happens inside
 		public CombiSection wram => new( wram0, wramx );
 
+		// ISection
 		public ushort StartAddr => 0;
 		public ushort Length => 0xFFFF;
 
-        private byte BootOrCart( ushort address ) => io[0xFF50] != 0 ? cart[address] : boot[address];
+		public List<OnRead> ReadCallbacks { get; } = new();
+		public List<OnWrite> WriteCallbacks { get; } = new();
+
+		private Section GetSection(ushort address ) 
+		{
+			switch( address )
+			{
+				case >= 0x0000 and < 0x8000: return io[0xFF50] != 0 ? cart : boot;	// 0000-7FFF 32KiB switchable
+				case >= 0x8000 and < 0xA000: return vram;		// 8000-9FFF 8KiB
+				case >= 0xA000 and < 0xC000: return cart;		// A000-BFFF 8KiB external ram on cartridge
+				case >= 0xC000 and < 0xD000: return wram0;		// C000-CFFF 4KiB
+				case >= 0xD000 and < 0xE000: return wramx;		// D000-DFFF 4KiB
+				case >= 0xE000 and < 0xFE00: return echo;		// E000-FE00 7680B
+				case >= 0xFE00 and < 0xFEA0: return oam;		// FE00-FEA0 160B
+				case >= 0xFEA0 and < 0xFF00: return unused;		// FEA0-FEFF 60B Not Usable
+				case >= 0xFF00 and < 0xFF80: return io;			// FF00-FF80 128B
+				case >= 0xFF80 and < 0xFFFF: return hram;		// FF80-FFFF 127B
+				case 0xFFFF: return IE;							// 0xFFFF
+				default: throw new AddressNotMappedException( address );
+			}
+		}
 
 		public byte this[ushort address]
         {
-            get
-            {
-                switch( address )
-                {
-                    case >= 0x0000 and < 0x8000: return BootOrCart(address);    // 0000-7FFF 32KiB switchable
-					case >= 0x8000 and < 0xA000: return vram[address];          // 8000-9FFF 8KiB
-					case >= 0xA000 and < 0xC000: return cart[address];          // A000-BFFF 8KiB external ram on cartridge
-					case >= 0xC000 and < 0xD000: return wram0[address];         // C000-CFFF 4KiB
-					case >= 0xD000 and < 0xE000: return wramx[address];         // D000-DFFF 4KiB
-					case >= 0xE000 and < 0xFE00: return echo[address];          // E000-FE00 7680B
-					case >= 0xFE00 and < 0xFEA0: return oam[address];           // FE00-FEA0 160B
-					case >= 0xFEA0 and < 0xFF00: return unused[address];        // FEA0-FEFF 60B Not Usable
-					case >= 0xFF00 and < 0xFF80: return io[address];            // FF00-FF80 128B
-					case >= 0xFF80 and < 0xFFFF: return hram[address];          // FF80-FFFF 127B
-					case 0xFFFF: return IE[address];                            // 0xFFFF
-					default: throw new AddressNotMappedException( address );
-                }
-            }
-
-            set
-            {
-				switch( address )
+			get
+			{
+				var section = GetSection( address );
+				foreach( OnRead onRead in ReadCallbacks )
 				{
-					case >= 0x0000 and < 0x8000: cart[address] = value; break;      // 0000-7FFF 32KiB switchable
-					case >= 0x8000 and < 0xA000: vram[address] = value; break;      // 8000-9FFF 8KiB
-					case >= 0xA000 and < 0xC000: cart[address] = value; break;      // A000-BFFF 8KiB external ram on cartridge
-					case >= 0xC000 and < 0xD000: wram0[address] = value; break;     // C000-CFFF 4KiB
-					case >= 0xD000 and < 0xE000: wramx[address] = value; break;     // D000-DFFF 4KiB
-					case >= 0xE000 and < 0xFE00: echo[address] = value; break;      // E000-FE00 7680B
-					case >= 0xFE00 and < 0xFEA0: oam[address] = value; break;       // FE00-FEA0 160B
-					case >= 0xFEA0 and < 0xFF00: unused[address] = value; break;	// FEA0-FEFF 60B Not Usable
-					case >= 0xFF00 and < 0xFF80: io[address] = value; break;		// FF00-FF80 128B
-					case >= 0xFF80 and < 0xFFFF: hram[address] = value; break;      // FF80-FFFF 127B
-					case 0xFFFF: IE[address] = value; break;						// 0xFFFF
-					default: throw new AddressNotMappedException( address );
+					onRead( section, address );
+				}
+				return section[address];
+			}
+
+			set
+            {
+				var section = GetSection( address );
+				section[address] = value;
+				foreach( OnWrite onWrite in WriteCallbacks )
+				{
+					onWrite( section, address, value );
 				}
 			}
         }
