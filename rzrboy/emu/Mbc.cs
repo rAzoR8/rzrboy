@@ -106,7 +106,7 @@ namespace rzr
             Header.RamBanks = bankCount;
         }
 
-        public override bool Contains( ushort address )
+        public bool Accepts( ushort address )
 		{
             return
                 address < 0x8000 ||     // roms banks
@@ -116,7 +116,7 @@ namespace rzr
         }
 
         // mapped access for emulator, default impl
-        public override byte this[ushort address]
+        public new byte this[ushort address]
         {
             get
             {
@@ -177,7 +177,8 @@ namespace rzr
 		{
 		}
 
-        public override byte this[ushort address]
+        // override Mbc behavior
+        public new byte this[ushort address]
         {
             set
             {

@@ -21,10 +21,13 @@ namespace rzr
         public ushort Length { get; }
 
         public string Name => "unnamed";
-        public bool Accepts( ushort address ) => address >= StartAddr && address < StartAddr + Length;
+        public bool Accepts( ushort address ) => address >= StartAddr && address < (StartAddr + Length);
     }
 
-    public class Storage : ISection
+	public delegate void OnRead( ISection section, ushort address );
+	public delegate void OnWrite( ISection section, ushort address, byte value );
+
+	public class Storage : ISection
     {
         public IList<byte> Data { get; }
 
@@ -52,7 +55,6 @@ namespace rzr
         public ushort StartAddr { get; set; }
         public ushort Length { get; set; }
     }
-
 
     public static class SectionExtensions
     {
@@ -84,15 +86,10 @@ namespace rzr
             }
 		}
 
-        public virtual bool Contains( ushort address )
-        {
-            return address >= StartAddr && address < ( StartAddr + Length );
-        }
-
         public override string ToString() { return Name; }
 
 		// mapped access for emulator, default impl
-		public virtual byte this[ushort address]
+		public byte this[ushort address]
         {
             get
             {
@@ -140,19 +137,14 @@ namespace rzr
 		}
 	}
 
-	public delegate byte ReadFunc( ushort address );
-    public delegate void WriteFunc( ushort address, byte value );
-
-	public delegate void OnRead( ISection section, ushort address );
-	public delegate void OnWrite( ISection section, ushort address, byte value );
-
 	public class RemapSection : ISection
-    {
-        public delegate ushort MapFunc(ushort address);
-        public static MapFunc Identity = (ushort address) => address;
+	{
+		public delegate ushort MapFunc( ushort address );
+		public static MapFunc Identity = ( ushort address ) => address;
 
-        public MapFunc Map { get; set; } = Identity;
-        public ISection Source { get; set; }
+		public MapFunc Map { get; set; } = Identity;
+		public ISection Source { get; set; }
+
 		public RemapSection( MapFunc map, ushort start, ushort len, Section src )
 		{
 			Map = map;
@@ -161,30 +153,17 @@ namespace rzr
 			Length = len;
 		}
 
-		public string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
-        public ushort StartAddr { get; }
-        public ushort Length { get; }
-        public byte this[ushort address]
-        {
-            get => Source[Map(address)];
-            set => Source[Map(address)] = value;
-        }
-    }
+		public string Name => $"{StartAddr}->{Map( StartAddr )}:{Source.Name}";
+		public ushort StartAddr { get; }
+		public ushort Length { get; }
+		public byte this[ushort address]
+		{
+			get => Source[Map( address )];
+			set => Source[Map( address )] = value;
+		}
+	}
 
-    public class SectionComparer : IComparer<Section>
-    {
-        public int Compare(Section? x, Section? y)
-        {
-            if (x != null && y != null)
-                return x.StartAddr.CompareTo(y.StartAddr);
-
-            if (x == null && y != null) return -1; // x is less
-            else if (x != null && y == null) return 1; // x is more
-            return 0;
-        }
-    }
-
-    public class ByteSection : ISection
+	public class ByteSection : ISection
     {
         public OnReadByte? OnRead { get; set; }
         public OnWriteByte? OnWrite { get; set; }
