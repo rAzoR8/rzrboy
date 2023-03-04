@@ -27,8 +27,7 @@
         public Section wram0 { get; set; } = new (0xC000, 0x1000, "wram0");        
         public Section wramx { get; set; } = new (0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
 
-        public RemapSection echo { get; set; }
-        public Section oam { get; set; } = new(0xFE00, OAMSize, "oam");
+		public Section oam { get; set; } = new(0xFE00, OAMSize, "oam");
         public Section unused { get; set; } = new(0xFEA0, UnusedSize, "unused");
         public Section io { get; set; } = new(0xFF00, IOSize, "io");
         public Section hram { get; set; } = new(0xFF80, HRamSize, "ram");
@@ -53,7 +52,7 @@
 				case >= 0xA000 and < 0xC000: return cart;		// A000-BFFF 8KiB external ram on cartridge
 				case >= 0xC000 and < 0xD000: return wram0;		// C000-CFFF 4KiB
 				case >= 0xD000 and < 0xE000: return wramx;		// D000-DFFF 4KiB
-				case >= 0xE000 and < 0xFE00: return echo;		// E000-FE00 7680B
+				case >= 0xE000 and < 0xFE00: throw new NotImplementedException();		// E000-FE00 7680B
 				case >= 0xFE00 and < 0xFEA0: return oam;		// FE00-FEA0 160B
 				case >= 0xFEA0 and < 0xFF00: return unused;		// FEA0-FEFF 60B Not Usable
 				case >= 0xFF00 and < 0xFF80: return io;			// FF00-FF80 128B
@@ -89,7 +88,7 @@
 		public Mem( )
 		{
 			// todo: remove echo section, do remapping in the switch
-			echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
+			//echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
         }
     }
 }

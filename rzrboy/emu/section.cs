@@ -19,6 +19,7 @@ namespace rzr
         byte this[ushort address] { get; set; }
         public ushort StartAddr { get; }
         public ushort Length { get; }
+        public string Name => "unnamed";
     }
 
     public class Storage : ISection
@@ -143,13 +144,13 @@ namespace rzr
 	public delegate void OnRead( ISection section, ushort address );
 	public delegate void OnWrite( ISection section, ushort address, byte value );
 
-	public class RemapSection : Section
+	public class RemapSection : ISection
     {
         public delegate ushort MapFunc(ushort address);
         public static MapFunc Identity = (ushort address) => address;
 
         public MapFunc Map { get; set; } = Identity;
-        public Section Source { get; set; }
+        public ISection Source { get; set; }
 		public RemapSection( MapFunc map, ushort start, ushort len, Section src )
 		{
 			Map = map;
@@ -158,10 +159,10 @@ namespace rzr
 			Length = len;
 		}
 
-		public override string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
-        public override ushort StartAddr { get; }
-        public override ushort Length { get; }
-        public override byte this[ushort address]
+		public string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
+        public ushort StartAddr { get; }
+        public ushort Length { get; }
+        public byte this[ushort address]
         {
             get => Source[Map(address)];
             set => Source[Map(address)] = value;
