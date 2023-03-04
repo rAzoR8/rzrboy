@@ -184,7 +184,7 @@ namespace rzr
         }
     }
 
-    public class ByteSection : Section
+    public class ByteSection : ISection
     {
         public OnReadByte? OnRead { get; set; }
         public OnWriteByte? OnWrite { get; set; }
@@ -197,16 +197,21 @@ namespace rzr
             set { OnWrite?.Invoke( m_value, value ); m_value = value; }
         }
 
-		public ByteSection( ushort start, byte val, string name ) : base( start: start, len: 1, name: name )
+		public ushort StartAddr { get; }
+        public ushort Length => 1;
+        public string Name { get; }
+
+		public ByteSection( ushort start, byte val, string name )
 		{
 			Value = val;
+            Name = name;
 		}
 
         // value read
         public delegate void OnReadByte ( byte val );
         public delegate void OnWriteByte ( byte oldVal, byte newVal );
 
-		public override byte this[ushort address] { get => Value; set => Value = value; }
+		public byte this[ushort address] { get => Value; set => Value = value; }
 
         public static implicit operator byte( ByteSection sec ) { return sec.Value; }
     }

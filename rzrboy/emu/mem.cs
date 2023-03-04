@@ -43,7 +43,7 @@
 		public List<OnRead> ReadCallbacks { get; } = new();
 		public List<OnWrite> WriteCallbacks { get; } = new();
 
-		private Section GetSection(ushort address ) 
+		private ISection GetSection( ushort address ) 
 		{
 			switch( address )
 			{
