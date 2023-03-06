@@ -27,6 +27,9 @@ namespace rzr
 	public delegate void OnRead( ISection section, ushort address );
 	public delegate void OnWrite( ISection section, ushort address, byte value );
 
+    /// <summary>
+    /// Storage is a Non-execution ISection implementation that doesnt throw on out-of-bounds access and directly mapps to a buffer
+    /// </summary>
 	public class Storage : ISection
     {
         public IList<byte> Data { get; }
@@ -61,6 +64,9 @@ namespace rzr
 		public static Storage AsStorage( this IList<byte> storage ) { return new Storage( storage ); }
 	}
 
+    /// <summary>
+    /// Section is the execution implementation of ISection, that optionally is backed by memory
+    /// </summary>
     public class Section : ISection
     {
         public string Name { get; }
@@ -91,16 +97,16 @@ namespace rzr
 		// mapped access for emulator, default impl
 		public byte this[ushort address]
         {
-            get
+			get
+			{
+				if( m_storage != null && ( (ISection)this ).Accepts( address ) )
+					return m_storage[address - StartAddr];
+				else
+					throw new SectionReadAccessViolationException( address, this );
+			}
+			set
             {
-                if( m_storage != null )
-                    return m_storage[address - StartAddr];
-                else
-                    throw new SectionReadAccessViolationException( address, this );
-            }
-            set
-            {
-                if( m_storage != null )
+                if( m_storage != null && ( (ISection)this ).Accepts( address ) )
                     m_storage[address - StartAddr] = value;
                 else
                     throw new SectionWriteAccessViolationException( address, this );
