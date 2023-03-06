@@ -237,15 +237,13 @@ namespace rzrboy
                 }
 
                 await boy.Execute( cts.Token );
-                {
-                    button.Text = "Run";
+				button.Text = "Run";
 
-                    foreach( Callback step in m_afterStep )
-                    {
-                        step();
-                    }
-                }
-            }
+				foreach( Callback step in m_afterStep )
+				{
+					step();
+				}
+			}
             else
             {
                 cts.Cancel();

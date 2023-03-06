@@ -45,7 +45,7 @@
 		{
 			switch( address )
 			{
-				case >= 0x0000 and < 0x8000: return Booting ? cart : boot;	// 0000-7FFF 32KiB switchable
+				case >= 0x0000 and < 0x8000: return Booting ? boot : cart; // 0000-7FFF 32KiB switchable
 				case >= 0x8000 and < 0xA000: return vram;		// 8000-9FFF 8KiB
 				case >= 0xA000 and < 0xC000: return cart;		// A000-BFFF 8KiB external ram on cartridge
 				case >= 0xC000 and < 0xE000: return wram;       // C000-E000 4KiB + 4KiB banked

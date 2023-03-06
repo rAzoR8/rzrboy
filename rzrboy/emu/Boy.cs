@@ -52,23 +52,37 @@ namespace rzr
                     while( true )
                     {
                         token.ThrowIfCancellationRequested();
-                        cycles += Step( false );
+                        cycles += Step( token: token, debugPrint: true );
                     }
                 } );
             }
-            catch( OperationCanceledException )
+            catch( OperationCanceledException e )
             {
-                IsRunning = false;
+                if(e.CancellationToken == token)
+                    IsRunning = false;
+                else
+                    return await Execute( token );
             }
 
             return cycles;
         }
 
-        public bool Tick() 
-        {
-            bool cont = cpu.Tick( reg, mem );
-			ppu.Tick( reg, mem );
-			apu.Tick( reg, mem );
+		public bool Tick( CancellationToken token = default )
+		{
+            bool cont;
+			try
+			{
+				cont = cpu.Tick( reg, mem );
+				ppu.Tick( reg, mem );
+				apu.Tick( reg, mem );
+			}
+			catch( rzr.ExecException e )
+			{
+				// TODO: handle
+				Debug.Write( e.Message );
+                cont = false;
+                throw new OperationCanceledException( message: e.Message, innerException: e, token );
+			}
 
 			return cont;
         }
@@ -77,12 +91,12 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( bool debugPrint )
+        public uint Step( bool debugPrint, CancellationToken token = default )
         {
             uint cycles = 1;
 
             // execute all ops
-            while ( Tick() ) { ++cycles; }
+            while ( Tick( token ) ) { ++cycles; }
 
             if ( debugPrint )
             {
