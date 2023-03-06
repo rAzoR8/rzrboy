@@ -151,7 +151,7 @@ namespace rzr
 		public MapFunc Map { get; set; } = Identity;
 		public ISection Source { get; set; }
 
-		public RemapSection( MapFunc map, ushort start, ushort len, Section src )
+		public RemapSection( MapFunc map, ushort start, ushort len, ISection src )
 		{
 			Map = map;
 			Source = src;
