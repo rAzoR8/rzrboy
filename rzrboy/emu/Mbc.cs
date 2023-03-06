@@ -3,7 +3,7 @@
 namespace rzr
 {
     // MBC Memory Banking Controller
-	public class Mbc : Section
+	public class Mbc : ISection
 	{
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort RamBankSize = 0x2000; // 8KiB
@@ -24,7 +24,11 @@ namespace rzr
 
         public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
-		public Mbc() : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
+        public string Name = "MBC";
+		public ushort StartAddr => 0;
+		public ushort Length => RomBankSize * 2 + RamBankSize;
+
+		public Mbc()
         {
 			m_rom = new List<byte>( Enumerable.Repeat<byte>( 0, RomBankSize * 2 ) );
 			m_ram = new List<byte>( Enumerable.Repeat<byte>( 0, RamBankSize ) );
@@ -35,7 +39,6 @@ namespace rzr
 		}
 
 		public Mbc( byte[] rom, byte[]? ram = null )
-            : base( start: 0, len: RomBankSize * 2 + RamBankSize, name: "MBC", alloc: false )
 		{
             m_rom = new( rom );
             Header = new( m_rom );
@@ -116,7 +119,7 @@ namespace rzr
         }
 
         // mapped access for emulator, default impl
-        public new byte this[ushort address]
+        public byte this[ushort address]
         {
             get
             {

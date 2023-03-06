@@ -95,7 +95,6 @@ namespace rzr
         public Mbc Mbc { get; private set; }
 		public HeaderView Header => Mbc.Header;
 
-		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
 		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
 
 		public Cartridge( byte[] cart ) 
