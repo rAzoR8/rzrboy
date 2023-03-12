@@ -1,4 +1,5 @@
 ﻿using rzr;
+using System.Diagnostics;
 
 MyGame peliPoika = new();
 
@@ -30,24 +31,27 @@ while(true)
 
 public static class Tiles
 {
-	public static IEnumerable<byte> FromColor( params ushort[] rows ) 
+	public static IEnumerable<byte> FromColor( this uint row ) => FromColors( row );
+	public static IEnumerable<byte> FromColor( this int row ) => FromColors( (uint)row );
+
+	public static IEnumerable<byte> FromColors( params uint[] rows )
 	{
-		foreach( ushort r in rows )
+		foreach( uint row in rows )
 		{
-			int l = 0;
-			l |= ( ( r >> 1) & 1 );
-			l |= ( ( r >> 3 ) & 1 );
-			l |= ( ( r >> 5 ) & 1 );
-			l |= ( ( r >> 7) & 1 );
+			uint val = row; uint l = 0, r = 0;
+			for( int i = 0; i < 8; i++ )
+			{
+				uint cur = val % 4;
+				l |= ( cur & 0b01 ) << i;
+				r |= ( ( cur & 0b10 ) >> 1 ) << i;
+
+				Debug.WriteLine( $"{cur} {Convert.ToString( l, toBase: 2 ).PadLeft( 8, '0' )} {Convert.ToString( r, toBase: 2 ).PadLeft( 8, '0' )}" );
+
+				val /= 10;
+			}
 
 			yield return (byte)l;
-
-			l = 0;
-			l |= ( ( r >> 0 ) & 1 );
-			l |= ( ( r >> 2 ) & 1 );
-			l |= ( ( r >> 4 ) & 1 );
-			l |= ( ( r >> 6 ) & 1 );
-			yield return (byte)l;
+			yield return (byte)r; // todo: flip L & R
 		}
 	}
 }
