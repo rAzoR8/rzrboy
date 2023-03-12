@@ -17,7 +17,8 @@ namespace rzr
 
         public delegate void Callback( Reg reg, Mem mem );
 
-        public List<Callback> StepCallbacks { get; } = new();
+		public List<Callback> PreStepCallbacks { get; } = new();
+		public List<Callback> PostStepCallbacks { get; } = new();
 
 		public Boy()
         {
@@ -95,8 +96,13 @@ namespace rzr
         {
             uint cycles = 1;
 
-            // execute all ops
-            while ( Tick( token ) ) { ++cycles; }
+			foreach( Callback fun in PreStepCallbacks )
+			{
+				fun( reg, mem );
+			}
+
+			// execute all ops
+			while ( Tick( token ) ) { ++cycles; }
 
             if ( debugPrint )
             {
@@ -104,7 +110,7 @@ namespace rzr
                 Debug.WriteLine( $"{Isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
-            foreach ( Callback fun in StepCallbacks )
+            foreach ( Callback fun in PostStepCallbacks )
             {
                 fun( reg, mem );
             }

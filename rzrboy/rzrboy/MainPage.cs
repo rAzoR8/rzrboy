@@ -8,6 +8,7 @@ using System.Threading;
 using System.Collections.ObjectModel;
 using Microsoft.Maui.Storage;
 using System.Text;
+using System.Linq;
 
 namespace rzrboy
 {
@@ -133,15 +134,15 @@ namespace rzrboy
             InstructionPicker picker = new( Asm.Ld(Asm.A, Asm.D) );
 
             boy = gb;
-            m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , 0, 16, 16 );
+            m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , offset: 0, columns: 16, rows: 16 );
 
             mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
             //mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => { if( address < 0x8000 ) m_updateDissassembly(); } );
 
-            boy.StepCallbacks.Add( ( reg, mem ) =>
-			{
-                // refresh m_assembly around reg.PC =- 30
-			});
+            //boy.PostStepCallbacks.Add( ( reg, mem ) =>
+			//{
+            //  refresh m_assembly around reg.PC =- 30
+			//});
 
             //boy.StepCallbacks.Add( ( reg, mem ) =>
             //{
@@ -181,8 +182,11 @@ namespace rzrboy
                             .Invoke(button => button.Clicked += OnLoadRomClicked),
                         new Button { Text = "Save Rom" }
                             .Font(bold: true, size: 20)
-                            .Invoke(button => button.Clicked += OnSaveRomClicked)
-                    }.Row(Row.LoadAndSaveButtons),
+                            .Invoke(button => button.Clicked += OnSaveRomClicked),
+						new Button { Text = "Debug" }
+							.Font(bold: true, size: 20)
+							.Invoke(button => button.Clicked += OnDebugClicked)
+					}.Row(Row.LoadAndSaveButtons),
 
                     new HorizontalStackLayout{ Registers(), Disassembly(10) }.Row(Row.RegAndDis),
 
@@ -333,8 +337,9 @@ namespace rzrboy
                 {
                     boy.LoadBootRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
                     m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-                }
-            }
+					m_updateDissassembly();
+				}
+			}
 			catch( rzr.Exception )
 			{
 				// TODO: log
@@ -344,5 +349,53 @@ namespace rzrboy
                 // TODO: log
 			}
 		}
-    }
+
+        private async void OnDebugClicked( object sender, EventArgs args )
+        {
+            if( boy.IsRunning )
+                cts.Cancel();
+
+			var options = new PickOptions
+			{
+				PickerTitle = "Please select a assembly load",
+			};
+
+            try
+            {
+				var result = await FilePicker.PickAsync( options );
+				if( result != null )
+				{
+					var assembly = System.Reflection.Assembly.LoadFrom( result.FullPath );
+
+					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( MbcWriter ) ) );
+					string[] typeNames = types.Select( t => t.FullName ).ToArray();
+					string selected = await DisplayActionSheet( title: "Module to debug:", cancel: "Cancel", destruction: "Destroy", typeNames );
+					
+                    if(selected == null && typeNames.Length >0)
+                        selected = typeNames[0];
+
+                    if( selected != null )
+					{
+						System.Type mwType = assembly.GetType( selected );
+						MbcWriter writer = (MbcWriter)System.Activator.CreateInstance( mwType );
+
+						writer.WriteAll();
+						boy.LoadRom( writer.Rom() );
+						m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
+						m_updateDissassembly();
+
+						boy.PreStepCallbacks.Add( ( reg, mem ) =>
+						{
+							writer.WriteAll();
+							boy.LoadRom( writer.Rom() );
+						} );
+					}
+				}
+			}
+            catch( System.Exception e )
+            {
+                System.Diagnostics.Debug.WriteLine( e.Message );
+            }			
+		}
+	}
 }
