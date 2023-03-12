@@ -375,6 +375,13 @@ namespace rzr
 			return pc;
 		}
 
+		public static Section Write( this AsmRecorder rec, ushort start, ushort len, ushort pc = 0, bool throwException = true )
+		{
+			Section section = new Section( start: start, len: len, name: "AsmWriter", alloc: true );
+			rec.Write( pc: pc, mem: section, throwException: throwException );
+			return section;
+		}
+
 		public static ushort Write( this IEnumerable<AsmInstr> instructions, ushort pc, ISection mem, bool throwException = true )
 		{
 			foreach( AsmInstr instr in instructions )

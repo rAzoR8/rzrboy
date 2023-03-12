@@ -21,8 +21,7 @@
 
 		public bool Booting => io[0xFF50] == 0;
 
-		// TODO: have some minimal boot rom
-		public Section boot { get; set; } = new( 0x0000, 0xFF, "nopboot" ); // 0x0000
+		public Section boot { get; set; } = Boot.Minimal; // 0x0000
 
 		public Mbc			cart { get; set; } = new(); // including eram (external)
 		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram" ); // In CGB mode, switchable bank 0/1        

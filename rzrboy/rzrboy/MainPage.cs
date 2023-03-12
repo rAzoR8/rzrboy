@@ -384,11 +384,11 @@ namespace rzrboy
 						m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
 						m_updateDissassembly();
 
-						boy.PreStepCallbacks.Add( ( reg, mem ) =>
-						{
-							writer.WriteAll();
-							boy.LoadRom( writer.Rom() );
-						} );
+						//boy.PreStepCallbacks.Add( ( reg, mem ) =>
+						//{
+						//	writer.WriteAll();
+						//	boy.LoadRom( writer.Rom() );
+						//} );
 					}
 				}
 			}
