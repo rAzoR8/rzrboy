@@ -571,7 +571,7 @@ namespace rzr
 		public IReadOnlyList<Storage> Banks => m_banks;
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
-		public override CartridgeType Type => CartridgeType.MBC1_RAM;
+		public override CartridgeType Type => CartridgeType.ROM_ONLY;
 
 		public byte HeaderChecksum { get; private set; } = 0;
 		public ushort RomChecksum { get; private set; } = 0;

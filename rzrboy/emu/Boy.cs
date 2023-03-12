@@ -39,6 +39,7 @@ namespace rzr
         public void LoadRom( byte[] rom )
         {
             cart.Load( rom );
+            mem.cart = cart.Mbc;
         }
 
         public async Task<ulong> Execute( CancellationToken token = default )

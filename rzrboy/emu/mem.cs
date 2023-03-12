@@ -83,8 +83,6 @@
 
 		public Mem( )
 		{
-			// todo: remove echo section, do remapping in the switch
-			//echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
         }
     }
 }
