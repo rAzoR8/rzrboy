@@ -69,11 +69,15 @@ namespace rzr
     /// </summary>
     public class Section : ISection
     {
+        // ISection
         public string Name { get; }
         public ushort StartAddr { get; }
         public ushort Length { get; }
 
-        public byte[]? m_storage = null;
+        public bool ReadOnly { get; set; } = false;
+		public bool WriteOnly { get; set; } = false;
+
+		public byte[]? m_storage = null;
 
         public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
         {
@@ -99,14 +103,14 @@ namespace rzr
         {
 			get
 			{
-				if( m_storage != null && ( (ISection)this ).Accepts( address ) )
+				if( !WriteOnly && m_storage != null && ( (ISection)this ).Accepts( address ) )
 					return m_storage[address - StartAddr];
 				else
 					throw new SectionReadAccessViolationException( address, this );
 			}
 			set
             {
-                if( m_storage != null && ( (ISection)this ).Accepts( address ) )
+                if( !ReadOnly && m_storage != null && ( (ISection)this ).Accepts( address ) )
                     m_storage[address - StartAddr] = value;
                 else
                     throw new SectionWriteAccessViolationException( address, this );

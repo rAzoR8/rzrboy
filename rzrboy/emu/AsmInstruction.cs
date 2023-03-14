@@ -162,7 +162,7 @@
 						case OperandType.BC when Rhs.IsD16(): Set( 0x01 ); Op2D16(); break;
 						case OperandType.DE when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
 						case OperandType.HL when Rhs.IsD16(): Set( 0x21 ); Op2D16(); break;
-						case OperandType.SP when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
+						case OperandType.SP when Rhs.IsD16(): Set( 0x31 ); Op2D16(); break;
 						// LD (BC), A
 						case OperandType.AdrBC when Rhs == OperandType.A: Set( 0x02 ); break;
 						case OperandType.AdrDE when Rhs == OperandType.A: Set( 0x12 ); break;

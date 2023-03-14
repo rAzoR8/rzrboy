@@ -361,24 +361,21 @@ namespace rzr
 		public static ushort Not( this AsmConsumer self, AsmConsumer.CELA rhs ) => Not( self, rhs.Type );
 		// NOT A, d8
 		public static ushort Not( this AsmConsumer self, byte rhs ) => Not( self, Asm.D8( rhs ) );
+
+		public static ushort Push( this AsmConsumer self, ushort rhs )
+		{
+			var label = self.Ld( AsmConsumer.BC, rhs );
+			self.Push( AsmConsumer.BC );
+			return label;
+		}
 	}
 
 	public static class AsmWriter 
 	{
-		public static ushort Write( this AsmRecorder rec, ushort pc, ISection mem, bool throwException = true )
-		{
-			foreach( AsmInstr instr in rec.Instructions )
-			{
-				instr.Assemble( ref pc, mem, throwException: throwException );
-			}
-
-			return pc;
-		}
-
-		public static Section Write( this AsmRecorder rec, ushort start, ushort len, ushort pc = 0, bool throwException = true )
+		public static Section Write( this IEnumerable<AsmInstr> instructions, ushort start, ushort len, ushort pc = 0, bool throwException = true )
 		{
 			Section section = new Section( start: start, len: len, name: "AsmWriter", alloc: true );
-			rec.Write( pc: pc, mem: section, throwException: throwException );
+			instructions.Write( pc: pc, mem: section, throwException: throwException );
 			return section;
 		}
 

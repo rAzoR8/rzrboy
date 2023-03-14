@@ -11,22 +11,24 @@ namespace rzr
         private List<byte> m_rom;
 		private List<byte> m_ram;
 
-		protected int m_selectedRomBank = 0;
-		protected int m_selectedRamBank = 0;
+		public int SelectedRomBank { get; protected set; } = 0;
+		public int SelectedRamBank { get; protected set; } = 0;
+
 		protected bool m_ramEnabled = false;
+		public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
-        public byte[] Ram() => m_ram.ToArray();
-        public byte[] Rom() => m_rom.ToArray();
-
-        public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
-
-        public HeaderView Header { get; }
-
-        public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
-
-        public string Name = "MBC";
+		// ISection
+		public string Name = "MBC";
 		public ushort StartAddr => 0;
 		public ushort Length => RomBankSize * 2 + RamBankSize;
+
+		public byte[] Ram() => m_ram.ToArray();
+		public byte[] Rom() => m_rom.ToArray();
+
+		public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
+		public Storage RamBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_ram, storageOffset: bankIndex * RamBankSize, startAddr: sectionStart, len: RamBankSize );
+
+		public HeaderView Header { get; }
 
 		public Mbc()
         {
@@ -67,9 +69,11 @@ namespace rzr
         public void LoadRom( byte[] rom )
         {
             var type = (CartridgeType)rom[(ushort)HeaderOffsets.Type];
-            Debug.Assert( type == Header.Type && rom.Length == RomBankSize * Header.RomBanks );
+            Debug.Assert( type == Header.Type );
+			Debug.Assert( rom.Length >= RomBankSize );
+			//Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
 
-            m_rom.Clear();
+			m_rom.Clear();
             m_rom.AddRange( rom );
         }
 
@@ -125,12 +129,12 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-					var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
+					var bankAdr = ( SelectedRomBank * Header.RomBanks ) + address - StartAddr;
                     return m_rom[bankAdr];
                 }
                 else if( RamEnabled )
                 {
-                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
                     return m_ram[bankAdr];
                 }
                 return 0xFF;
@@ -139,17 +143,17 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( m_selectedRomBank * Header.RomBanks ) + address - StartAddr;
+                    var bankAdr = ( SelectedRomBank * Header.RomBanks ) + address - StartAddr;
                     throw new SectionWriteAccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
                 else if( RamEnabled )
                 {
-                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
                     m_ram[bankAdr] = value;
                 }
                 else
                 {
-                    var bankAdr = ( m_selectedRamBank * Header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
                     throw new SectionWriteAccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
             }
@@ -206,8 +210,8 @@ namespace rzr
                     base[address] = value;
                 }
 
-                m_selectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % Header.RomBanks;
-                Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{m_selectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
+                SelectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % Header.RomBanks;
+                Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{SelectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
             }
         }
     }

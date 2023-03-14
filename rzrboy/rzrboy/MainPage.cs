@@ -19,7 +19,13 @@ namespace rzrboy
     {
         public delegate void OnUpdate<T>( T view );
 
-        public static T Update<T>( this T view, Callbacks callbacks, OnUpdate<T> func  )
+		public static T Spacing<T>( this T view, double spacing ) where T: StackBase
+		{
+			view.Spacing = spacing;
+			return view;
+		}
+
+		public static T Update<T>( this T view, Callbacks callbacks, OnUpdate<T> func  )
         {
             callbacks.Add(() => func( view ) );
             return view;
@@ -41,43 +47,43 @@ namespace rzrboy
         private Reg reg => boy.reg;
         private Mem mem => boy.mem;
 
+        private ISection GetCurRomBank() => boy.cart.Mbc.RomBank( bankIndex: boy.cart.Mbc.SelectedRamBank );
+
         private List<Callback> m_beforeStep = new();
         private List<Callback> m_afterStep = new();
 
-        private MemoryEditor m_memEdit;
-        private ObservableCollection<AsmInstr> m_assembly = new();
-        private Callback m_updateDissassembly;
+        private MemoryEditor m_mainMemEdit;
+		private MemoryEditor m_stackMemEdit;
+
+		private ObservableCollection<AsmInstr> m_assembly = new();
+        private Callback m_updateRamAssembly;
+		private Callback m_updateRomAssembly;
 
 		private enum RegRows 
         {
             AF, BC, DE, HL, SP, PC, Flags
         }
 
-        private HorizontalStackLayout MakeRow( Reg8 l, Reg8 r )
+        private HorizontalStackLayout MakeRow( Reg16 reg, double cellHeight = 26 )
         {
             return new HorizontalStackLayout
             {
-                new Label{ FontFamily = Font.Regular, Text = $"{l}  0x" },
-                new Label{ FontFamily = Font.Regular, }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[l]:X2}"; }),
-                //new Label{ }.Bind(Label.TextProperty, nameof(emu.Cpu.reg.PC)),
-                new Label{ FontFamily = Font.Regular, }.Update( m_afterStep, lbl => {lbl.Text = $"{reg[r]:X2}"; }),
-                new Label{ FontFamily = Font.Regular, Text = $" {r}" }
-            };
-        }
-
-        private HorizontalStackLayout MakeRow( Reg16 reg )
-        {
-            return new HorizontalStackLayout
-            {
-                new Label{ FontFamily = Font.Regular , Text = $"{reg} 0x" },
-                new Label{ FontFamily = Font.Regular }.Update( m_afterStep, lbl => {lbl.Text = $"{this.reg[reg]:X4}"; }),
-            };
+                new Label{ FontFamily = Font.Regular, Text = $"{reg} " },
+                new Entry{ FontFamily = Font.Regular, Text = $"0x{this.reg[reg]:X4}", MinimumHeightRequest = cellHeight, MaximumHeightRequest = cellHeight }
+				.Update( m_afterStep, lbl => {lbl.Text = $"0x{this.reg[reg]:X4}"; })
+				.Invoke( edit => edit.Completed += ( object sender, EventArgs e) =>
+				{
+                    string text = (edit.Text.StartsWith("0x") || edit.Text.StartsWith("0X")) ? edit.Text.Substring(2) : edit.Text;
+					if( ushort.TryParse( text, System.Globalization.NumberStyles.HexNumber, null, out var val ) )
+					{
+						this.reg[reg] = val;
+					}
+				} )
+			};
         }
 
         private Grid Registers()
         {
-            int byt( bool b ) => b ? 1 : 0;
-
             return new Grid
             {
                 RowSpacing = 2,
@@ -94,18 +100,28 @@ namespace rzrboy
 
                 Children =
                 {
-                    MakeRow(Reg8.A, Reg8.F).Row(RegRows.AF),
-                    MakeRow(Reg8.B, Reg8.C).Row(RegRows.BC),
-                    MakeRow(Reg8.D, Reg8.E).Row(RegRows.DE),
-                    MakeRow(Reg8.H, Reg8.L).Row(RegRows.HL),
+                    MakeRow(Reg16.AF).Row(RegRows.AF),
+                    MakeRow(Reg16.BC).Row(RegRows.BC),
+                    MakeRow(Reg16.DE).Row(RegRows.DE),
+                    MakeRow(Reg16.HL).Row(RegRows.HL),
                     MakeRow(Reg16.SP).Row(RegRows.SP),
                     MakeRow(Reg16.PC).Row(RegRows.PC),
-                    new Label{ FontFamily = Font.Regular }.Update(m_afterStep, lbl => lbl.Text = $"Z {byt(reg.Zero)} N {byt(reg.Sub)} H {byt(reg.HalfCarry)} C {byt(reg.Carry)}").Row(RegRows.Flags)
+                    new HorizontalStackLayout
+                    {
+						new Label{ FontFamily = Font.Regular, Text = "Z" },
+						new CheckBox{ IsChecked = reg.Zero }.Update(m_afterStep, box => box.IsChecked = reg.Zero ).Invoke( box => box.CheckedChanged += (object sender, CheckedChangedEventArgs e) => reg.Zero = e.Value),
+						new Label{ FontFamily = Font.Regular, Text = "N" },
+						new CheckBox{ IsChecked = reg.Sub }.Update(m_afterStep, box => box.IsChecked = reg.Zero ).Invoke( box => box.CheckedChanged += (object sender, CheckedChangedEventArgs e) => reg.Sub = e.Value),
+						new Label{ FontFamily = Font.Regular, Text = "H" },
+						new CheckBox{ IsChecked = reg.HalfCarry }.Update(m_afterStep, box => box.IsChecked = reg.HalfCarry ).Invoke( box => box.CheckedChanged += (object sender, CheckedChangedEventArgs e) => reg.HalfCarry = e.Value),
+						new Label{ FontFamily = Font.Regular, Text = "C" },
+						new CheckBox{ IsChecked = reg.Carry }.Update(m_afterStep, box => box.IsChecked = reg.Carry ).Invoke( box => box.CheckedChanged += (object sender, CheckedChangedEventArgs e) => reg.Carry = e.Value),
+					}.Row(RegRows.Flags)
                 }
             };
         }
 
-        private View Disassembly( int instructions )
+        private View Disassembly( int instructions, Func<ISection> source, out Callback callback )
         {
             //return new AssemblyView( m_assembly );
 
@@ -113,31 +129,57 @@ namespace rzrboy
             {
                 int i = 0;
                 StringBuilder sb = new();
-                foreach( string instr in Isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem ) )
-                {
-                    if( i++ > instructions )
-                    {
-                        break;
-                    }
 
-                    sb.AppendLine( instr );
+                try
+                {
+					foreach( string instr in Isa.Disassemble( cpu.curInstrPC, (ushort)( cpu.curInstrPC + instructions * 3 ), mem: source(), unknownOp: UnknownOpHandling.AsDb ) )
+					{
+						if( i++ > instructions )
+						{
+							break;
+						}
+
+						sb.AppendLine( instr );
+					}
+				}
+                catch( System.Exception e )
+                {
+                    System.Diagnostics.Debug.WriteLine( e.Message );
                 }
 
                 lbl.Text = sb.ToString();
-            }, out m_updateDissassembly );
+            }, out callback );
         }
 
         public MainPage( rzr.Boy gb )
         {
             Title = "rzrBoy Studio";
 
-            InstructionPicker picker = new( Asm.Ld(Asm.A, Asm.D) );
+            InstructionPicker picker = new( Asm.Ld( Asm.A, Asm.D ) );
 
             boy = gb;
-            m_memEdit = new MemoryEditor( boy.cart.Mbc.RomBank( 0 ) , offset: 0, columns: 16, rows: 16 );
+            m_mainMemEdit = new MemoryEditor( source: GetCurRomBank, offset: 0, columns: 16, rows: 16 );
+            m_stackMemEdit = new MemoryEditor( source: () => mem, offset: 0, columns: 2, rows: 6 );
 
-            mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => m_memEdit.OnSetValue( address, value ) );
-            //mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) => { if( address < 0x8000 ) m_updateDissassembly(); } );
+            // program memory writes
+            mem.WriteCallbacks.Add( ( ISection section, ushort address, byte value ) =>
+            { 
+                m_mainMemEdit.OnSetValue( address, value );
+			} ) ;
+
+            // user edit writes
+            m_mainMemEdit.WriteCallbacks.Add( ( section, address, value ) =>
+            {
+                if( address < 0x8000 )
+                {
+                    m_updateRamAssembly();
+                    m_updateRomAssembly();
+                }
+            } );
+
+
+			m_afterStep.Add( () => m_stackMemEdit.Offset = reg.SP );
+            //boy.PostStepCallbacks.Add( ( reg, mem ) => m_stackMemEdit.Offset = reg.SP );
 
             //boy.PostStepCallbacks.Add( ( reg, mem ) =>
 			//{
@@ -161,7 +203,7 @@ namespace rzrboy
                     (Row.LoadAndSaveButtons, Auto),
                     (Row.RegAndDis, Auto),
                     (Row.StepAndRunButtons, Auto),
-                    (Row.Memory, Auto)
+                    (Row.MemoryAndRomDis, Auto)
                     ),
 
                 Children =
@@ -188,7 +230,12 @@ namespace rzrboy
 							.Invoke(button => button.Clicked += OnDebugClicked)
 					}.Row(Row.LoadAndSaveButtons),
 
-                    new HorizontalStackLayout{ Registers(), Disassembly(10) }.Row(Row.RegAndDis),
+                    new HorizontalStackLayout
+                    {
+                        Registers(),
+                        m_stackMemEdit,
+                        Disassembly(10, source: () => mem, out m_updateRamAssembly),
+                    }.Row(Row.RegAndDis).Spacing(10),
 
                     new HorizontalStackLayout {
                         new Button { Text = "Step" }
@@ -199,8 +246,12 @@ namespace rzrboy
                             .Invoke(button => button.Clicked += OnRunClicked),
                     }.Row(Row.StepAndRunButtons),
 
-                    m_memEdit.Row(Row.Memory),
-                }
+					new HorizontalStackLayout
+					{
+						m_mainMemEdit, // TODO: add bank selector
+						Disassembly(32, source: () => boy.cart.Mbc.RomBank( bankIndex: boy.cart.Mbc.SelectedRomBank ), out m_updateRomAssembly)
+					}.Row(Row.MemoryAndRomDis)
+				}
             };
 
             // init
@@ -222,7 +273,7 @@ namespace rzrboy
             LoadAndSaveButtons,
             RegAndDis,
             StepAndRunButtons,
-            Memory,
+            MemoryAndRomDis,
         }
 
         private CancellationTokenSource cts = new();
@@ -310,13 +361,9 @@ namespace rzrboy
                 var rom = await System.IO.File.ReadAllBytesAsync( result.FullPath );
 
                 boy.LoadRom( rom );
-				m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-                m_updateDissassembly();
-				//m_assembly.Clear();
-				//foreach( AsmInstr instr in Asm.Disassemble( rom ) )
-				//{
-				//  m_assembly.Add( instr );
-				//}
+				m_mainMemEdit.Source = GetCurRomBank;
+                m_updateRomAssembly();
+                m_updateRamAssembly();
 			}
 		}
 
@@ -336,8 +383,7 @@ namespace rzrboy
                 if( result != null )
                 {
                     boy.LoadBootRom( await System.IO.File.ReadAllBytesAsync( result.FullPath ) );
-                    m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-					m_updateDissassembly();
+					m_updateRamAssembly();
 				}
 			}
 			catch( rzr.Exception )
@@ -350,7 +396,22 @@ namespace rzrboy
 			}
 		}
 
-        private async void OnDebugClicked( object sender, EventArgs args )
+        public void Debug( System.Type type ) 
+        {
+            boy.PreStepCallbacks.Add( ( reg, mem ) =>
+            {
+                var writer = (rzr.MbcWriter)System.Activator.CreateInstance( type );
+
+				writer.WriteAll();
+                boy.LoadRom( writer.Rom() );
+
+				m_mainMemEdit.Source = GetCurRomBank;
+				m_updateRomAssembly();
+				m_updateRamAssembly();
+			} );
+        }
+
+		private async void OnDebugClicked( object sender, EventArgs args )
         {
             if( boy.IsRunning )
                 cts.Cancel();
@@ -369,9 +430,9 @@ namespace rzrboy
 
 					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( MbcWriter ) ) );
 					string[] typeNames = types.Select( t => t.FullName ).ToArray();
-					string selected = await DisplayActionSheet( title: "Module to debug:", cancel: "Cancel", destruction: "Destroy", typeNames );
+					string selected = await DisplayActionSheet( title: "Module to debug:", cancel: "Cancel", destruction: "OK", typeNames );
 					
-                    if(selected == null && typeNames.Length >0)
+                    if( selected == null && typeNames.Length >0)
                         selected = typeNames[0];
 
                     if( selected != null )
@@ -381,14 +442,9 @@ namespace rzrboy
 
 						writer.WriteAll();
 						boy.LoadRom( writer.Rom() );
-						m_memEdit.Section = boy.cart.Mbc.RomBank( 0 );
-						m_updateDissassembly();
-
-						//boy.PreStepCallbacks.Add( ( reg, mem ) =>
-						//{
-						//	writer.WriteAll();
-						//	boy.LoadRom( writer.Rom() );
-						//} );
+						m_mainMemEdit.Source = GetCurRomBank;
+						m_updateRomAssembly();
+						m_updateRamAssembly();
 					}
 				}
 			}
