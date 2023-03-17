@@ -1,16 +1,10 @@
 ﻿using System.Collections;
+using static rzr.AsmOperandTypes;
 
 namespace rzr
 {
-	public abstract class AsmConsumer
+	public static class AsmOperandTypes
 	{
-		public ushort Instr( InstrType instr, params AsmOperand[] operands )
-		{
-			return Consume( new AsmInstr( instr, operands ) );
-		}
-
-		public abstract ushort Consume( AsmInstr instr );
-
 		public interface IOpType { OperandType Type { get; } }
 
 		// B D H (HL)
@@ -41,11 +35,11 @@ namespace rzr
 		// IoC 0xFF00+C
 		public struct AdrCtype : IOpType { public OperandType Type => OperandType.ioC; }
 
-		public struct BCtype : BcDeHlSp { public OperandType Type => OperandType.BC; public AdrBCtype Adr => adrBC;  }
+		public struct BCtype : BcDeHlSp { public OperandType Type => OperandType.BC; public AdrBCtype Adr => adrBC; }
 		public struct DEtype : BcDeHlSp { public OperandType Type => OperandType.DE; public AdrDEtype Adr => adrDE; }
 		public struct HLtype : BcDeHlSp { public OperandType Type => OperandType.HL; public AdrHLtype Adr => adrHL; }
 		public struct SPtype : BcDeHlSp { public OperandType Type => OperandType.SP; }
-		
+
 		public struct AFtype : IOpType { public OperandType Type => OperandType.AF; }
 
 		public interface Condtype : IOpType { }
@@ -53,6 +47,42 @@ namespace rzr
 		public struct CondNZtype : Condtype { public OperandType Type => OperandType.condNZ; }
 		public struct CondCtype : Condtype { public OperandType Type => OperandType.condC; }
 		public struct CondNCtype : Condtype { public OperandType Type => OperandType.condNC; }
+
+		public static readonly Atype A;
+		public static readonly Btype B;
+		public static readonly Ctype C;
+		public static readonly Dtype D;
+		public static readonly Etype E;
+		public static readonly Htype H;
+		public static readonly Ltype L;
+
+		public static readonly BCtype BC;
+		public static readonly DEtype DE;
+		public static readonly HLtype HL;
+		public static readonly SPtype SP;
+		public static readonly AFtype AF; // Push/Pop only
+
+		public static readonly AdrBCtype adrBC;
+		public static readonly AdrDEtype adrDE;
+		public static readonly AdrHLtype adrHL;
+		public static readonly AdrHLitype adrHLi;
+		public static readonly AdrHLdtype adrHLd;
+		public static readonly AdrCtype adrC; // IoC
+
+		public static readonly CondZtype isZ;
+		public static readonly CondNZtype isNZ;
+		public static readonly CondCtype isC;
+		public static readonly CondNCtype isNC;
+	}
+
+	public abstract class AsmConsumer
+	{
+		public ushort Instr( InstrType instr, params AsmOperand[] operands )
+		{
+			return Consume( new AsmInstr( instr, operands ) );
+		}
+
+		public abstract ushort Consume( AsmInstr instr );
 
 		public static readonly Atype A;
 		public static readonly Btype B;
@@ -356,9 +386,9 @@ namespace rzr
 		}
 
 		// NOT A, [B D H (HL)]
-		public static ushort Not( this AsmConsumer self, AsmConsumer.BDHhl rhs ) => Not( self, rhs.Type );
+		public static ushort Not( this AsmConsumer self, BDHhl rhs ) => Not( self, rhs.Type );
 		// NOT A, [C E L A]
-		public static ushort Not( this AsmConsumer self, AsmConsumer.CELA rhs ) => Not( self, rhs.Type );
+		public static ushort Not( this AsmConsumer self, CELA rhs ) => Not( self, rhs.Type );
 		// NOT A, d8
 		public static ushort Not( this AsmConsumer self, byte rhs ) => Not( self, Asm.D8( rhs ) );
 

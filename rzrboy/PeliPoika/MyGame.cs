@@ -1,7 +1,115 @@
 ﻿namespace PeliPoika
 {
+	using System.Reflection;
+	using static rzr.AsmOperandTypes;
+
+	public static class FunctionExtensions
+	{
+		public enum Linkage
+		{
+			Inline,
+			SameBank,
+			Any
+		}
+
+		[AttributeUsageAttribute( AttributeTargets.Method )]
+		public class LinkageAttribute : System.Attribute
+		{
+			public Linkage Linkage { get; }
+			public LinkageAttribute( Linkage linkage )
+			{
+				Linkage = linkage;
+			}
+		}
+
+		public class InlineAttribute : LinkageAttribute { public InlineAttribute() : base( Linkage.Inline ) { } }
+
+		[AttributeUsageAttribute( AttributeTargets.Parameter )]
+		public class ParamStorageAttribute : System.Attribute
+		{
+			public rzr.OperandType Target { get; }
+			public ParamStorageAttribute( rzr.OperandType target ) 
+			{
+				Target = target;
+			}
+		}
+
+		public class BCAttribute : ParamStorageAttribute { public BCAttribute() : base( rzr.OperandType.BC ) { } }
+		public class DEAttribute : ParamStorageAttribute { public DEAttribute() : base( rzr.OperandType.DE ) { } }
+		public class HLAttribute : ParamStorageAttribute { public HLAttribute() : base( rzr.OperandType.HL ) { } }
+
+		public static ushort memcopy_impl( this rzr.AsmConsumer self, [DE] ushort dst, [HL] ushort src, [BC] ushort len )
+		{
+			//ushort init = self.Ld( DE, src );
+			//self.Ld( HL, dst );
+			//self.Ld( BC, len );
+
+			ushort copy = self.Ld( A, adrDE );
+			self.Ld( adrHLi, A );
+			self.Inc( DE );
+			self.Dec( BC );
+			self.Ld( A, B );
+			self.Or( C );
+			self.Jp( isNZ, copy );
+			//self.Ret();
+
+			return copy;
+		}
+
+		static Func<T1, T2> test<T1, T2>( Func<T1, T2> f )
+		{			
+			return ( T1 t1 ) => f( t1 ); 
+		}
+
+
+		public static ushort memcopy( this Game self, ushort dst, ushort src, ushort len )
+		{
+			ushort init = self.Ld( DE, src );
+			self.Ld( HL, dst );
+			self.Ld( BC, len );
+
+			var type = System.Reflection.MethodBase.GetCurrentMethod();
+			if( type == null ) return 0;
+
+			LinkageAttribute? linkage = type.GetCustomAttribute<LinkageAttribute>();
+			if( linkage != null )
+			{
+			
+			}
+
+			foreach( var param in type.GetParameters() )
+			{
+				ParamStorageAttribute? storage = param.GetCustomAttribute<ParamStorageAttribute>();
+				if( storage != null )
+				{
+				
+				}
+			}
+
+			if( self.GetFunc( type, out ushort label ) )
+			{
+				self.Call( label );
+				return label;
+			}
+			label = self.memcopy_impl( dst, src, len );
+			self.AddFunc( type, label);
+			return label;
+		}
+	}
+
 	public class Game : rzr.MbcWriter
 	{
+		private Dictionary<System.Reflection.MethodBase, ushort> m_functions = new();
+
+		public bool GetFunc( System.Reflection.MethodBase method, out ushort label ) => m_functions.TryGetValue( method, out label );
+
+		public bool AddFunc( System.Reflection.MethodBase method, ushort label ) => m_functions.TryAdd( method, label );
+
+		//public ushort Call()
+		//{
+		//	return 0;
+		//}
+
 		public Game()
 		{
 			Title = "PeliPoika";
@@ -130,7 +238,7 @@
 				00000000);
 
 			// replace background tile
-			//data.CopyTo( TileData, 0 );
+			data.CopyTo( TileData, 0 );
 
 			// turn off audio
 			ushort Entry = Xor( B ); // A = 0
@@ -144,29 +252,33 @@
 			Xor( A );
 			Ldh( 0x40, A ); // rLCDC LCD control
 
-			Ld( DE, TileDataStart );
-			Ld( HL, 0x9000 );
-			Ld( BC, (ushort)TileData.Length );
+			this.memcopy( dst: 0x9000, src: TileDataStart, len: (ushort)TileData.Length );
 
-			ushort CopyTiles = Ld( A, adrDE );
-			Ld( adrHLi, A );
-			Inc( DE );
-			Dec( BC );
-			Ld( A, B );
-			Or( C );
-			Jp( isNZ, CopyTiles );
+			//Ld( DE, TileDataStart );
+			//Ld( HL, 0x9000 );
+			//Ld( BC, (ushort)TileData.Length );
 
-			Ld( DE, TileMapStart );
-			Ld( HL, 0x9800 ); // 0x9800
-			Ld( BC, (ushort)( TileMap.Length ) );
+			//ushort CopyTiles = Ld( A, adrDE );
+			//Ld( adrHLi, A );
+			//Inc( DE );
+			//Dec( BC );
+			//Ld( A, B );
+			//Or( C );
+			//Jp( isNZ, CopyTiles );
 
-			ushort CopyTilemap = Ld( A, adrDE );
-			Ld( adrHLi, A );
-			Inc( DE );
-			Dec( BC );
-			Ld( A, B );
-			Or( C );
-			Jp( isNZ, CopyTilemap );
+			this.memcopy( dst: 0x9800, src: TileMapStart, len: (ushort)TileData.Length );
+
+			//Ld( DE, TileMapStart );
+			//Ld( HL, 0x9800 ); // 0x9800
+			//Ld( BC, (ushort)( TileMap.Length ) );
+
+			//ushort CopyTilemap = Ld( A, adrDE );
+			//Ld( adrHLi, A );
+			//Inc( DE );
+			//Dec( BC );
+			//Ld( A, B );
+			//Or( C );
+			//Jp( isNZ, CopyTilemap );
 
 			//Turn the LCD on
 			Ld( A, 0b10000001 );
@@ -178,7 +290,7 @@
 			Ldh( 0x47, A ); // BGP palette
 			Inc( A );
 
-			Jp( PC );// while true
+			//Jp( PC );// while true
 
 			var resetB = Ld( B, 0 );
 			//var resetD = Ld( D, 0 );
