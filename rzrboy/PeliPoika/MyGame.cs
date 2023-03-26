@@ -1,6 +1,7 @@
 ﻿namespace PeliPoika
 {
 	using System.Reflection;
+	using static PeliPoika.FunctionExtensions;
 	using static rzr.AsmOperandTypes;
 
 	public static class FunctionExtensions
@@ -8,8 +9,7 @@
 		public enum Linkage
 		{
 			Inline,
-			SameBank,
-			Any
+			Call
 		}
 
 		[AttributeUsageAttribute( AttributeTargets.Method )]
@@ -23,6 +23,7 @@
 		}
 
 		public class InlineAttribute : LinkageAttribute { public InlineAttribute() : base( Linkage.Inline ) { } }
+		public class CallAttribute : LinkageAttribute { public CallAttribute() : base( Linkage.Call ) { } }
 
 		[AttributeUsageAttribute( AttributeTargets.Parameter )]
 		public class ParamStorageAttribute : System.Attribute
@@ -38,7 +39,7 @@
 		public class DEAttribute : ParamStorageAttribute { public DEAttribute() : base( rzr.OperandType.DE ) { } }
 		public class HLAttribute : ParamStorageAttribute { public HLAttribute() : base( rzr.OperandType.HL ) { } }
 
-		public static ushort memcopy_impl( this rzr.AsmConsumer self, [DE] ushort dst, [HL] ushort src, [BC] ushort len )
+		public static ushort memcopy_impl( /*this*/ rzr.AsmConsumer self, [DE] ushort dst, [HL] ushort src, [BC] ushort len )
 		{
 			//ushort init = self.Ld( DE, src );
 			//self.Ld( HL, dst );
@@ -56,44 +57,56 @@
 			return copy;
 		}
 
-		static Func<T1, T2> test<T1, T2>( Func<T1, T2> f )
-		{			
-			return ( T1 t1 ) => f( t1 ); 
-		}
-
-
-		public static ushort memcopy( this Game self, ushort dst, ushort src, ushort len )
+		public static Func<T1, T2, T3, T4> Function<T1, T2, T3, T4>( this Game self, Func<T1, T2, T3, T4> f )
 		{
-			ushort init = self.Ld( DE, src );
-			self.Ld( HL, dst );
-			self.Ld( BC, len );
+			//var type = System.Reflection.MethodBase.GetCurrentMethod();
 
-			var type = System.Reflection.MethodBase.GetCurrentMethod();
-			if( type == null ) return 0;
+			var type = f.GetMethodInfo();
 
-			LinkageAttribute? linkage = type.GetCustomAttribute<LinkageAttribute>();
-			if( linkage != null )
+			void loadParams( params dynamic[] dynParams )
 			{
-			
-			}
-
-			foreach( var param in type.GetParameters() )
-			{
-				ParamStorageAttribute? storage = param.GetCustomAttribute<ParamStorageAttribute>();
-				if( storage != null )
+				for( int i = 0; i < dynParams.Length; i++ )
 				{
-				
+					var info = type.GetParameters()[i];
+					ParamStorageAttribute? storage = info.GetCustomAttribute<ParamStorageAttribute>();
+					if( storage != null )
+					{
+						self.Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
+					}
 				}
 			}
 
-			if( self.GetFunc( type, out ushort label ) )
+			LinkageAttribute? linkAttrib = type.GetCustomAttribute<LinkageAttribute>();
+			Linkage linkage = linkAttrib != null ? linkAttrib.Linkage : Linkage.Call;
+
+			T4 Impl( T1 t1, T2 t2, T3 t3 )
 			{
-				self.Call( label );
-				return label;
+				loadParams( t1, t2, t3 );
+
+				T4 res = default;
+				if( linkage == Linkage.Call ) 
+				{
+					if( self.GetFunc( type, out ushort label ) )
+					{
+						self.Call( label );
+					}
+					else
+					{
+						label = self.PC;
+						res = f( t1, t2, t3 );
+						self.Ret();
+						self.AddFunc( type, label );
+					}
+				}
+				else if( linkage == Linkage.Inline ) 
+				{
+					res = f( t1, t2, t3 );
+				}
+
+				return res;
 			}
-			label = self.memcopy_impl( dst, src, len );
-			self.AddFunc( type, label);
-			return label;
+
+			return Impl;
 		}
 	}
 
@@ -105,11 +118,22 @@
 
 		public bool AddFunc( System.Reflection.MethodBase method, ushort label ) => m_functions.TryAdd( method, label );
 
-		//public ushort Call()
-		//{
-		//	return 0;
-		//}
+		public ushort memcopy_impl( [DE] ushort dst, [HL] ushort src, [BC] ushort len )
+		{
+			//ushort init = self.Ld( DE, src );
+			//self.Ld( HL, dst );
+			//self.Ld( BC, len );
 
+			ushort copy = Ld( A, adrDE );
+			Ld( adrHLi, A );
+			Inc( DE );
+			Dec( BC );
+			Ld( A, B );
+			Or( C );
+			Jp( isNZ, copy );
+
+			return copy;
+		}
 		public Game()
 		{
 			Title = "PeliPoika";
@@ -252,7 +276,21 @@
 			Xor( A );
 			Ldh( 0x40, A ); // rLCDC LCD control
 
-			this.memcopy( dst: 0x9000, src: TileDataStart, len: (ushort)TileData.Length );
+			var memcopy = this.Function( [Inline] ( [HL] ushort dst, [DE] ushort src, [BC] ushort len ) =>
+			{
+				ushort copy = Ld( A, adrDE );
+				Ld( adrHLi, A );
+				Inc( DE );
+				Dec( BC );
+				Ld( A, B );
+				Or( C );
+				Jp( isNZ, copy );
+
+				return copy;
+			});
+			memcopy( 0x9000, TileDataStart, (ushort)TileData.Length );
+
+			//this.memcopy( dst: 0x9000, src: TileDataStart, len: (ushort)TileData.Length );
 
 			//Ld( DE, TileDataStart );
 			//Ld( HL, 0x9000 );
@@ -266,7 +304,7 @@
 			//Or( C );
 			//Jp( isNZ, CopyTiles );
 
-			this.memcopy( dst: 0x9800, src: TileMapStart, len: (ushort)TileData.Length );
+			memcopy( 0x9800, TileMapStart, (ushort)TileData.Length );
 
 			//Ld( DE, TileMapStart );
 			//Ld( HL, 0x9800 ); // 0x9800
@@ -290,7 +328,7 @@
 			Ldh( 0x47, A ); // BGP palette
 			Inc( A );
 
-			//Jp( PC );// while true
+			Jp( PC );// while true
 
 			var resetB = Ld( B, 0 );
 			//var resetD = Ld( D, 0 );
