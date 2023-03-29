@@ -594,7 +594,7 @@ namespace rzr
 
 	public class MbcWriter : ModuleWriter
 	{
-		private List<Storage> m_banks = new();
+		private List<Storage> m_banks = new( );
 		public IReadOnlyList<Storage> Banks => m_banks;
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
@@ -602,6 +602,8 @@ namespace rzr
 
 		public byte HeaderChecksum { get; private set; } = 0;
 		public ushort RomChecksum { get; private set; } = 0;
+
+		protected int InitialRomBanks { get; set; } = 2;
 
 		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP )
 		{
@@ -653,6 +655,11 @@ namespace rzr
 		{
 			// reset banks
 			m_banks.Clear();
+			for( int i = 0; i < InitialRomBanks; i++ )
+			{
+				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+			}
+
 			IP = 0;
 
 			WritePreamble( entryPoint: entryPoint );

@@ -1,20 +1,9 @@
 ﻿using PeliPoika;
 using rzr;
 
-bool first = true;
+ushort romChecksum = 0;
 while(true)
 {
-	if( !first )
-	{
-		Console.WriteLine( "publish?" );
-
-		int key = Console.In.Read();
-		if( key == 'q' || key == 'n' )
-			break;
-	}
-
-	first = false;
-
 	Game peliPoika = new();
 	peliPoika.WriteAll();
 	byte[] rom = peliPoika.Rom();
@@ -24,14 +13,23 @@ while(true)
 		Console.WriteLine( instr );
 	}
 
-	try
+	bool changed = peliPoika.RomChecksum != romChecksum;
+	romChecksum = peliPoika.RomChecksum;
+
+	if( changed )
 	{
-		File.WriteAllBytes( $"{peliPoika.Title}.gb", rom ); // local
-		Console.WriteLine( $"Written {peliPoika.Title} v{peliPoika.Version} {rom.Length}B HeaderChk {peliPoika.HeaderChecksum:X2} RomChk {peliPoika.RomChecksum:X4}");
-		File.WriteAllBytes( $"D:\\Assets\\gbc\\common\\{peliPoika.Title}.gb", rom ); // pocket
+		try
+		{
+			File.WriteAllBytes( $"{peliPoika.Title}.gb", rom ); // local
+			Console.WriteLine( $"{( changed ? "Change" : "NO change" )} written {peliPoika.Title} v{peliPoika.Version} {rom.Length}B HeaderChk {peliPoika.HeaderChecksum:X2} RomChk {peliPoika.RomChecksum:X4}" );
+			File.WriteAllBytes( $"D:\\Assets\\gbc\\common\\{peliPoika.Title}.gb", rom ); // pocket
+			File.WriteAllBytes( $"D:\\Assets\\gb\\common\\{peliPoika.Title}.gb", rom ); // pocket
+		}
+		catch( System.Exception e )
+		{
+			Console.WriteLine( $">> {e.Message}" );
+		}
 	}
-	catch( System.Exception e )
-	{
-		Console.WriteLine( $">> {e.Message}" );
-	}
+
+	System.Threading.Thread.Sleep( 2000 );
 }
