@@ -8,16 +8,16 @@ while(true)
 	peliPoika.WriteAll();
 	byte[] rom = peliPoika.Rom();
 
-	foreach( string instr in Isa.Disassemble( 0x150, peliPoika.PC, new Storage( rom ) ) )
-	{
-		Console.WriteLine( instr );
-	}
-
 	bool changed = peliPoika.RomChecksum != romChecksum;
 	romChecksum = peliPoika.RomChecksum;
 
 	if( changed )
 	{
+		foreach( string instr in Isa.Disassemble( 0x150, peliPoika.PC, new Storage( rom ) ) )
+		{
+			Console.WriteLine( instr );
+		}
+
 		try
 		{
 			File.WriteAllBytes( $"{peliPoika.Title}.gb", rom ); // local
@@ -30,6 +30,4 @@ while(true)
 			Console.WriteLine( $">> {e.Message}" );
 		}
 	}
-
-	System.Threading.Thread.Sleep( 2000 );
 }

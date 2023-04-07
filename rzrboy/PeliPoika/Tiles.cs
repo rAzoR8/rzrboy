@@ -1,10 +1,20 @@
 ﻿using System.Diagnostics;
+using System.Text;
 
 namespace PeliPoika
 {
 	public static class Tiles
 	{
-		public const int BytesPerTile = 8 * 2;
+		public static class FileFormat
+		{
+			public const uint Magic = 0x6c695472;
+			public const byte Version = 1;
+			public enum Mode : byte
+			{ 
+				Y8 = 8,
+				Y16 = 16
+			}
+		}
 
 		public static readonly byte[] Color0 = From4Bit( 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000 );
 		public static readonly byte[] Color1 = From4Bit( 11111111, 11111111, 11111111, 11111111, 11111111, 11111111, 11111111, 11111111 );
@@ -41,73 +51,43 @@ namespace PeliPoika
 			return result;
 		}
 
-		public static class Fonts
+		public static byte[] FromStream( System.IO.Stream stream ) 
 		{
-			// todo turn into readonly static field, not property once the font is finalized
-			public static IReadOnlyDictionary<char, byte[]> Milla => new Dictionary<char, byte[]>()
+			using( var reader = new BinaryReader( stream, Encoding.UTF8, leaveOpen: true ) )
 			{
-				{ 'A', From4Bit(
-					03333300,
-					32000330,
-					32000330,
-					33333330,
-					32000330,
-					32000330,
-					32000330,
-					00000000)
-				},
-				{ 'I', From4Bit(
-					33333300,
-					00230000,
-					00230000,
-					00230000,
-					00230000,
-					00230000,
-					33333300,
-					00000000)
-				},
-				{ 'L', From4Bit(
-					32000000,
-					32000000,
-					32000000,
-					32000000,
-					32000000,
-					32222220,
-					33333330,
-					00000000)
-				},
-				{ 'M', From4Bit(
-					32000230,
-					33202330,
-					33030330,
-					33020330,
-					33000330,
-					33000330,
-					33000330,
-					00000000)
-				},
-				{ 'U', From4Bit(
-					32000330,
-					32000330,
-					32000330,
-					32000330,
-					32000330,
-					32000330,
-					33333330,
-					00000000)
-				},
-			};
+				var magic = reader.ReadUInt32();
+				var version = reader.ReadByte();
+				var mode = reader.ReadByte();
+
+				if( magic == FileFormat.Magic && version == FileFormat.Version
+					&& ( mode == (byte)FileFormat.Mode.Y8 || mode == (byte)FileFormat.Mode.Y16 ) )
+				{
+					var width = reader.ReadByte();
+					var height = reader.ReadByte();
+
+					if( width != 0 && height != 0 )
+					{
+						var bytesPerTile = mode * 2;
+						return reader.ReadBytes( width * height * bytesPerTile );
+					}
+				}
+			}
+
+			return new byte[0];
 		}
 
-		public static byte[] ToTiles( this IReadOnlyDictionary<char, byte[]> font, string str )
+		public static byte[] FromFile( string filename )
 		{
-			byte[] result = new byte[str.Length*BytesPerTile];
-			for( int i = 0; i < str.Length; ++i )
+			try
 			{
-				if( font.TryGetValue( str[i], out var tile ) )
-					Array.Copy( tile, sourceIndex: 0, result, destinationIndex: i * BytesPerTile, BytesPerTile );
+				using( var stream = File.Open( filename, FileMode.Open ) )
+				{
+					return FromStream( stream );
+				}
 			}
-			return result;
+			catch( System.Exception ){}
+
+			return new byte[0];
 		}
 	}
 }
