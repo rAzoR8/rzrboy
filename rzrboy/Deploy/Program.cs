@@ -20,9 +20,10 @@ while(true)
 
 		try
 		{
-			File.WriteAllBytes( $"{peliPoika.Title}.gb", rom ); // local
+			var localTarget = Path.GetFullPath( $"{peliPoika.Title}.gb" );
+			File.WriteAllBytes( localTarget, rom ); // local
 			Console.WriteLine( $"{( changed ? "Change" : "NO change" )} written {peliPoika.Title} v{peliPoika.Version} {rom.Length}B HeaderChk {peliPoika.HeaderChecksum:X2} RomChk {peliPoika.RomChecksum:X4}" );
-			File.WriteAllBytes( $"D:\\Assets\\gbc\\common\\{peliPoika.Title}.gb", rom ); // pocket
+			Console.WriteLine($"\t{localTarget}");
 			File.WriteAllBytes( $"D:\\Assets\\gb\\common\\{peliPoika.Title}.gb", rom ); // pocket
 		}
 		catch( System.Exception e )

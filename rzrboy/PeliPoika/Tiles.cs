@@ -5,15 +5,16 @@ namespace PeliPoika
 {
 	public static class Tiles
 	{
+		public enum Mode : byte
+		{
+			Y8 = 8,
+			Y16 = 16
+		}
+
 		public static class FileFormat
 		{
 			public const uint Magic = 0x6c695472;
 			public const byte Version = 1;
-			public enum Mode : byte
-			{ 
-				Y8 = 8,
-				Y16 = 16
-			}
 		}
 
 		public static readonly byte[] Color0 = From4Bit( 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000, 00000000 );
@@ -51,43 +52,60 @@ namespace PeliPoika
 			return result;
 		}
 
-		public static byte[] FromStream( System.IO.Stream stream ) 
+		public static byte[] FromStream( System.IO.Stream stream, out byte width, out byte height, out Mode mode ) 
 		{
 			using( var reader = new BinaryReader( stream, Encoding.UTF8, leaveOpen: true ) )
 			{
 				var magic = reader.ReadUInt32();
 				var version = reader.ReadByte();
-				var mode = reader.ReadByte();
+				var modeByte = reader.ReadByte();
 
 				if( magic == FileFormat.Magic && version == FileFormat.Version
-					&& ( mode == (byte)FileFormat.Mode.Y8 || mode == (byte)FileFormat.Mode.Y16 ) )
+					&& ( modeByte == (byte)Mode.Y8 || modeByte == (byte)Mode.Y16 ) )
 				{
-					var width = reader.ReadByte();
-					var height = reader.ReadByte();
+					width = reader.ReadByte();
+					height = reader.ReadByte();
+					mode = (Mode)modeByte;
 
 					if( width != 0 && height != 0 )
 					{
-						var bytesPerTile = mode * 2;
+						var bytesPerTile = modeByte * 2;
 						return reader.ReadBytes( width * height * bytesPerTile );
 					}
 				}
 			}
 
+			mode = default;
+			width = height = 0;
 			return new byte[0];
 		}
 
-		public static byte[] FromFile( string filename )
+		public static byte[] FromFile( string filename, out byte width, out byte height, out Mode mode )
 		{
 			try
 			{
 				using( var stream = File.Open( filename, FileMode.Open ) )
 				{
-					return FromStream( stream );
+					return FromStream( stream, out width, out height, out mode);
 				}
 			}
 			catch( System.Exception ){}
 
+			mode = default;
+			width = height = 0;
 			return new byte[0];
+		}
+
+		public static void WriteTileMap( byte[] target, byte xStart, byte yStart, byte width, byte height )
+		{
+			byte tile = 0;
+			for( int y = yStart; y < yStart + height; y++ )
+			{
+				for( int x = xStart; x < xStart + width; x++ )
+				{
+					target[y * 32 + x] = tile++;
+				}
+			}
 		}
 	}
 }

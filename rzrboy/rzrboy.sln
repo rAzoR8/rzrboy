@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rzrboy", "rzrboy\rzrboy.csp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "emu", "emu\emu.csproj", "{64C32A41-6BB7-4871-B80E-2563A1D4570A}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deploy", "ModuleWriter\Deploy.csproj", "{F5D5F78F-AC4A-4BDF-A45F-0AF60F89981B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Deploy", "Deploy\Deploy.csproj", "{F5D5F78F-AC4A-4BDF-A45F-0AF60F89981B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeliPoika", "PeliPoika\PeliPoika.csproj", "{0F35240C-90A4-4CB8-8516-0EF49CBC6587}"
 EndProject
