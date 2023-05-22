@@ -24,6 +24,14 @@ namespace rzr
         public bool Accepts( ushort address ) => address >= StartAddr && address < (StartAddr + Length);
     }
 
+	// Dummy section that reads and writes nothing
+	public class NullSection : ISection
+	{
+		public byte this[ushort address] { get => 0; set { } }
+		public ushort StartAddr => 0;
+		public ushort Length => 0;
+	}
+
 	public delegate void OnRead( ISection section, ushort address );
 	public delegate void OnWrite( ISection section, ushort address, byte value );
 

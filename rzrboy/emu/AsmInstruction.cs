@@ -109,6 +109,8 @@
 				this[1] = op;
 		}
 
+		//public byte Length => Assemble( ref ushort pc, new NullSection, throwException: false)
+
 		/// <summary>
 		/// Assemble to machine code
 		/// </summary>

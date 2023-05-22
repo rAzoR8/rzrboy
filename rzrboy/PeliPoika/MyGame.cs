@@ -1,8 +1,9 @@
 ﻿namespace PeliPoika
 {
-	using System.Reflection;
 	using static rzr.AsmOperandTypes;
 	using static Palettes;
+	using System.Reflection;
+	using rzr;
 
 	public static class FunctionExtensions
 	{
@@ -56,7 +57,7 @@
 		} )( dst, src, len );
 
 		public delegate void F3<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
-		public static F3<T1, T2, T3> Function<T1, T2, T3>( this Game self, F3<T1, T2, T3> f )
+		public static F3<T1, T2, T3> Function<GAME, T1, T2, T3>( this GAME self, F3<T1, T2, T3> f ) where GAME: AsmConsumer, IFunctionAssembler
 		{
 			var type = f.GetMethodInfo();
 
@@ -82,16 +83,16 @@
 
 				if( linkage == Linkage.Call ) 
 				{
-					if( self.GetFunc( type, out ushort label ) )
+					if( self.Functions.TryGetValue( type, out ushort label ) )
 					{
 						self.Call( label );
 					}
 					else
 					{
-						label = self.PC;
+						//label = self.PC;
 						f( t1, t2, t3 );
 						self.Ret();
-						self.AddFunc( type, label );
+						self.Functions.Add( type, label );
 					}
 				}
 				else if( linkage == Linkage.Inline ) 
@@ -104,13 +105,20 @@
 		}
 	}
 
-	public class Game : rzr.MbcWriter
+	public interface IFunctionAssembler 
 	{
+		public IDictionary<System.Reflection.MethodBase, ushort> Functions { get; }
+	}
+
+	public class Game : rzr.MbcWriter, IFunctionAssembler
+	{
+		public IDictionary<MethodBase, ushort> Functions => m_functions;
+
 		private Dictionary<System.Reflection.MethodBase, ushort> m_functions = new();
 
-		public bool GetFunc( System.Reflection.MethodBase method, out ushort label ) => m_functions.TryGetValue( method, out label );
+		//public bool GetFunc( System.Reflection.MethodBase method, out ushort label ) => m_functions.TryGetValue( method, out label );
 
-		public bool AddFunc( System.Reflection.MethodBase method, ushort label ) => m_functions.TryAdd( method, label );
+		//public bool AddFunc( System.Reflection.MethodBase method, ushort label ) => m_functions.TryAdd( method, label );
 
 		public Game()
 		{
@@ -293,6 +301,10 @@
 			Ldh( A, SCY );
 			Inc( A );
 			Ldh( SCY, A );
+
+			Ldh( A, SCX );
+			Dec( A );
+			Ldh( SCX, A );
 
 			Jp( restart );
 			
