@@ -337,6 +337,8 @@ namespace rzr
 		protected List<AsmInstr> m_instructions = new();
 		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
 
+		private ushort m_IP = 0;
+
 		public AsmRecorder() { }
 		public AsmRecorder( IEnumerable<AsmInstr> instructions ) { m_instructions = new( instructions ); }
 
@@ -352,8 +354,9 @@ namespace rzr
 
 		public override ushort Consume( AsmInstr instr )
 		{
+			m_IP += instr.ByteLength;
 			m_instructions.Add( instr );
-			return (ushort)m_instructions.Count;
+			return m_IP;
 		}
 	}
 
