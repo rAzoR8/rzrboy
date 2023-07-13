@@ -422,11 +422,11 @@ namespace rzr
 
 	public abstract class ModuleWriter : AsmConsumer
 	{
-		public class FixedConsumer : AsmRecorder
+		public class SubstituteRecorder : AsmRecorder
 		{
 			public delegate ushort Consumer( AsmInstr instr );
 			private Consumer m_consumer;
-			public FixedConsumer( Consumer consumer ) { m_consumer = consumer; }
+			public SubstituteRecorder( Consumer consumer ) { m_consumer = consumer; }
 			public override ushort Consume( AsmInstr instr )
 			{
 				base.Consume( instr );
@@ -475,20 +475,20 @@ namespace rzr
 			Joypad = new( Consume );
 		}
 
-		public FixedConsumer Rst0 { get; }
-		public FixedConsumer Rst8 { get; }
-		public FixedConsumer Rst10 { get; }
-		public FixedConsumer Rst18 { get; }
-		public FixedConsumer Rst20 { get; }
-		public FixedConsumer Rst28 { get; }
-		public FixedConsumer Rst30 { get; }
-		public FixedConsumer Rst38 { get; }
+		public SubstituteRecorder Rst0 { get; }
+		public SubstituteRecorder Rst8 { get; }
+		public SubstituteRecorder Rst10 { get; }
+		public SubstituteRecorder Rst18 { get; }
+		public SubstituteRecorder Rst20 { get; }
+		public SubstituteRecorder Rst28 { get; }
+		public SubstituteRecorder Rst30 { get; }
+		public SubstituteRecorder Rst38 { get; }
 
-		public FixedConsumer VBlank { get; }	// $40
-		public FixedConsumer LCDStat { get; }	// $48
-		public FixedConsumer Timer { get; }		// $50
-		public FixedConsumer Serial { get; }	// $58
-		public FixedConsumer Joypad { get; }    // $60
+		public SubstituteRecorder VBlank { get; }	// $40
+		public SubstituteRecorder LCDStat { get; }	// $48
+		public SubstituteRecorder Timer { get; }		// $50
+		public SubstituteRecorder Serial { get; }	// $58
+		public SubstituteRecorder Joypad { get; }    // $60
 
 		public override ushort Consume( AsmInstr instr )
 		{

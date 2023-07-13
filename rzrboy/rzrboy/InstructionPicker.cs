@@ -202,7 +202,7 @@ namespace rzrboy
 		{
 			if(m_Lhs.SelectedIndex > -1 )
 			{
-				Instruction.SetL( CurLhs );
+				Instruction.SetLhs( CurLhs );
 
 				if( m_Rhs.ItemsSource != CurRhsSelectables )
 				{
@@ -225,7 +225,7 @@ namespace rzrboy
 		{
 			if( m_Rhs.SelectedIndex > -1 )
 			{
-				Instruction.SetR( CurRhs );			
+				Instruction.SetRhs( CurRhs );			
 			}
 		}
 	}

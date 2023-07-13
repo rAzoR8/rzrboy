@@ -88,7 +88,7 @@
 		public AsmOperand L { get => this[0]; set => this[0] = value; }
 		public AsmOperand R { get => this[1]; set => this[1] = value; }
 
-		public void SetL( AsmOperand op ) 
+		public void SetLhs( AsmOperand op ) 
 		{
 			if( Count == 0 )
 				Add( op );
@@ -96,7 +96,7 @@
 				this[0] = op;
 		}
 
-		public void SetR( AsmOperand op, OperandType defaultL = OperandType.A )
+		public void SetRhs( AsmOperand op, OperandType defaultL = OperandType.A )
 		{
 			if( Count == 0 )
 			{
