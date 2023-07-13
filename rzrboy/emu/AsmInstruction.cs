@@ -77,7 +77,7 @@
 		public AsmInstr( InstrType type, params AsmOperand[] operands ) : base( operands ) { Type = type; }
 
 		public static implicit operator AsmInstr( InstrType type ) { return new AsmInstr( type ); }
-		public static AsmInstr operator +( AsmInstr i, AsmOperand op ) { i.Add(op); return i; }
+		public static AsmInstr operator +( AsmInstr i, AsmOperand op ) { i.Add( op ); return i; }
 		public static AsmInstr operator +( AsmInstr i, OperandType op ) { i.Add( op ); return i; }
 
 		public InstrType Type { get; set; }
@@ -88,7 +88,7 @@
 		public AsmOperand L { get => this[0]; set => this[0] = value; }
 		public AsmOperand R { get => this[1]; set => this[1] = value; }
 
-		public void SetLhs( AsmOperand op ) 
+		public void SetLhs( AsmOperand op )
 		{
 			if( Count == 0 )
 				Add( op );
@@ -109,7 +109,8 @@
 				this[1] = op;
 		}
 
-		//public byte Length => Assemble( ref ushort pc, new NullSection, throwException: false)
+		// approximate length of a instruction, only correct if the instruction itself is valid
+		public byte ByteLength => (byte)( 1 + this.Sum( ( AsmOperand op ) => op.Type switch { OperandType.d8 => 1, OperandType.r8 => 1, OperandType.io8 => 1, OperandType.SPr8 => 1, OperandType.d16 => 2, OperandType.a16 => 2, _ => 0 } ) );
 
 		/// <summary>
 		/// Assemble to machine code
