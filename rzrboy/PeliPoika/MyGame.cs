@@ -57,7 +57,7 @@
 		} )( dst, src, len );
 
 		public delegate void F3<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
-		public static F3<T1, T2, T3> Function<GAME, T1, T2, T3>( this GAME self, F3<T1, T2, T3> f ) where GAME: AsmConsumer, IFunctionAssembler
+		public static F3<T1, T2, T3> Function<GAME, T1, T2, T3>( this GAME self, F3<T1, T2, T3> f ) where GAME: AsmBuilder, IFunctionAssembler
 		{
 			var type = f.GetMethodInfo();
 
@@ -89,7 +89,7 @@
 					}
 					else
 					{
-						//label = self.PC;
+						label = self.PC;
 						f( t1, t2, t3 );
 						self.Ret();
 						self.Functions.Add( type, label );
@@ -244,7 +244,7 @@
 
 			// replace background tile
 			//data.CopyTo( TileData, 0 );
-			var tiles = Project.GetTiles( "steffen.tl", targetTileMap: TileMap, x: 6, y: 6 );
+			var tiles = Project.GetTiles( "test.tl", targetTileMap: TileMap, x: 6, y: 6 );
 			tiles.CopyTo( TileData, 0 );
 
 			//Fonts.Milla.ToTiles( "LUMIA" ).CopyTo(TileData, 0);

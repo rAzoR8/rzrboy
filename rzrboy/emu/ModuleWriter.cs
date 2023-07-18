@@ -75,8 +75,13 @@ namespace rzr
 		public static readonly CondNCtype isNC;
 	}
 
-	public abstract class AsmConsumer
+	public abstract class AsmBuilder
 	{
+		// absolute InstructionPointer (IP) in the current instruction stream (ROM)
+		public virtual uint IP { get; protected set; }
+		// bank 0 is always mapped, so any PC pointing to the selectable bank X is mapped to adsress 0x4000+x 
+		public virtual ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + (IP % Mbc.RomBankSize) );
+
 		public ushort Instr( InstrType instr, params AsmOperand[] operands )
 		{
 			return Consume( new AsmInstr( instr, operands ) );
@@ -332,13 +337,10 @@ namespace rzr
 		public ushort Set( byte idx, CELA rhs ) => Instr( InstrType.Set, Asm.BitIdx( idx ), rhs.Type );
 	}
 
-	public class AsmRecorder : AsmConsumer, IEnumerable<AsmInstr>
+	public class AsmRecorder : AsmBuilder, IEnumerable<AsmInstr>
 	{
 		protected List<AsmInstr> m_instructions = new();
 		public IReadOnlyList<AsmInstr> Instructions => m_instructions;
-
-		public uint IP { get; protected set; }
-		public ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + IP % Mbc.RomBankSize );
 
 		public AsmRecorder() { }
 		public AsmRecorder( IEnumerable<AsmInstr> instructions ) { m_instructions = new( instructions ); }
@@ -362,17 +364,30 @@ namespace rzr
 		}
 	}
 
-	public static class AsmConsumerExtensions
+	public class DelegateRecorder : AsmRecorder
+	{
+		public delegate ushort Consumer( AsmInstr instr );
+		private Consumer m_consumer;
+		public DelegateRecorder( Consumer consumer ) { m_consumer = consumer; }
+		public override ushort Consume( AsmInstr instr )
+		{
+			// dont call base.Consume, we dont want to increment the IP/PC twice so m_consumer has to take care of that
+			m_instructions.Add( instr );
+			return m_consumer( instr );
+		}
+	}
+
+	public static class AsmBuilderExtensions
 	{
 		// Helper for LD (a16), d8
-		public static ushort Ld( this AsmConsumer self, ushort adr, byte val )
+		public static ushort Ld( this AsmBuilder self, ushort adr, byte val )
 		{
-			var label = self.Ld( AsmConsumer.A, val );
-			self.Ld( adr.Adr(), AsmConsumer.A );
+			var label = self.Ld( AsmBuilder.A, val );
+			self.Ld( adr.Adr(), AsmBuilder.A );
 			return label;
 		}
 
-		public static ushort Db( this AsmConsumer self, byte first, params byte[] vals )
+		public static ushort Db( this AsmBuilder self, byte first, params byte[] vals )
 		{
 			var label = self.Db( first );
 			foreach( byte val in vals )
@@ -383,24 +398,24 @@ namespace rzr
 			return label;
 		}
 
-		private static ushort Not( this AsmConsumer self, AsmOperand rhs )
+		private static ushort Not( this AsmBuilder self, AsmOperand rhs )
 		{
-			ushort ret = self.Ld( AsmConsumer.A, 255 );
+			ushort ret = self.Ld( AsmBuilder.A, 255 );
 			self.Instr( InstrType.Sub, rhs );
 			return ret;
 		}
 
 		// NOT A, [B D H (HL)]
-		public static ushort Not( this AsmConsumer self, BDHhl rhs ) => Not( self, rhs.Type );
+		public static ushort Not( this AsmBuilder self, BDHhl rhs ) => Not( self, rhs.Type );
 		// NOT A, [C E L A]
-		public static ushort Not( this AsmConsumer self, CELA rhs ) => Not( self, rhs.Type );
+		public static ushort Not( this AsmBuilder self, CELA rhs ) => Not( self, rhs.Type );
 		// NOT A, d8
-		public static ushort Not( this AsmConsumer self, byte rhs ) => Not( self, Asm.D8( rhs ) );
+		public static ushort Not( this AsmBuilder self, byte rhs ) => Not( self, Asm.D8( rhs ) );
 
-		public static ushort Push( this AsmConsumer self, ushort rhs )
+		public static ushort Push( this AsmBuilder self, ushort rhs )
 		{
-			var label = self.Ld( AsmConsumer.BC, rhs );
-			self.Push( AsmConsumer.BC );
+			var label = self.Ld( AsmBuilder.BC, rhs );
+			self.Push( AsmBuilder.BC );
 			return label;
 		}
 	}
@@ -414,6 +429,14 @@ namespace rzr
 			return section;
 		}
 
+		/// <summary>
+		/// Write/Assemble a stream of instructions into the mem section
+		/// </summary>
+		/// <param name="instructions">Instructions to Assemble into mem section</param>
+		/// <param name="pc">ProgramCounter where to start assembling instructions in this mem section</param>
+		/// <param name="mem">Mem section where to assmble instructions into</param>
+		/// <param name="throwException">Whether to throw execptions when errors are encountred during assembling instructions</param>
+		/// <returns>PC after writing all instructions to mem section (pointing to first instruction after instructions)</returns>
 		public static ushort Write( this IEnumerable<AsmInstr> instructions, ushort pc, ISection mem, bool throwException = true )
 		{
 			foreach( AsmInstr instr in instructions )
@@ -425,22 +448,8 @@ namespace rzr
 		}
 	}
 
-	public abstract class ModuleWriter : AsmConsumer
+	public abstract class ModuleWriter : AsmBuilder
 	{
-		public class SubstituteRecorder : AsmRecorder
-		{
-			public delegate ushort Consumer( AsmInstr instr );
-			private Consumer m_consumer;
-			public SubstituteRecorder( Consumer consumer ) { m_consumer = consumer; }
-			public override ushort Consume( AsmInstr instr )
-			{
-				base.Consume( instr );
-				return m_consumer( instr );
-			}
-		}
-
-		public uint IP { get; protected set; }
-		public ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + IP % Mbc.RomBankSize );
 		public bool ThrowException { get; set; } = true;
 
 		// Header access
@@ -480,20 +489,20 @@ namespace rzr
 			Joypad = new( Consume );
 		}
 
-		public SubstituteRecorder Rst0 { get; }
-		public SubstituteRecorder Rst8 { get; }
-		public SubstituteRecorder Rst10 { get; }
-		public SubstituteRecorder Rst18 { get; }
-		public SubstituteRecorder Rst20 { get; }
-		public SubstituteRecorder Rst28 { get; }
-		public SubstituteRecorder Rst30 { get; }
-		public SubstituteRecorder Rst38 { get; }
+		public DelegateRecorder Rst0 { get; }
+		public DelegateRecorder Rst8 { get; }
+		public DelegateRecorder Rst10 { get; }
+		public DelegateRecorder Rst18 { get; }
+		public DelegateRecorder Rst20 { get; }
+		public DelegateRecorder Rst28 { get; }
+		public DelegateRecorder Rst30 { get; }
+		public DelegateRecorder Rst38 { get; }
 
-		public SubstituteRecorder VBlank { get; }	// $40
-		public SubstituteRecorder LCDStat { get; }	// $48
-		public SubstituteRecorder Timer { get; }		// $50
-		public SubstituteRecorder Serial { get; }	// $58
-		public SubstituteRecorder Joypad { get; }    // $60
+		public DelegateRecorder VBlank { get; }	// $40
+		public DelegateRecorder LCDStat { get; }	// $48
+		public DelegateRecorder Timer { get; }		// $50
+		public DelegateRecorder Serial { get; }	// $58
+		public DelegateRecorder Joypad { get; }    // $60
 
 		public override ushort Consume( AsmInstr instr )
 		{
@@ -555,7 +564,7 @@ namespace rzr
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
 				}
-				IP = bound; // rest pc to acceptible bounds
+				IP = bound; // rest IP to acceptible bounds
 			}
 
 			interrupt( Rst0);
