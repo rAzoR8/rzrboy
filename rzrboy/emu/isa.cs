@@ -371,7 +371,7 @@ namespace rzr
 		{
             ushort _pc = pc;
 
-			AsmInstr instr = Asm.Disassemble( ref pc, mem, unknownOp: unknownOp );
+			AsmInstr instr = Asm.DisassembleInstr( ref pc, mem, unknownOp: unknownOp );
 			StringBuilder sb = new();
 
 			byte op0 = mem[_pc];

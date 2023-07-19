@@ -16,7 +16,32 @@
 
 	public static class Asm
 	{
-		public static List<AsmInstr> DisassembleRom( byte[] rom, UnknownOpHandling unknownOp = default )
+		public static Section AssembleSection( this IEnumerable<AsmInstr> instructions, ushort start, ushort len, ushort pc = 0, bool throwException = true )
+		{
+			Section section = new Section( start: start, len: len, name: "AsmDummySection", alloc: true );
+			instructions.Assemble( pc: pc, mem: section, throwException: throwException );
+			return section;
+		}
+
+		/// <summary>
+		/// Assemble a stream of instructions into the mem section
+		/// </summary>
+		/// <param name="instructions">Instructions to Assemble into mem section</param>
+		/// <param name="pc">ProgramCounter where to start assembling instructions in this mem section</param>
+		/// <param name="mem">Mem section where to assmble instructions into</param>
+		/// <param name="throwException">Whether to throw execptions when errors are encountred during assembling instructions</param>
+		/// <returns>PC after writing all instructions to mem section (pointing to first instruction after instructions)</returns>
+		public static ushort Assemble( this IEnumerable<AsmInstr> instructions, ushort pc, ISection mem, bool throwException = true )
+		{
+			foreach( AsmInstr instr in instructions )
+			{
+				instr.Assemble( ref pc, mem, throwException: throwException );
+			}
+
+			return pc;
+		}
+
+		public static List<AsmInstr> DisassembleRom( this byte[] rom, UnknownOpHandling unknownOp = default )
 		{
 			// estimate the average instruction length as 2byte
 			List<AsmInstr> instrs = new ( rom.Length / 2);
@@ -25,17 +50,17 @@
 			for( uint i = 0; i < rom.Length; ) 
 			{
 				ushort pc = 0;
-				instrs.Add( Disassemble( ref pc, mem: sec, unknownOp: unknownOp ) );
+				instrs.Add( DisassembleInstr( ref pc, mem: sec, unknownOp: unknownOp ) );
 				i += pc;
 			}
 
 			return instrs;
 		}
 
-		public static byte[] Assemble( List<AsmInstr> module ) 
+		public static byte[] AssembleRom( IEnumerable<AsmInstr> module ) 
 		{
 			// max instruction length is 3 byte
-			byte[] rom = new byte[module.Count * 3]; ;
+			byte[] rom = new byte[module.Count() * 3]; ;
 			Storage sec = new( rom );
 
 			foreach( AsmInstr instr in module )
@@ -49,91 +74,7 @@
 			return rom.Take(sec.BufferOffset).ToArray();
 		}
 
-		// Operands
-		public static AsmOperand D8( byte val ) => new AsmOperand( OperandType.d8, val );
-		public static AsmOperand R8( sbyte val ) => new AsmOperand( OperandType.r8, val );
-		public static AsmOperand R8( byte val ) => new AsmOperand( OperandType.r8, val );
-		public static AsmOperand D16( byte lsb, byte msb ) => new AsmOperand( OperandType.d16, msb.Combine( lsb ) );
-		public static AsmOperand D16( ushort val ) => new AsmOperand( OperandType.d16, val );
-		public static AsmOperand A16( ushort adr ) => new AsmOperand( OperandType.a16, adr );
-		public static AsmOperand A16( byte lsb, byte msb ) => new AsmOperand( OperandType.a16, msb.Combine( lsb ) );
-		public static AsmOperand Io8( byte val ) => new AsmOperand( OperandType.io8, val );
-		public static AsmOperand RstAdr( byte val ) => new AsmOperand( OperandType.RstAddr, val );
-		public static AsmOperand BitIdx( byte idx ) => new AsmOperand( OperandType.BitIdx, idx );
-		public static AsmOperand SPr8( sbyte val ) => new AsmOperand( OperandType.SPr8, val );
-
-		// Instructions
-		public static AsmInstr Db( params AsmOperand[] vals ) => new AsmInstr( InstrType.Db, vals ); // not actual OpCode, just data
-		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
-		public static AsmInstr Stop( AsmOperand val ) => new AsmInstr( InstrType.Stop, val );
-		public static AsmInstr Halt() => new AsmInstr( InstrType.Halt );
-		public static AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => new AsmInstr( InstrType.Ld, lhs, rhs );
-		public static AsmInstr Jr( params AsmOperand[] ops ) => new AsmInstr( InstrType.Jr, ops );
-		public static AsmInstr Jp( params AsmOperand[] ops ) => new AsmInstr( InstrType.Jp, ops );
-		public static AsmInstr Inc( AsmOperand lhs ) => new AsmInstr( InstrType.Inc, lhs );
-		public static AsmInstr Dec( AsmOperand lhs ) => new AsmInstr( InstrType.Dec, lhs );
-		public static AsmInstr Add( AsmOperand lhs, AsmOperand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
-		public static AsmInstr Adc( AsmOperand rhs ) => new AsmInstr( InstrType.Adc, rhs );
-		public static AsmInstr Sub( AsmOperand rhs ) => new AsmInstr( InstrType.Sub, rhs );
-		public static AsmInstr Sbc( AsmOperand rhs ) => new AsmInstr( InstrType.Sbc, rhs );
-		public static AsmInstr And( AsmOperand rhs ) => new AsmInstr( InstrType.And, rhs );
-		public static AsmInstr Or( AsmOperand rhs ) => new AsmInstr( InstrType.Or, rhs );
-		public static AsmInstr Xor( AsmOperand rhs ) => new AsmInstr( InstrType.Xor, rhs );
-		public static AsmInstr Cp( AsmOperand rhs ) => new AsmInstr( InstrType.Cp, rhs );
-		public static AsmInstr Ret( params AsmOperand[] ops ) => new AsmInstr( InstrType.Ret, ops );
-		public static AsmInstr Reti() => new AsmInstr( InstrType.Reti );
-		public static AsmInstr Pop( AsmOperand lhs ) => new AsmInstr( InstrType.Pop, lhs );
-		public static AsmInstr Push( AsmOperand lhs ) => new AsmInstr( InstrType.Push, lhs );
-		public static AsmInstr Call( params AsmOperand[] ops ) => new AsmInstr( InstrType.Call, ops );
-		public static AsmInstr Di() => new AsmInstr( InstrType.Di );
-		public static AsmInstr Ei() => new AsmInstr( InstrType.Ei );
-		public static AsmInstr Rlca() => new AsmInstr( InstrType.Rlca );
-		public static AsmInstr Rla() => new AsmInstr( InstrType.Rla );
-		public static AsmInstr Daa() => new AsmInstr( InstrType.Daa );
-		public static AsmInstr Scf() => new AsmInstr( InstrType.Scf );
-		public static AsmInstr Rrca() => new AsmInstr( InstrType.Rrca );
-		public static AsmInstr Rra() => new AsmInstr( InstrType.Rra );
-		public static AsmInstr Cpl() => new AsmInstr( InstrType.Cpl );
-		public static AsmInstr Ccf() => new AsmInstr( InstrType.Ccf );
-		public static AsmInstr Rst( AsmOperand vec ) => new AsmInstr( InstrType.Rst, vec );
-
-		public static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.SP };
-		public static readonly OperandType[] BcDeHlAf = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.AF };
-		public static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLi, OperandType.AdrHLd };
-		public static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
-		public static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
-		public static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
-
-		public const OperandType A = OperandType.A;
-		public const OperandType B = OperandType.B;
-		public const OperandType C = OperandType.C;
-		public const OperandType D = OperandType.D;
-		public const OperandType E = OperandType.E;
-		public const OperandType H = OperandType.H;
-		public const OperandType L = OperandType.L;
-
-		public const OperandType BC = OperandType.BC;
-		public const OperandType DE = OperandType.DE;
-		public const OperandType HL = OperandType.HL;
-		public const OperandType SP = OperandType.SP;
-		public const OperandType AF = OperandType.AF;
-
-		public const OperandType ioC = OperandType.ioC;
-
-		public const OperandType adrBC = OperandType.AdrBC;
-		public const OperandType adrDE = OperandType.AdrDE;
-		public const OperandType adrHL = OperandType.AdrHL;
-		public const OperandType adrHLi = OperandType.AdrHLi;
-		public const OperandType adrHLd = OperandType.AdrHLd;
-
-		public const OperandType condZ = OperandType.condZ;
-		public const OperandType condNZ = OperandType.condNZ;
-		public const OperandType condC = OperandType.condC;
-		public const OperandType condNC = OperandType.condNC;
-
-		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
-
-		public static AsmInstr Disassemble( ref ushort pc, ISection mem, UnknownOpHandling unknownOp = default )
+		public static AsmInstr DisassembleInstr( ref ushort pc, ISection mem, UnknownOpHandling unknownOp = default )
 		{
 			ushort _pc = pc;
 			byte opcode = mem[pc++];
@@ -345,6 +286,91 @@
 				}; ;
 			}
 		}
+		
+		// Operand types
+		public static readonly OperandType[] BcDeHlSp = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.SP };
+		public static readonly OperandType[] BcDeHlAf = { OperandType.BC, OperandType.DE, OperandType.HL, OperandType.AF };
+		public static readonly OperandType[] adrBcDeHlID = { OperandType.AdrBC, OperandType.AdrDE, OperandType.AdrHLi, OperandType.AdrHLd };
+		public static readonly OperandType[] BDHAdrHl = { OperandType.B, OperandType.D, OperandType.H, OperandType.AdrHL };
+		public static readonly OperandType[] CELA = { OperandType.C, OperandType.E, OperandType.L, OperandType.A };
+		public static readonly OperandType[] BCDEHLAdrHlA = { OperandType.B, OperandType.C, OperandType.D, OperandType.E, OperandType.H, OperandType.L, OperandType.AdrHL, OperandType.A };
+
+		public const OperandType A = OperandType.A;
+		public const OperandType B = OperandType.B;
+		public const OperandType C = OperandType.C;
+		public const OperandType D = OperandType.D;
+		public const OperandType E = OperandType.E;
+		public const OperandType H = OperandType.H;
+		public const OperandType L = OperandType.L;
+
+		public const OperandType BC = OperandType.BC;
+		public const OperandType DE = OperandType.DE;
+		public const OperandType HL = OperandType.HL;
+		public const OperandType SP = OperandType.SP;
+		public const OperandType AF = OperandType.AF;
+
+		public const OperandType ioC = OperandType.ioC;
+
+		public const OperandType adrBC = OperandType.AdrBC;
+		public const OperandType adrDE = OperandType.AdrDE;
+		public const OperandType adrHL = OperandType.AdrHL;
+		public const OperandType adrHLi = OperandType.AdrHLi;
+		public const OperandType adrHLd = OperandType.AdrHLd;
+
+		public const OperandType condZ = OperandType.condZ;
+		public const OperandType condNZ = OperandType.condNZ;
+		public const OperandType condC = OperandType.condC;
+		public const OperandType condNC = OperandType.condNC;
+
+		public static readonly OperandType[] condZCnZnC = { condZ, condC, condNZ, condNC };
+
+		// Operands
+		public static AsmOperand D8( byte val ) => new AsmOperand( OperandType.d8, val );
+		public static AsmOperand R8( sbyte val ) => new AsmOperand( OperandType.r8, val );
+		public static AsmOperand R8( byte val ) => new AsmOperand( OperandType.r8, val );
+		public static AsmOperand D16( byte lsb, byte msb ) => new AsmOperand( OperandType.d16, msb.Combine( lsb ) );
+		public static AsmOperand D16( ushort val ) => new AsmOperand( OperandType.d16, val );
+		public static AsmOperand A16( ushort adr ) => new AsmOperand( OperandType.a16, adr );
+		public static AsmOperand A16( byte lsb, byte msb ) => new AsmOperand( OperandType.a16, msb.Combine( lsb ) );
+		public static AsmOperand Io8( byte val ) => new AsmOperand( OperandType.io8, val );
+		public static AsmOperand RstAdr( byte val ) => new AsmOperand( OperandType.RstAddr, val );
+		public static AsmOperand BitIdx( byte idx ) => new AsmOperand( OperandType.BitIdx, idx );
+		public static AsmOperand SPr8( sbyte val ) => new AsmOperand( OperandType.SPr8, val );
+
+		// Instructions
+		public static AsmInstr Db( params AsmOperand[] vals ) => new AsmInstr( InstrType.Db, vals ); // not actual OpCode, just data
+		public static AsmInstr Nop() => new AsmInstr( InstrType.Nop );
+		public static AsmInstr Stop( AsmOperand val ) => new AsmInstr( InstrType.Stop, val );
+		public static AsmInstr Halt() => new AsmInstr( InstrType.Halt );
+		public static AsmInstr Ld( AsmOperand lhs, AsmOperand rhs ) => new AsmInstr( InstrType.Ld, lhs, rhs );
+		public static AsmInstr Jr( params AsmOperand[] ops ) => new AsmInstr( InstrType.Jr, ops );
+		public static AsmInstr Jp( params AsmOperand[] ops ) => new AsmInstr( InstrType.Jp, ops );
+		public static AsmInstr Inc( AsmOperand lhs ) => new AsmInstr( InstrType.Inc, lhs );
+		public static AsmInstr Dec( AsmOperand lhs ) => new AsmInstr( InstrType.Dec, lhs );
+		public static AsmInstr Add( AsmOperand lhs, AsmOperand rhs ) => new AsmInstr( InstrType.Add, lhs, rhs );
+		public static AsmInstr Adc( AsmOperand rhs ) => new AsmInstr( InstrType.Adc, rhs );
+		public static AsmInstr Sub( AsmOperand rhs ) => new AsmInstr( InstrType.Sub, rhs );
+		public static AsmInstr Sbc( AsmOperand rhs ) => new AsmInstr( InstrType.Sbc, rhs );
+		public static AsmInstr And( AsmOperand rhs ) => new AsmInstr( InstrType.And, rhs );
+		public static AsmInstr Or( AsmOperand rhs ) => new AsmInstr( InstrType.Or, rhs );
+		public static AsmInstr Xor( AsmOperand rhs ) => new AsmInstr( InstrType.Xor, rhs );
+		public static AsmInstr Cp( AsmOperand rhs ) => new AsmInstr( InstrType.Cp, rhs );
+		public static AsmInstr Ret( params AsmOperand[] ops ) => new AsmInstr( InstrType.Ret, ops );
+		public static AsmInstr Reti() => new AsmInstr( InstrType.Reti );
+		public static AsmInstr Pop( AsmOperand lhs ) => new AsmInstr( InstrType.Pop, lhs );
+		public static AsmInstr Push( AsmOperand lhs ) => new AsmInstr( InstrType.Push, lhs );
+		public static AsmInstr Call( params AsmOperand[] ops ) => new AsmInstr( InstrType.Call, ops );
+		public static AsmInstr Di() => new AsmInstr( InstrType.Di );
+		public static AsmInstr Ei() => new AsmInstr( InstrType.Ei );
+		public static AsmInstr Rlca() => new AsmInstr( InstrType.Rlca );
+		public static AsmInstr Rla() => new AsmInstr( InstrType.Rla );
+		public static AsmInstr Daa() => new AsmInstr( InstrType.Daa );
+		public static AsmInstr Scf() => new AsmInstr( InstrType.Scf );
+		public static AsmInstr Rrca() => new AsmInstr( InstrType.Rrca );
+		public static AsmInstr Rra() => new AsmInstr( InstrType.Rra );
+		public static AsmInstr Cpl() => new AsmInstr( InstrType.Cpl );
+		public static AsmInstr Ccf() => new AsmInstr( InstrType.Ccf );
+		public static AsmInstr Rst( AsmOperand vec ) => new AsmInstr( InstrType.Rst, vec );
 
 		// Extension Instructions
 		public static AsmInstr Rlc( AsmOperand rhs ) => new AsmInstr( InstrType.Rlc, rhs );
@@ -369,4 +395,4 @@
 		public static AsmInstr Set( byte idx, OperandType reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
 		public static AsmInstr Set( byte idx, AsmOperand reg ) => new AsmInstr( InstrType.Bit, BitIdx( idx ), reg );
 	} // !Asm
-}
+} // !rzr
