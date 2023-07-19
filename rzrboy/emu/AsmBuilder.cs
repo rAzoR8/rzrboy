@@ -306,6 +306,27 @@ namespace rzr
 			self.Push( AsmBuilder.BC );
 			return label;
 		}
+
+		public static ushort SwitchBank(this AsmBuilder self, byte bank ) 
+		{
+			// https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work
+			ushort label;
+			if( bank <= 0x1f )
+			{
+				label = self.Ld( 0x2000, bank );
+			}
+			else
+			{
+				//ld $6000, $00; Set ROM mode
+				//ld $2000, $06; Set lower 5 bits, could also use $46
+				//ld $4000, $02; Set upper 2 bits
+				label =
+				self.Ld( 0x6000, 0 );
+				self.Ld( 0x2000, (byte)( bank & 0b11111 ) );
+				self.Ld( 0x4000, (byte)( ( bank >> 5 ) & 0b11 ) );
+			}
+			return label;
+		}
 	}
 
 	public class AsmRecorder : AsmBuilder, IEnumerable<AsmInstr>

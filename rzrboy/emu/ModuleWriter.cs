@@ -1,6 +1,6 @@
 ﻿namespace rzr
 {
-	public abstract class ModuleWriter : AsmBuilder
+	public class ModuleWriter : AsmBuilder
 	{
 		public bool ThrowException { get; set; } = true;
 
@@ -8,7 +8,7 @@
 		public bool Japan { get; set; }
 		public byte Version { get; set; }
 		public bool SGBSupport { get; set; }
-		public abstract CartridgeType Type { get; } // to be set by the implementing class
+		public CartridgeType Type { get; set; } = CartridgeType.ROM_ONLY; // to be set by the implementing class
 		public IEnumerable<byte> Logo { get; set; } = new byte[]{
 			0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
 			0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
@@ -21,10 +21,23 @@
 		public byte OldLicenseeCode { get; set; } = 0x33;
 		public byte CGBSupport { get; set; }
 
-		protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP );
+		// Banks/Storage
+		protected List<Storage> m_banks = new();
+		public IReadOnlyList<Storage> Banks => m_banks;
+		public byte BankIdx { get; private set; } = 0;
+		public Storage CurBank => m_banks[BankIdx];
+		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
-		public ModuleWriter() 
+		//protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP );
+
+		public ModuleWriter( uint initialBanks = 2 )
 		{
+			// alloc at least two banks 
+			for( uint i = 0; i < initialBanks; i++ )
+			{
+				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+			}
+
 			Rst0 = new( Consume );
 			Rst8 = new( Consume );
 			Rst10 = new( Consume );
@@ -56,21 +69,37 @@
 		public DelegateRecorder Serial { get; }	// $58
 		public DelegateRecorder Joypad { get; }    // $60
 
+		protected void AddBank()
+		{
+			m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+		}
+
 		public override ushort Consume( AsmInstr instr )
 		{
 			ushort prev = PC;
 
-			var (bank, switching) = GetBank( IP: IP );
+			// LD 3 byte instr vs 3 LD instructions
+			var threshold = ( BankIdx > 0x1F ? 3 * 3 : 3 );
+			bool switching = IP - threshold > ( m_banks.Count * Mbc.RomBankSize );
 
-			// write bank switching code to the end of this bank
-			ushort pc = switching.Assemble( pc: prev, mem: bank, throwException: ThrowException );
+			ushort pc = prev;
 
-			if( pc > prev )
+			if( switching )
 			{
-				(bank, _) = GetBank( IP: IP + (uint)( pc - prev ) );
+				AsmRecorder sw = new();
+				sw.SwitchBank( (byte)(BankIdx+1) ); // record on separate stream to not invoke this function (Consume)
+				// write bank switching code to the end of this bank
+				pc = sw.Assemble( pc: prev, mem: CurBank, throwException: ThrowException );
+
+				if( BankIdx + 1 > m_banks.Count )
+				{
+					AddBank();
+				}
+
+				BankIdx++; // select current bank
 			}
 
-			instr.Assemble( ref pc, bank, throwException: ThrowException );
+			instr.Assemble( ref pc, CurBank, throwException: ThrowException );
 
 			IP += (uint)( pc - prev );
 
@@ -80,16 +109,17 @@
 		// direct write through to current rom bank, ignores any switching
 		public void Write( byte[] data, uint ip )
 		{
-			var (bank, _) = GetBank( IP: ip );
 			for( uint i = 0; i < data.Length; ++i, ++ip )
 			{
+				uint bankIdx = ip / Mbc.RomBankSize;
 				uint pc = ip % Mbc.RomBankSize;
 
-				if( pc == 0 ) // get next bank
+				if( bankIdx >= m_banks.Count ) 
 				{
-					(bank, _) = GetBank( IP: ip );
+					AddBank();
 				}
 
+				Storage bank = m_banks[(int)bankIdx];
 				bank[(ushort)pc] = data[i];
 			}
 		}
@@ -107,11 +137,10 @@
 
 		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
-			var (bank0,_) = GetBank( IP );
 			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
-				ushort end = writer.Assemble( PC, bank0, ThrowException );
+				ushort end = writer.Assemble( PC, CurBank, ThrowException );
 				if( end > bound && ThrowException )
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
@@ -136,9 +165,9 @@
 
 			ushort EP = (ushort)HeaderOffsets.EntryPointStart;
 			// jump to EntryPoint
-			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, bank0, throwException: ThrowException );
+			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, CurBank, throwException: ThrowException );
 
-			HeaderView header = new( bank0.Data );
+			HeaderView header = new( CurBank.Data );
 
 			header.Manufacturer = Manufacturer;
 			header.Version = Version;
@@ -160,53 +189,8 @@
 
 	public class MbcWriter : ModuleWriter
 	{
-		private List<Storage> m_banks = new( );
-		public IReadOnlyList<Storage> Banks => m_banks;
-		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
-
-		public override CartridgeType Type => CartridgeType.ROM_ONLY;
-
 		public byte HeaderChecksum { get; private set; } = 0;
 		public ushort RomChecksum { get; private set; } = 0;
-
-		protected int InitialRomBanks { get; set; } = 2;
-
-		protected override (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP )
-		{
-			int i = (int)( IP / Mbc.RomBankSize );
-			// LD 3 byte instr vs 3 LD instructions
-
-			var threshold = ( m_banks.Count > 0x1F ? 3 * 3 : 3 );
-			bool switching = IP - threshold > ( m_banks.Count * Mbc.RomBankSize );
-
-			if( i >= m_banks.Count || switching )
-			{
-				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
-			}
-
-			AsmRecorder sw = new();
-
-			// https://retrocomputing.stackexchange.com/questions/11732/how-does-the-gameboys-memory-bank-switching-work
-
-			if( switching )
-			{
-				if( m_banks.Count <= 0x1f )
-				{
-					sw.Ld( 0x2000, (byte)m_banks.Count );
-				}
-				else
-				{
-					//ld $6000, $00; Set ROM mode
-					//ld $2000, $06; Set lower 5 bits, could also use $46
-					//ld $4000, $02; Set upper 2 bits
-					sw.Ld( 0x6000, 0 );
-					sw.Ld( 0x2000, (byte)( m_banks.Count & 0b11111 ) );
-					sw.Ld( 0x4000, (byte)( ( m_banks.Count >> 5 ) & 0b11 ) );
-				}
-			}
-
-			return (m_banks[i], sw);
-		}
 
 		/// <summary>
 		/// Override this function with you game assembly producing code which will be placed after the preamble
@@ -221,10 +205,10 @@
 		{
 			// reset banks
 			m_banks.Clear();
-			for( int i = 0; i < InitialRomBanks; i++ )
-			{
-				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
-			}
+
+			// add two default banks
+			AddBank();
+			AddBank();
 
 			IP = 0;
 
