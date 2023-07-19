@@ -110,7 +110,7 @@
 		public IDictionary<System.Reflection.MethodBase, ushort> Functions { get; }
 	}
 
-	public class Game : rzr.MbcWriter, IFunctionAssembler
+	public class Game : rzr.ModuleWriter, IFunctionAssembler
 	{
 		public IDictionary<MethodBase, ushort> Functions => m_functions;
 
@@ -244,7 +244,7 @@
 
 			// replace background tile
 			//data.CopyTo( TileData, 0 );
-			var tiles = Project.GetTiles( "test.tl", targetTileMap: TileMap, x: 6, y: 6 );
+			var tiles = Project.GetTiles( "test.tl", targetTileMap: TileMap, x: 8, y: 6 );
 			tiles.CopyTo( TileData, 0 );
 
 			//Fonts.Milla.ToTiles( "LUMIA" ).CopyTo(TileData, 0);

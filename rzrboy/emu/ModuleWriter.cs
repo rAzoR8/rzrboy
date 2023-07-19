@@ -2,6 +2,7 @@
 {
 	public class ModuleWriter : AsmBuilder
 	{
+		// throw exception when encountering errors while assembling
 		public bool ThrowException { get; set; } = true;
 
 		// Header access
@@ -21,6 +22,9 @@
 		public byte OldLicenseeCode { get; set; } = 0x33;
 		public byte CGBSupport { get; set; }
 
+		public byte HeaderChecksum { get; private set; } = 0;
+		public ushort RomChecksum { get; private set; } = 0;
+
 		// Banks/Storage
 		protected List<Storage> m_banks = new();
 		public IReadOnlyList<Storage> Banks => m_banks;
@@ -28,14 +32,12 @@
 		public Storage CurBank => m_banks[BankIdx];
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
-		//protected abstract (Storage bank, IEnumerable<AsmInstr> switchting) GetBank( uint IP );
-
 		public ModuleWriter( uint initialBanks = 2 )
 		{
 			// alloc at least two banks 
 			for( uint i = 0; i < initialBanks; i++ )
 			{
-				m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+				AddBank();
 			}
 
 			Rst0 = new( Consume );
@@ -69,7 +71,7 @@
 		public DelegateRecorder Serial { get; }	// $58
 		public DelegateRecorder Joypad { get; }    // $60
 
-		protected void AddBank()
+		private void AddBank()
 		{
 			m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
 		}
@@ -77,12 +79,11 @@
 		public override ushort Consume( AsmInstr instr )
 		{
 			ushort prev = PC;
+			ushort pc = PC;
 
 			// LD 3 byte instr vs 3 LD instructions
 			var threshold = ( BankIdx > 0x1F ? 3 * 3 : 3 );
-			bool switching = IP - threshold > ( m_banks.Count * Mbc.RomBankSize );
-
-			ushort pc = prev;
+			bool switching = IP - threshold > ( (BankIdx+1) * Mbc.RomBankSize );
 
 			if( switching )
 			{
@@ -135,12 +136,32 @@
 			return prev;
 		}
 
-		protected void WritePreamble( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
+		/// <summary>
+		/// Override this function with you game assembly producing code which will be placed after the preamble
+		/// </summary>
+		protected virtual void WriteGameCode() { }
+
+		/// <summary>
+		/// Make sure to set the header corretly before calling this function
+		/// </summary>
+		/// <param name="entryPoint">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
+		public byte[] WriteAll( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
 		{
-			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0)
+			// reset banks
+			m_banks.Clear();
+
+			// add two default banks
+			AddBank();
+			AddBank();
+
+			IP = 0;
+			BankIdx = 0;
+			var bank0 = m_banks[0];
+
+			void interrupt( IEnumerable<AsmInstr> writer, ushort _bound = 0 )
 			{
 				ushort bound = _bound != 0 ? _bound : (ushort)( PC + 8 );
-				ushort end = writer.Assemble( PC, CurBank, ThrowException );
+				ushort end = writer.Assemble( PC, bank0, ThrowException );
 				if( end > bound && ThrowException )
 				{
 					throw new rzr.AsmException( $"Invalid PC bound for Writer: {end:X4} expected {bound}" );
@@ -148,7 +169,7 @@
 				IP = bound; // rest IP to acceptible bounds
 			}
 
-			interrupt( Rst0);
+			interrupt( Rst0 );
 			interrupt( Rst8 );
 			interrupt( Rst10 );
 			interrupt( Rst18 );
@@ -163,11 +184,11 @@
 			interrupt( Serial );
 			interrupt( Joypad, 0x100 ); //$60-$100
 
-			ushort EP = (ushort)HeaderOffsets.EntryPointStart;
-			// jump to EntryPoint
-			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, CurBank, throwException: ThrowException );
+			ushort EP = (ushort)HeaderOffsets.EntryPointStart; // 0x100
+			// JP 0x150, jump to EntryPoint
+			Asm.Jp( Asm.A16( entryPoint ) ).Assemble( ref EP, bank0, throwException: ThrowException );
 
-			HeaderView header = new( CurBank.Data );
+			HeaderView header = new( bank0.Data );
 
 			header.Manufacturer = Manufacturer;
 			header.Version = Version;
@@ -182,50 +203,27 @@
 			header.Version = Version;
 			header.Type = Type;
 
-			// skip header to game code:
+			// skip header to game code entry at 0x150
 			IP = entryPoint;
-		}
-	}
 
-	public class MbcWriter : ModuleWriter
-	{
-		public byte HeaderChecksum { get; private set; } = 0;
-		public ushort RomChecksum { get; private set; } = 0;
-
-		/// <summary>
-		/// Override this function with you game assembly producing code which will be placed after the preamble
-		/// </summary>
-		protected virtual void WriteGameCode() { }
-
-		/// <summary>
-		/// Make sure to set the header corretly before calling this function
-		/// </summary>
-		/// <param name="entryPoint">Location in the first bank to start writing the game code after the preamble, usually at 0x150</param>
-		public void WriteAll( ushort entryPoint = (ushort)HeaderOffsets.HeaderSize )
-		{
-			// reset banks
-			m_banks.Clear();
-
-			// add two default banks
-			AddBank();
-			AddBank();
-
-			IP = 0;
-
-			WritePreamble( entryPoint: entryPoint );
-
-			IP = entryPoint;
 			WriteGameCode();
 
-			var bank0 = m_banks.First();
-			HeaderView header = new HeaderView( bank0.Data );
-
+			// update header with final bank count and compute 
 			header.RomBanks = m_banks.Count;
 			HeaderChecksum = header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( bank0.Data );
-			RomChecksum = header.RomChecksum = HeaderView.ComputeRomChecksum( m_banks.SelectMany( x => x.Data ) );
+
+			byte[] rom = Rom();
+			RomChecksum = header.RomChecksum = HeaderView.ComputeRomChecksum( rom );
+
+			// inject rom checksum
+			rom[(ushort)HeaderOffsets.RomChecksumStart] = RomChecksum.GetMsb();
+			rom[(ushort)HeaderOffsets.RomChecksumEnd] = RomChecksum.GetLsb();
+
 #if DEBUG
 			header.Valid();
 #endif
+
+			return rom;
 		}
 	}
 }

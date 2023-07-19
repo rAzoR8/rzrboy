@@ -5,8 +5,7 @@ ushort romChecksum = 0;
 while(true)
 {
 	Game peliPoika = new();
-	peliPoika.WriteAll();
-	byte[] rom = peliPoika.Rom();
+	byte[] rom = peliPoika.WriteAll();
 
 	bool changed = peliPoika.RomChecksum != romChecksum;
 	romChecksum = peliPoika.RomChecksum;

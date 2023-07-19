@@ -400,10 +400,10 @@ namespace rzrboy
         {
             boy.PreStepCallbacks.Add( ( reg, mem ) =>
             {
-                var writer = (rzr.MbcWriter)System.Activator.CreateInstance( type );
+                var writer = (rzr.ModuleWriter)System.Activator.CreateInstance( type );
 
-				writer.WriteAll();
-                boy.LoadRom( writer.Rom() );
+				byte[] rom = writer.WriteAll();
+                boy.LoadRom( rom );
 
 				m_mainMemEdit.Source = GetCurRomBank;
 				m_updateRomAssembly();
@@ -428,7 +428,7 @@ namespace rzrboy
 				{
 					var assembly = System.Reflection.Assembly.LoadFrom( result.FullPath );
 
-					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( MbcWriter ) ) );
+					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( ModuleWriter ) ) );
 					string[] typeNames = types.Select( t => t.FullName ).ToArray();
 					string selected = await DisplayActionSheet( title: "Module to debug:", cancel: "Cancel", destruction: "OK", typeNames );
 					
@@ -438,10 +438,10 @@ namespace rzrboy
                     if( selected != null )
 					{
 						System.Type mwType = assembly.GetType( selected );
-						MbcWriter writer = (MbcWriter)System.Activator.CreateInstance( mwType );
+						ModuleWriter writer = (ModuleWriter)System.Activator.CreateInstance( mwType );
 
-						writer.WriteAll();
-						boy.LoadRom( writer.Rom() );
+						byte[] rom = writer.WriteAll();
+						boy.LoadRom( rom );
 						m_mainMemEdit.Source = GetCurRomBank;
 						m_updateRomAssembly();
 						m_updateRamAssembly();
