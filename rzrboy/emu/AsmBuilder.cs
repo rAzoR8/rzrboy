@@ -6,7 +6,7 @@ namespace rzr
 	public abstract class AsmBuilder
 	{
 		// absolute InstructionPointer (IP) in the current instruction stream (ROM)
-		public virtual uint IP { get; protected set; }
+		public virtual uint IP { get; set; }
 		// bank 0 is always mapped, so any PC pointing to the selectable bank X is mapped to adsress 0x4000+x 
 		public virtual ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + ( IP % Mbc.RomBankSize ) );
 
@@ -366,6 +366,57 @@ namespace rzr
 			// dont call base.Consume, we dont want to increment the IP/PC twice so m_consumer has to take care of that
 			m_instructions.Add( instr );
 			return m_consumer( instr );
+		}
+	}
+
+	public class SectionBuilder : AsmBuilder, ISection
+	{
+		public byte this[ushort address] { get => Section[address]; set => Section[address] = value; }
+		public ushort StartAddr => Section.StartAddr;
+		public ushort Length => Section.Length;
+		
+		public ISection Section { get; set; }
+
+		public SectionBuilder( ISection section) 
+		{
+			Section = section;
+		}
+
+		public override ushort Consume( AsmInstr instr )
+		{
+			ushort pc = PC;
+			ushort label = pc;
+			instr.Assemble( ref pc, Section, throwException: true );
+			IP += (uint)( pc - label );
+			return label;
+		}
+	}
+
+	public class GrowingSectionBuilder : AsmBuilder, ISection
+	{
+		public byte this[ushort address] { get => Section[address]; set => Section[address] = value; }
+		public ushort StartAddr => Section.StartAddr;
+		public ushort Length => Section.Length;
+
+		// executable section
+		public List<byte> Data { get; }
+		public Storage Section { get; }
+
+		public GrowingSectionBuilder()
+		{
+			Data = new();
+			Section = new( Data );
+		}
+
+		public override ushort Consume( AsmInstr instr )
+		{
+			ushort pc = PC;
+			ushort label = pc;
+			Data.EnsureCapacity( (int)IP + 3 );
+			instr.Assemble( ref pc, Section, throwException: true );
+			IP += (uint)( pc - label );
+			Section.Length = pc;
+			return label;
 		}
 	}
 }

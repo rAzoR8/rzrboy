@@ -85,7 +85,7 @@ namespace rzr
         public bool ReadOnly { get; set; } = false;
 		public bool WriteOnly { get; set; } = false;
 
-		public byte[]? m_storage = null;
+		private byte[]? m_storage = null;
 
         public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
         {

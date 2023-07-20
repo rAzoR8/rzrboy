@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+﻿using static rzr.AsmOperandTypes;
 
 namespace rzr
 {
@@ -6,16 +6,19 @@ namespace rzr
 	{
 		private static Section CreateMinimal()
 		{
-			Section boot = new( 0, len: 0x200, "MinimalBoot" );
-			ushort pc = 0;
+			Section boot = new( 0, len: 0x150, "MinimalBoot" );
+			SectionBuilder sb = new( boot );
 
-			Asm.Ld( Asm.SP, Asm.D16( 0xFFFE ) ).Assemble( ref pc, boot ); // init stack: SP = 0xFFFE
-			Asm.Jp( Asm.A16( 0x150 - 4 ) ).Assemble( ref pc, boot ); // 4 byte instructions:
+			sb.Ld( SP, 0xFFFE ); // init stack: SP = 0xFFFE
+			sb.Jp( 0x14C );
+			sb.IP = 0x14C; // 0x150 - 4;
+			sb.Ld( A, 1 );
+			sb.Ldh( 0x50, A ); // mem[0xFF50]=1: disable booting, switch to rom
 
-			pc = 0x150 - 4;
-			Asm.Ld( Asm.A, Asm.D8( 1 ) ).Assemble( ref pc, boot ); // A = 1
-			Asm.Ld( Asm.Io8( 0x50 ), Asm.A ).Assemble( ref pc, boot ); // mem[0xFF50]=A: disable booting, switch to rom
-			Debug.Assert( pc == 0x150 );
+			// [0x0000] LD SP, 0xFFFE
+			// [0x0003] JP 0x14C
+			// [0x014C] LD A, 1
+			// [0x014E] LD (0xFF50), A (disable booting)
 
 			boot.ReadOnly = true;
 			return boot;
