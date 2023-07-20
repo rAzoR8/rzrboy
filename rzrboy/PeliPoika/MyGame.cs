@@ -65,8 +65,8 @@
 			{
 				for( int i = 0; i < dynParams.Length; i++ )
 				{
-					var info = type.GetParameters()[i];
-					ParamStorageAttribute? storage = info.GetCustomAttribute<ParamStorageAttribute>();
+					var info = type?.GetParameters()[i];
+					ParamStorageAttribute? storage = info?.GetCustomAttribute<ParamStorageAttribute>();
 					if( storage != null )
 					{
 						self.Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
@@ -83,16 +83,22 @@
 
 				if( linkage == Linkage.Call ) 
 				{
-					if( self.Functions.TryGetValue( type, out ushort label ) )
+					if( self.Functions.TryGetValue( type, out var label ) )
 					{
-						self.Call( label );
+						if( self.BankIdx != label.bank ) // far procedure call
+							self.SwitchBank( label.bank );
+
+						self.Call( label.pc );
+
+						if( self.BankIdx != label.bank )
+							self.SwitchBank( self.BankIdx );
 					}
 					else
 					{
-						label = self.PC;
+						ushort pc = self.PC;
 						f( t1, t2, t3 );
 						self.Ret();
-						self.Functions.Add( type, label );
+						self.Functions.Add( type, (pc, self.BankIdx) );
 					}
 				}
 				else if( linkage == Linkage.Inline ) 
@@ -107,14 +113,15 @@
 
 	public interface IFunctionAssembler 
 	{
-		public IDictionary<System.Reflection.MethodBase, ushort> Functions { get; }
+		// (PC, BankIdx)
+		public IDictionary<System.Reflection.MethodBase, (ushort pc, byte bank)> Functions { get; }
 	}
 
 	public class Game : rzr.ModuleWriter, IFunctionAssembler
 	{
-		public IDictionary<MethodBase, ushort> Functions => m_functions;
+		public IDictionary<MethodBase, (ushort pc, byte bank)> Functions => m_functions;
 
-		private Dictionary<System.Reflection.MethodBase, ushort> m_functions = new();
+		private Dictionary<System.Reflection.MethodBase, (ushort pc, byte bank)> m_functions = new();
 
 		//public bool GetFunc( System.Reflection.MethodBase method, out ushort label ) => m_functions.TryGetValue( method, out label );
 

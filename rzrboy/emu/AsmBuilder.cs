@@ -6,9 +6,11 @@ namespace rzr
 	public abstract class AsmBuilder
 	{
 		// absolute InstructionPointer (IP) in the current instruction stream (ROM)
-		public virtual uint IP { get; set; }
+		public uint IP { get; set; }
 		// bank 0 is always mapped, so any PC pointing to the selectable bank X is mapped to adsress 0x4000+x 
-		public virtual ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + ( IP % Mbc.RomBankSize ) );
+		public ushort PC => (ushort)( IP < Mbc.RomBankSize ? IP : Mbc.RomBankSize + ( IP % Mbc.RomBankSize ) );
+		// dummy bank index based on IP
+		public virtual byte BankIdx { get => (byte)( IP / Mbc.RomBankSize ); protected set { } } // { get; protected set; } =>;
 
 		public ushort Instr( InstrType instr, params AsmOperand[] operands )
 		{

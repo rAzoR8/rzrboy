@@ -28,7 +28,7 @@
 		// Banks/Storage
 		protected List<Storage> m_banks = new();
 		public IReadOnlyList<Storage> Banks => m_banks;
-		public byte BankIdx { get; private set; } = 0;
+		public override byte BankIdx { get; protected set; } = 0;
 		public Storage CurBank => m_banks[BankIdx];
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
