@@ -100,11 +100,12 @@
 				BankIdx++; // select current bank
 			}
 
+			ushort label = pc; // always return address of current instruction being assembled, not label of switching code start
 			instr.Assemble( ref pc, CurBank, throwException: ThrowException );
 
 			IP += (uint)( pc - prev );
 
-			return prev;
+			return label;
 		}
 
 		// direct write through to current rom bank, ignores any switching
