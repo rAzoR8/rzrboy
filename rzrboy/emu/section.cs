@@ -85,7 +85,7 @@ namespace rzr
         public bool ReadOnly { get; set; } = false;
 		public bool WriteOnly { get; set; } = false;
 
-		private byte[]? m_storage = null;
+		private IList<byte>? m_storage = null;
 
         public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
         {
@@ -95,13 +95,13 @@ namespace rzr
             Name = $"{start}:{name}";
         }
 
-        public Section( ushort start, ushort len, string name, byte[] init ) : this( start, len, name, alloc: true )
+        public Section( ushort start, ushort len, string name, IList<byte> init )
         {
-			var size = (ushort)Math.Min( init.Length, len );
-            if( m_storage != null )
-            {
-                Array.Copy( init, m_storage, size );            
-            }
+			var size = (ushort)Math.Min( init.Count, len );
+			StartAddr = start;
+			Length = size;
+			Name = $"{start}:{name}";
+			m_storage = init;
 		}
 
         public override string ToString() { return Name; }
@@ -125,12 +125,15 @@ namespace rzr
             }
         }
 
-        public void Write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
+        public void Write( IList<byte> src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {
-            len = len != 0 ? Math.Min( len, (ushort)src.Length ) : (ushort)src.Length;
+            len = len != 0 ? Math.Min( len, (ushort)src.Count ) : (ushort)src.Count;
             if( m_storage != null )
             {
-                Array.Copy( src, src_offset, m_storage, dst_offset, len );            
+				for( int i = 0; i < len; ++i ) 
+				{
+					m_storage[dst_offset + i] = src[src_offset + i];
+				}
             }
         }
     }
