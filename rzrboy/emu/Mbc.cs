@@ -8,6 +8,7 @@ namespace rzr
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort RamBankSize = 0x2000; // 8KiB
 
+        // TODO: change to List of Banks! this is a linked list of bytes *facepalm*
         private List<byte> m_rom;
 		private List<byte> m_ram;
 
@@ -25,6 +26,7 @@ namespace rzr
 		public byte[] Ram() => m_ram.ToArray();
 		public byte[] Rom() => m_rom.ToArray();
 
+        // TODO: return Section instead of Storage, Mbc is for the exectuion part and thus should use Section
 		public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
 		public Storage RamBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_ram, storageOffset: bankIndex * RamBankSize, startAddr: sectionStart, len: RamBankSize );
 

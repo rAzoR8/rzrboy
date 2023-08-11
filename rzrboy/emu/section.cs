@@ -36,7 +36,8 @@ namespace rzr
 	public delegate void OnWrite( ISection section, ushort address, byte value );
 
     /// <summary>
-    /// Storage is a Non-execution ISection implementation that doesnt throw on out-of-bounds access and directly mapps to a buffer
+    /// Storage is a Non-execution ISection implementation that doesnt throw on out-of-bounds access and directly maps to a buffer
+	/// Ignores ISection.Accepts
     /// </summary>
 	public class Storage : ISection
     {
