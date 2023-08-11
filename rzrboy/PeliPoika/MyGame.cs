@@ -2,8 +2,8 @@
 {
 	using static rzr.AsmOperandTypes;
 	using static Palettes;
-	using System.Reflection;
 	using rzr;
+	using System.Reflection;
 
 	public static class FunctionExtensions
 	{
@@ -56,7 +56,7 @@
 			self.Jp( isNZ, copy );
 		} )( dst, src, len );
 
-		private static void LoadParameters( this AsmBuilder self, MethodInfo? method, params dynamic[] dynParams ) 
+		private static void LoadParameters( this AsmBuilder self, System.Reflection.MethodInfo? method, params dynamic[] dynParams ) 
 		{
 			for( int i = 0; i < dynParams.Length; i++ )
 			{
@@ -117,15 +117,11 @@
 		public IDictionary<System.Reflection.MethodBase, (ushort pc, byte bank)> Functions { get; }
 	}
 
-	public class Game : rzr.ModuleWriter, IFunctionAssembler
+	public class Game : rzr.ModuleBuilder, IFunctionAssembler
 	{
 		public IDictionary<MethodBase, (ushort pc, byte bank)> Functions => m_functions;
 
 		private Dictionary<System.Reflection.MethodBase, (ushort pc, byte bank)> m_functions = new();
-
-		//public bool GetFunc( System.Reflection.MethodBase method, out ushort label ) => m_functions.TryGetValue( method, out label );
-
-		//public bool AddFunc( System.Reflection.MethodBase method, ushort label ) => m_functions.TryAdd( method, label );
 
 		public Game()
 		{

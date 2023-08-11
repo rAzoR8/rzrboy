@@ -1,6 +1,6 @@
 ﻿namespace rzr
 {
-	public class ModuleWriter : AsmBuilder
+	public class ModuleBuilder : AsmBuilder
 	{
 		// throw exception when encountering errors while assembling
 		public bool ThrowException { get; set; } = true;
@@ -32,7 +32,7 @@
 		public Storage CurBank => m_banks[BankIdx];
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
-		public ModuleWriter( uint initialBanks = 2 )
+		public ModuleBuilder( uint initialBanks = 2 )
 		{
 			// alloc at least two banks 
 			for( uint i = 0; i < initialBanks; i++ )

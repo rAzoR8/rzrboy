@@ -29,7 +29,7 @@ namespace rzrboy
 
 				if( game == null ) { game = typeof( PeliPoika.Game ); }
 
-				if( game != null && game.IsClass && !game.IsAbstract && game.IsSubclassOf( typeof( rzr.ModuleWriter ) ) )
+				if( game != null && game.IsClass && !game.IsAbstract && game.IsSubclassOf( typeof( rzr.ModuleBuilder ) ) )
 				{
 					page.Debug( game );
 				}

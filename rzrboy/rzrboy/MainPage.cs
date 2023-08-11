@@ -400,7 +400,7 @@ namespace rzrboy
         {
             boy.PreStepCallbacks.Add( ( reg, mem ) =>
             {
-                var writer = (rzr.ModuleWriter)System.Activator.CreateInstance( type );
+                var writer = (rzr.ModuleBuilder)System.Activator.CreateInstance( type );
 
 				byte[] rom = writer.WriteAll();
                 boy.LoadRom( rom );
@@ -428,7 +428,7 @@ namespace rzrboy
 				{
 					var assembly = System.Reflection.Assembly.LoadFrom( result.FullPath );
 
-					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( ModuleWriter ) ) );
+					var types = assembly.GetTypes().Where( t => !t.IsAbstract && t.IsClass && t.IsSubclassOf( typeof( ModuleBuilder ) ) );
 					string[] typeNames = types.Select( t => t.FullName ).ToArray();
 					string selected = await DisplayActionSheet( title: "Module to debug:", cancel: "Cancel", destruction: "OK", typeNames );
 					
@@ -438,7 +438,7 @@ namespace rzrboy
                     if( selected != null )
 					{
 						System.Type mwType = assembly.GetType( selected );
-						ModuleWriter writer = (ModuleWriter)System.Activator.CreateInstance( mwType );
+						ModuleBuilder writer = (ModuleBuilder)System.Activator.CreateInstance( mwType );
 
 						byte[] rom = writer.WriteAll();
 						boy.LoadRom( rom );
