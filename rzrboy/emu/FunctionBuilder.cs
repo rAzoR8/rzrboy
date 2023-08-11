@@ -46,7 +46,7 @@ namespace rzr
 			{
 				var info = method?.GetParameters()[i];
 				ParamStorageAttribute? storage = info?.GetCustomAttribute<ParamStorageAttribute>();
-				if( storage != null )
+				if( storage != null && dynParams[i] != null )
 				{
 					Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
 				}

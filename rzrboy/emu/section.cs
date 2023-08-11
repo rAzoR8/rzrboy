@@ -73,7 +73,7 @@ namespace rzr
 	}
 
     /// <summary>
-    /// Section is the execution implementation of ISection, that optionally is backed by memory
+    /// Section is the execution implementation of ISection that is backed by memory
     /// </summary>
     public class Section : ISection
     {
@@ -85,23 +85,23 @@ namespace rzr
         public bool ReadOnly { get; set; } = false;
 		public bool WriteOnly { get; set; } = false;
 
-		private IList<byte>? m_storage = null;
+		public IList<byte> Data { get; }
 
-        public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
+		// this constructor allocates a byte array of length len
+        public Section( ushort start, ushort len, string name )
         {
             StartAddr = start;
             Length = len;
-            if( alloc ) m_storage = new byte[len];
+            Data = new byte[len];
             Name = $"{start}:{name}";
         }
 
         public Section( ushort start, ushort len, string name, IList<byte> init )
         {
-			var size = (ushort)Math.Min( init.Count, len );
 			StartAddr = start;
-			Length = size;
+			Length = (ushort)Math.Min( init.Count, len );
 			Name = $"{start}:{name}";
-			m_storage = init;
+			Data = init;
 		}
 
         public override string ToString() { return Name; }
@@ -111,15 +111,15 @@ namespace rzr
         {
 			get
 			{
-				if( !WriteOnly && m_storage != null && ( (ISection)this ).Accepts( address ) )
-					return m_storage[address - StartAddr];
+				if( !WriteOnly && ( (ISection)this ).Accepts( address ) )
+					return Data[address - StartAddr];
 				else
 					throw new SectionReadAccessViolationException( address, this );
 			}
 			set
             {
-                if( !ReadOnly && m_storage != null && ( (ISection)this ).Accepts( address ) )
-                    m_storage[address - StartAddr] = value;
+                if( !ReadOnly && ( (ISection)this ).Accepts( address ) )
+                    Data[address - StartAddr] = value;
                 else
                     throw new SectionWriteAccessViolationException( address, this );
             }
@@ -128,11 +128,11 @@ namespace rzr
         public void Write( IList<byte> src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {
             len = len != 0 ? Math.Min( len, (ushort)src.Count ) : (ushort)src.Count;
-            if( m_storage != null )
+            if( Data != null )
             {
 				for( int i = 0; i < len; ++i ) 
 				{
-					m_storage[dst_offset + i] = src[src_offset + i];
+					Data[dst_offset + i] = src[src_offset + i];
 				}
             }
         }

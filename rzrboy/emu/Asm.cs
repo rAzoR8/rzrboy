@@ -18,7 +18,7 @@
 	{
 		public static Section AssembleSection( this IEnumerable<AsmInstr> instructions, ushort start, ushort len, ushort pc = 0, bool throwException = true )
 		{
-			Section section = new Section( start: start, len: len, name: "AsmDummySection", alloc: true );
+			Section section = new Section( start: start, len: len, name: "AsmDummySection");
 			instructions.Assemble( pc: pc, mem: section, throwException: throwException );
 			return section;
 		}
