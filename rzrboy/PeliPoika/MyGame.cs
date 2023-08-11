@@ -56,30 +56,30 @@
 			self.Jp( isNZ, copy );
 		} )( dst, src, len );
 
+		private static void LoadParameters( this AsmBuilder self, MethodInfo? method, params dynamic[] dynParams ) 
+		{
+			for( int i = 0; i < dynParams.Length; i++ )
+			{
+				var info = method?.GetParameters()[i];
+				ParamStorageAttribute? storage = info?.GetCustomAttribute<ParamStorageAttribute>();
+				if( storage != null )
+				{
+					self.Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
+				}
+				else throw new rzr.AsmException( $"Parameter {info?.Name ?? i.ToString()} is missing the {nameof(ParamStorageAttribute)}" );
+			}
+		}
+
 		public delegate void F3<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
 		public static F3<T1, T2, T3> Function<GAME, T1, T2, T3>( this GAME self, F3<T1, T2, T3> f ) where GAME: AsmBuilder, IFunctionAssembler
 		{
-			var type = f.GetMethodInfo();
-
-			void loadParams( params dynamic[] dynParams )
-			{
-				for( int i = 0; i < dynParams.Length; i++ )
-				{
-					var info = type?.GetParameters()[i];
-					ParamStorageAttribute? storage = info?.GetCustomAttribute<ParamStorageAttribute>();
-					if( storage != null )
-					{
-						self.Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
-					}
-				}
-			}
-
+			MethodInfo type = f.GetMethodInfo();
 			LinkageAttribute? linkAttrib = type.GetCustomAttribute<LinkageAttribute>();
 			Linkage linkage = linkAttrib != null ? linkAttrib.Linkage : Linkage.Call;
 
 			void Impl( T1 t1, T2 t2, T3 t3 )
 			{
-				loadParams( t1, t2, t3 );
+				self.LoadParameters( type, t1, t2, t3 );
 
 				if( linkage == Linkage.Call ) 
 				{
