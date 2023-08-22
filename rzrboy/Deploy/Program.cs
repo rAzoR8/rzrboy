@@ -12,7 +12,7 @@ while(true)
 
 	if( changed )
 	{
-		foreach( string instr in Isa.Disassemble( 0x150, peliPoika.PC, new Storage( rom ) ) )
+		foreach( string instr in Isa.Disassemble( 0x150, peliPoika.PC, new Section( start: 0, len: Mbc.RomBankSize, name: "disrom", data: rom, access: SectionAccess.Read ) ) )
 		{
 			Console.WriteLine( instr );
 		}

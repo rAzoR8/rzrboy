@@ -35,96 +35,73 @@ namespace rzr
 	public delegate void OnRead( ISection section, ushort address );
 	public delegate void OnWrite( ISection section, ushort address, byte value );
 
-    /// <summary>
-    /// Storage is a Non-execution ISection implementation that doesnt throw on out-of-bounds access and directly maps to a buffer
-	/// Ignores ISection.Accepts
-    /// </summary>
-	public class Storage : ISection
-    {
-        public IList<byte> Data { get; }
-
-		/// <summary>
-		/// Wrapper over some storage to allow Section like access
-		/// </summary>
-		/// <param name="storage"></param>
-		/// <param name="storageOffset"></param>
-		/// <param name="startAddr"></param>
-		/// <param name="len"></param>
-		public Storage( IList<byte> storage, int storageOffset = 0, ushort startAddr = 0, ushort len = 0 )
-        {
-			Data = storage;
-            BufferOffset = storageOffset;
-            StartAddr = startAddr;
-			Length = len > 0 ? len : (ushort)( Data.Count - storageOffset );
-		}
-
-        public int BufferOffset { get; set; }
-		public byte this[ushort address]
-        {
-			get => Data[BufferOffset + ( address - StartAddr )];
-			set => Data[BufferOffset + ( address - StartAddr )] = value;
-		}
-        public ushort StartAddr { get; set; }
-        public ushort Length { get; set; }
-    }
-
-    public static class SectionExtensions
-    {
-		public static Storage AsStorage( this IList<byte> storage ) { return new Storage( storage ); }
+	[Flags]
+	public enum SectionAccess
+	{
+		None = 0,
+		Read = 1 << 0,
+		Write = 1 << 1,
+		ReadWrite = Read | Write
 	}
 
-    /// <summary>
-    /// Section is the execution implementation of ISection that is backed by memory
-    /// </summary>
-    public class Section : ISection
+	/// <summary>
+	/// Section is the implementation of ISection that is backed by memory
+	/// </summary>
+	public class Section : ISection
     {
         // ISection
         public string Name { get; }
         public ushort StartAddr { get; }
-        public ushort Length { get; }
+        public ushort Length { get; set; }
 
-        public bool ReadOnly { get; set; } = false;
-		public bool WriteOnly { get; set; } = false;
-
+		// Section
 		public IList<byte> Data { get; }
+		public int BufferOffset { get; set; } = 0;
+		public SectionAccess Access { get; } = SectionAccess.ReadWrite;
+
+		public Section AsReadOnly() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.Read, data: Data, offset: BufferOffset );
 
 		// this constructor allocates a byte array of length len
-        public Section( ushort start, ushort len, string name )
+        public Section( ushort start, ushort len, string name, SectionAccess access )
         {
             StartAddr = start;
             Length = len;
             Data = new byte[len];
             Name = $"{start}:{name}";
-        }
-
-        public Section( ushort start, ushort len, string name, IList<byte> init )
-        {
-			StartAddr = start;
-			Length = (ushort)Math.Min( init.Count, len );
-			Name = $"{start}:{name}";
-			Data = init;
+			Access = access;
 		}
 
-        public override string ToString() { return Name; }
+		// this constructor uses data passed in to back this section
+        public Section( ushort start, ushort len, string name, SectionAccess access, IList<byte> data, int offset = 0 )
+        {
+			StartAddr = start;
+			Length = len;
+			Name = $"{start}:{name}";
+			Data = data;
+			BufferOffset = offset;
+			Access = access;
+		}
+
+		public override string ToString() { return Name; }
 
 		// mapped access for emulator, default impl
 		public byte this[ushort address]
         {
 			get
 			{
-				if( !WriteOnly && ( (ISection)this ).Accepts( address ) )
-					return Data[address - StartAddr];
+				if( Access.HasFlag( SectionAccess.Read ) && ( (ISection)this ).Accepts( address ) )
+					return Data[BufferOffset + address - StartAddr];
 				else
 					throw new SectionReadAccessViolationException( address, this );
 			}
 			set
-            {
-                if( !ReadOnly && ( (ISection)this ).Accepts( address ) )
-                    Data[address - StartAddr] = value;
-                else
-                    throw new SectionWriteAccessViolationException( address, this );
-            }
-        }
+			{
+				if( Access.HasFlag( SectionAccess.Write ) && ( (ISection)this ).Accepts( address ) )
+					Data[BufferOffset + address - StartAddr] = value;
+				else
+					throw new SectionWriteAccessViolationException( address, this );
+			}
+		}
 
         public void Write( IList<byte> src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {

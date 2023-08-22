@@ -24,13 +24,13 @@
 		public Section boot { get; set; } = Boot.Minimal; // 0x0000
 
 		public Mbc			cart { get; set; } = new(); // including eram (external)
-		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram" ); // In CGB mode, switchable bank 0/1        
+		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram", SectionAccess.ReadWrite ); // In CGB mode, switchable bank 0/1        
 		public WRam			wram { get; set; } = new(); // C000
 		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
-		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam" );
-		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused" );
-		public Section		io { get; set; } = new( 0xFF00, IOSize, "io" );
-		public Section		hram { get; set; } = new( 0xFF80, HRamSize, "ram" );
+		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam", SectionAccess.ReadWrite );
+		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused", SectionAccess.None ); // for arbitrary roms it might be necessary to allow ReadWrite access
+		public Section		io { get; set; } = new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
+		public Section		hram { get; set; } = new( 0xFF80, HRamSize, "ram", SectionAccess.ReadWrite);
 		public ByteSection	IE { get; set; } = new( 0xFFFF, val: 0, name: "IE" );
 
 		// ISection

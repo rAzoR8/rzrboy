@@ -33,7 +33,7 @@ namespace rzr
 
         public void LoadBootRom( byte[] boot )
         {
-            mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", boot );
+            mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read );
         }
 
         public void LoadRom( byte[] rom )

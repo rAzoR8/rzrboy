@@ -16,13 +16,6 @@
 
 	public static class Asm
 	{
-		public static Section AssembleSection( this IEnumerable<AsmInstr> instructions, ushort start, ushort len, ushort pc = 0, bool throwException = true )
-		{
-			Section section = new Section( start: start, len: len, name: "AsmDummySection");
-			instructions.Assemble( pc: pc, mem: section, throwException: throwException );
-			return section;
-		}
-
 		/// <summary>
 		/// Assemble a stream of instructions into the mem section
 		/// </summary>
@@ -45,13 +38,14 @@
 		{
 			// estimate the average instruction length as 2byte
 			List<AsmInstr> instrs = new ( rom.Length / 2);
-			Storage sec = new( rom );
+			Section sec = new Section( start: 0, len: Mbc.RomBankSize, "DisassemblerSection", access: SectionAccess.Read, data: rom, offset: 0 );
 
-			for( uint i = 0; i < rom.Length; ) 
+			for( int i = 0; i < rom.Length; ) 
 			{
 				ushort pc = 0;
 				instrs.Add( DisassembleInstr( ref pc, mem: sec, unknownOp: unknownOp ) );
 				i += pc;
+				sec.BufferOffset = i;
 			}
 
 			return instrs;
@@ -61,7 +55,7 @@
 		{
 			// max instruction length is 3 byte
 			byte[] rom = new byte[module.Count() * 3]; ;
-			Storage sec = new( rom );
+			Section sec = new( start: 0, len: Mbc.RomBankSize, name: "AssemblerSection", access: SectionAccess.Write, data: rom, offset: 0 );
 
 			foreach( AsmInstr instr in module )
 			{				

@@ -6,7 +6,7 @@ namespace rzr
 	{
 		private static Section CreateMinimal()
 		{
-			Section boot = new( 0, len: 0x150, "MinimalBoot" );
+			Section boot = new( start: 0, len: 0x150, name: "MinimalBoot", access: SectionAccess.Write );
 			SectionBuilder sb = new( boot );
 
 			sb.Ld( SP, 0xFFFE ); // init stack: SP = 0xFFFE
@@ -20,8 +20,7 @@ namespace rzr
 			// [0x014C] LD A, 1
 			// [0x014E] LD (0xFF50), A (disable booting)
 
-			boot.ReadOnly = true;
-			return boot;
+			return boot.AsReadOnly();
 		}
 
 		public static Section Minimal { get; } = CreateMinimal();

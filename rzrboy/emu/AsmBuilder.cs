@@ -394,20 +394,21 @@ namespace rzr
 		}
 	}
 
+	// TODO: this is a ROM section builder, if code should be build for RAM then section Access should be Read & Write
 	public class GrowingSectionBuilder : AsmBuilder, ISection
 	{
 		public byte this[ushort address] { get => Section[address]; set => Section[address] = value; }
 		public ushort StartAddr => Section.StartAddr;
-		public ushort Length => Section.Length;
+		public ushort Length => Section.Length; // return RomBank instead?
 
 		// executable section
 		public List<byte> Data { get; }
-		public Storage Section { get; }
+		public Section Section { get; }
 
 		public GrowingSectionBuilder()
 		{
 			Data = new();
-			Section = new( Data );
+			Section = new Section( start: 0, len: Mbc.RomBankSize, "GrowingSection", access: SectionAccess.ReadWrite, data: Data, offset: 0 );
 		}
 
 		public override ushort Consume( AsmInstr instr )

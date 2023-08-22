@@ -25,11 +25,11 @@
 		public byte HeaderChecksum { get; private set; } = 0;
 		public ushort RomChecksum { get; private set; } = 0;
 
-		// Banks/Storage
-		protected List<Storage> m_banks = new();
-		public IReadOnlyList<Storage> Banks => m_banks;
+		// Banks
+		protected List<Section> m_banks = new();
+		public IReadOnlyList<Section> Banks => m_banks;
 		public override byte BankIdx { get; protected set; } = 0;
-		public Storage CurBank => m_banks[BankIdx];
+		public Section CurBank => m_banks[BankIdx];
 		public byte[] Rom() => m_banks.SelectMany( x => x.Data ).ToArray();
 
 		public ModuleBuilder( uint initialBanks = 2 )
@@ -73,7 +73,7 @@
 
 		private void AddBank()
 		{
-			m_banks.Add( new Storage( new byte[Mbc.RomBankSize] ) );
+			m_banks.Add( new Section( start: 0, len: Mbc.RomBankSize, name: $"bank{m_banks.Count}", access: SectionAccess.ReadWrite ) );
 		}
 
 		public override ushort Consume( AsmInstr instr )
@@ -121,7 +121,7 @@
 					AddBank();
 				}
 
-				Storage bank = m_banks[(int)bankIdx];
+				Section bank = m_banks[(int)bankIdx];
 				bank[(ushort)pc] = data[i];
 			}
 		}

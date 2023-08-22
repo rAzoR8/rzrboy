@@ -7,7 +7,7 @@
 		public ushort Length => 8192; // 8KiB
 
 		private byte[] m_banks = new byte[8*4096];
-		private int m_index = 0;
+		private int m_index = 0; // TODO: where / how to change the index???
 
 		public byte this[ushort address] 
 		{

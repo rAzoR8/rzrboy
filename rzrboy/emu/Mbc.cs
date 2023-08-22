@@ -26,11 +26,11 @@ namespace rzr
 		public byte[] Ram() => m_ram.ToArray();
 		public byte[] Rom() => m_rom.ToArray();
 
-        // TODO: return Section instead of Storage, Mbc is for the exectuion part and thus should use Section
-		public Storage RomBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_rom, storageOffset: bankIndex * RomBankSize, startAddr: sectionStart, len: RomBankSize );
-		public Storage RamBank( int bankIndex, ushort sectionStart = 0 ) => new Storage( storage: m_ram, storageOffset: bankIndex * RamBankSize, startAddr: sectionStart, len: RamBankSize );
+		public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom, offset: bankIndex * RomBankSize );
+		public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram, offset: bankIndex * RamBankSize );
 
-		public HeaderView Header { get; }
+
+        public HeaderView Header { get; }
 
 		public Mbc()
         {
