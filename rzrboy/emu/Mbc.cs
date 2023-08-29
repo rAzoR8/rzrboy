@@ -18,19 +18,26 @@ namespace rzr
 		protected bool m_ramEnabled = false;
 		public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
-		// ISection
-		public string Name = "MBC";
-		public ushort StartAddr => 0;
-		public ushort Length => RomBankSize * 2 + RamBankSize;
-
 		public byte[] Ram() => m_ram.ToArray();
 		public byte[] Rom() => m_rom.ToArray();
 
 		public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom, offset: bankIndex * RomBankSize );
 		public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram, offset: bankIndex * RamBankSize );
 
-
         public HeaderView Header { get; }
+
+		// ISection
+		public string Name = "MBC";
+		public ushort StartAddr => 0;
+		public ushort Length => RomBankSize * 2 + RamBankSize;
+		public bool Accepts( ushort address )
+		{
+			return
+				address < 0x8000 ||     // 2x 16KiB banks banks
+										// 0x8000-0x9FFF vram ( gap )
+				( address > 0x9FFF &&   // 0xA000 - 0xC000 eram
+				address < 0xC000 );
+		}
 
 		public Mbc()
         {
@@ -113,15 +120,6 @@ namespace rzr
             }
 
             Header.RamBanks = bankCount;
-        }
-
-        public bool Accepts( ushort address )
-		{
-            return
-                address < 0x8000 ||     // roms banks
-                                        // 0x8000-0x9FFF vram
-                ( address > 0x9FFF &&   // 0xA000 - 0xC000 eram
-                address < 0xC000 );     
         }
 
         // mapped access for emulator, default impl

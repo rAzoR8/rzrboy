@@ -47,7 +47,7 @@ namespace rzrboy
         private Reg reg => boy.reg;
         private Mem mem => boy.mem;
 
-        private ISection GetCurRomBank() => boy.cart.Mbc.RomBank( bankIndex: boy.cart.Mbc.SelectedRamBank );
+        private Section GetCurRomBank() => boy.cart.Mbc.RomBank( bankIndex: boy.cart.Mbc.SelectedRomBank ).AsReadWrite(); // get write access for debugger
 
         private List<Callback> m_beforeStep = new();
         private List<Callback> m_afterStep = new();

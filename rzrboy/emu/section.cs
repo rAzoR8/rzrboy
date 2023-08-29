@@ -60,23 +60,25 @@ namespace rzr
 		public SectionAccess Access { get; } = SectionAccess.ReadWrite;
 
 		public Section AsReadOnly() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.Read, data: Data, offset: BufferOffset );
+		public Section AsReadWrite() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.ReadWrite, data: Data, offset: BufferOffset );
 
 		// this constructor allocates a byte array of length len
-        public Section( ushort start, ushort len, string name, SectionAccess access )
+		public Section( ushort start, ushort len, string name, SectionAccess access )
         {
+            Name = $"{start}:{name}";
             StartAddr = start;
             Length = len;
             Data = new byte[len];
-            Name = $"{start}:{name}";
+			BufferOffset = 0;
 			Access = access;
 		}
 
 		// this constructor uses data passed in to back this section
         public Section( ushort start, ushort len, string name, SectionAccess access, IList<byte> data, int offset = 0 )
         {
+			Name = $"{start}:{name}";
 			StartAddr = start;
 			Length = len;
-			Name = $"{start}:{name}";
 			Data = data;
 			BufferOffset = offset;
 			Access = access;
