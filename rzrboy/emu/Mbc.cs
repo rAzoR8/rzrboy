@@ -8,9 +8,8 @@ namespace rzr
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort RamBankSize = 0x2000; // 8KiB
 
-        // TODO: change to List of Banks! this is a linked list of bytes *facepalm*
-        private List<byte> m_rom;
-		private List<byte> m_ram;
+        private List<byte[]> m_rom = new();
+		private List<byte[]> m_ram = new();
 
 		public int SelectedRomBank { get; protected set; } = 0;
 		public int SelectedRamBank { get; protected set; } = 0;
@@ -18,11 +17,11 @@ namespace rzr
 		protected bool m_ramEnabled = false;
 		public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
 
-		public byte[] Ram() => m_ram.ToArray();
-		public byte[] Rom() => m_rom.ToArray();
+		public byte[] Ram() => m_ram.SelectMany( x => x ).ToArray();
+		public byte[] Rom() => m_rom.SelectMany( x => x ).ToArray();
 
-		public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom, offset: bankIndex * RomBankSize );
-		public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram, offset: bankIndex * RamBankSize );
+		public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom[bankIndex], offset: 0 );
+		public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram[bankIndex], offset: 0 );
 
         public HeaderView Header { get; }
 
@@ -39,11 +38,21 @@ namespace rzr
 				address < 0xC000 );
 		}
 
+		private static IEnumerable<T[]> Split<T>( T[] arr, int size )
+		{
+			for( var i = 0; i < arr.Length / size + 1; i++ )
+			{
+				yield return arr.Skip( i * size ).Take( size ).ToArray();
+			}
+		}
+
 		public Mbc()
         {
-			m_rom = new List<byte>( Enumerable.Repeat<byte>( 0, RomBankSize * 2 ) );
-			m_ram = new List<byte>( Enumerable.Repeat<byte>( 0, RamBankSize ) );
-            Header = new HeaderView( m_rom );
+            m_rom.Add( new byte[RomBankSize] ); // 0000->3FFF
+			m_rom.Add( new byte[RomBankSize] ); // 4000->7FFF
+			m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
+
+			Header = new HeaderView( m_rom[0] );
 
             Header.RomBanks = 2;
             Header.RamBanks = 1;
@@ -51,27 +60,28 @@ namespace rzr
 
 		public Mbc( byte[] rom, byte[]? ram = null )
 		{
-            m_rom = new( rom );
-            Header = new( m_rom );
+            m_rom = new( Split( rom, RomBankSize ) );
+            Header = new( m_rom[0] );
 
-			Debug.Assert( m_rom.Count == RomBankSize * Header.RomBanks );
+			Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
+			Debug.Assert( m_rom.Count > 1 );
 
             if( ram != null )
             {
                 Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
-                m_ram = new( ram );
+                m_ram = new( Split( ram, RamBankSize ) );
             }
             else
             {
-                m_ram = new( Enumerable.Repeat<byte>( 0, RamBankSize * Header.RamBanks ) );
-            }
+				m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
+			}
         }
 
         public void LoadRam( byte[] ram )
         {
             Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
             m_ram.Clear();
-            m_ram.AddRange( ram );
+            m_ram.AddRange( Split( ram, RamBankSize ) );
         }
 
         // Load rom of identical MBC type
@@ -82,44 +92,43 @@ namespace rzr
 			Debug.Assert( rom.Length >= RomBankSize );
 			//Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
 
-			m_rom.Clear();
-            m_rom.AddRange( rom );
+            m_rom = new( Split( rom, RomBankSize ) );
         }
 
         public void ResizeRom( int bankCount )
         {
-            var size = RomBankSize * bankCount;
-
-            if( size > m_rom.Count )
-            {
-                m_rom.EnsureCapacity( size );
-                m_rom.AddRange( Enumerable.Repeat<byte>( 0, ( bankCount - Header.RomBanks ) * RomBankSize ) );
-			}
-			else
+			if( bankCount > m_rom.Count )
 			{
-                m_rom.RemoveRange( size, m_rom.Count - size );
+				for( int i = m_rom.Count; i < bankCount; ++i )
+				{
+					m_rom.Add( new byte[RomBankSize] );
+				}
 			}
-            
-            Header.RomBanks = bankCount;
+			else if( bankCount < m_rom.Count )
+			{
+				m_rom.RemoveRange( bankCount - 1, m_rom.Count - bankCount );
+			}
+
+			Header.RomBanks = bankCount;
         }
 
         public void ResizeRam( int bankCount )
         {
             bankCount = HeaderView.RamBankSizes.SkipWhile( b => b < bankCount ).First();
 
-            var size = RamBankSize * bankCount;
+			if( bankCount > m_ram.Count )
+			{
+				for( int i = m_ram.Count; i < bankCount; ++i )
+				{
+					m_ram.Add( new byte[RamBankSize] );
+				}
+			}
+			else if( bankCount < m_ram.Count )
+			{
+				m_ram.RemoveRange( bankCount - 1, m_ram.Count - bankCount );
+			}
 
-            if( size > m_ram.Count )
-            {
-                m_ram.EnsureCapacity( size );
-                m_ram.AddRange( Enumerable.Repeat<byte>( 0, ( bankCount - Header.RamBanks ) * RamBankSize ) );
-            }
-            else
-            {
-                m_ram.RemoveRange( size, m_ram.Count - size );
-            }
-
-            Header.RamBanks = bankCount;
+			Header.RamBanks = bankCount;
         }
 
         // mapped access for emulator, default impl
@@ -129,15 +138,13 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-					var bankAdr = ( SelectedRomBank * Header.RomBanks ) + address - StartAddr;
-                    return m_rom[bankAdr];
+                    return m_rom[SelectedRomBank][address - StartAddr];
                 }
                 else if( RamEnabled )
                 {
-                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
-                    return m_ram[bankAdr];
-                }
-                return 0xFF;
+					return m_rom[SelectedRamBank][address - StartAddr];
+				}
+				return 0xFF;
             }
             set
             {
@@ -148,8 +155,7 @@ namespace rzr
                 }
                 else if( RamEnabled )
                 {
-                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
-                    m_ram[bankAdr] = value;
+                    m_ram[SelectedRamBank][address - StartAddr] = value;
                 }
                 else
                 {
@@ -161,8 +167,8 @@ namespace rzr
 
         public bool FinalizeRom() 
         {
-			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_rom );
-            Header.RomChecksum = HeaderView.ComputeRomChecksum( m_rom );
+			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_rom[0] );
+            Header.RomChecksum = HeaderView.ComputeRomChecksum( m_rom.SelectMany(b=>b) );
             return Header.Valid();
         }
     }
