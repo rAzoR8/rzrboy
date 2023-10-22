@@ -63,9 +63,9 @@ namespace PeliPoika
 				if( magic == FileFormat.Magic && version == FileFormat.Version
 					&& ( modeByte == (byte)Mode.Y8 || modeByte == (byte)Mode.Y16 ) )
 				{
-					width = reader.ReadByte();
-					height = reader.ReadByte();
-					mode = (Mode)modeByte;
+					width = reader.ReadByte(); // num of tiles in x
+					height = reader.ReadByte(); // num of tiles in y
+					mode = (Mode)modeByte; // num of rows in tile: 8 or 16
 
 					if( width != 0 && height != 0 )
 					{
@@ -96,6 +96,14 @@ namespace PeliPoika
 			return new byte[0];
 		}
 
+		/// <summary>
+		/// Creates a linear 1-to-1 tile map and writes it to the target buffer
+		/// </summary>
+		/// <param name="target">Target buffer, 32x32 bytes</param>
+		/// <param name="xStart">x offset in the target buffer</param>
+		/// <param name="yStart">y offset in the target buffer</param>
+		/// <param name="width">number of tiles in x</param>
+		/// <param name="height">number of tiles in y</param>
 		public static void WriteTileMap( byte[] target, byte xStart, byte yStart, byte width, byte height )
 		{
 			byte tile = 0;
@@ -107,5 +115,21 @@ namespace PeliPoika
 				}
 			}
 		}
+
+		// public static byte[] CompressTileData(byte[] tiles, Mode mode, byte width, byte height, byte[] targetTileMap )
+		// {
+		// 	// tile data -> map id
+		// 	Dictionary<byte[], byte> tileMap = new();
+
+			
+		// 	for(byte y = 0; y<height; ++y)
+		// 	{
+		// 		for (byte x = 0; x < width; ++x)
+		// 		{
+
+
+		// 		}
+		// 	}
+		// }
 	}
 }
