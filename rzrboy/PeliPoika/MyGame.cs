@@ -25,12 +25,14 @@
 
 		protected override void WriteGameCode()
 		{
-			Array.Fill( TileMap, (byte)0xff );
+			// TODO: find a tile that is clear / 0 and fint the index to it
+			const byte TileMapClearId = 0xff;
+			Array.Fill( TileMap, TileMapClearId);
 
 			// replace background tile
-			var tileData = Project.GetTiles( "8bit_16x16_triangle.tl8", targetTileMap: TileMap, x: 0, y: 0 );
-
-			//Fonts.Milla.ToTiles( "LUMIA" ).CopyTo(TileData, 0);
+			//var tileData = Project.GetTiles( "8bit_16x16_triangle.tl8", out var width, out var height, out var mode);
+			var tileData = Project.GetTiles( "8bit_16x16_triangle.tl8", targetTileMap: TileMap, x: 0, y: 0);
+			//tileData = Tiles.CompressTileData(tiles: tileData, mode: mode, width: width, height: height, targetTileMap: TileMap );
 
 			// turn off audio
 			ushort Entry = Xor( B ); // A = 0
@@ -68,14 +70,8 @@
 			byte newPalette = BGColor.LightGray.Color1( BGColor.White ).Color2( BGColor.DarkGray ).Color3( BGColor.Black );
 			Ld( A, newPalette );
 			Ldh( 0x47, A ); // BGP palette
-			Inc( A );
+			Ld( L, A );
 
-			//Jp( PC );// while true
-
-			//var resetB = Ld( B, 0 );
-			//Ld( HL, 0x9800 );
-			//Ld( BC, (ushort)( TileMap.Length ) );
-			
 			const ushort delay = 100;
 			var restart = Ld( BC, delay );
 
@@ -95,27 +91,14 @@
 			Inc( A );
 			Ldh( SCY, A );
 
-			//Ldh( A, SCX );
-			//Dec( A );
-			//Ldh( SCX, A );
+			Jp(restart); // remove
 
-			Jp( restart );
-			
-
-			//Ld( A, adrHL );
-			//Inc( A );
-			//Ld( adrHLi, A );
-			//Dec( BC );
-			//Ld( A, B );
-			//Or( C );
-			//Jp( isZ, resetB );
-
-			//Jp( start );
-
-			//Ld( A, B );
-			//Ldh( 0x47, A );
-			//Inc( B );
-			//Jp( start );
+			// Cp(255);
+			// Jp(isNZ, restart);
+			// Inc(L);
+			// Ld( A, L );
+			// Ldh( 0x47, A );
+			// Jp(restart);
 
 			Write( tileData, ip: TileDataStart );
 			Write( TileMap, ip: TileMapStart );

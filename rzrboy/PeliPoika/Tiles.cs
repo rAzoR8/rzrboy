@@ -116,20 +116,53 @@ namespace PeliPoika
 			}
 		}
 
-		// public static byte[] CompressTileData(byte[] tiles, Mode mode, byte width, byte height, byte[] targetTileMap )
-		// {
-		// 	// tile data -> map id
-		// 	Dictionary<byte[], byte> tileMap = new();
+		internal class ByteArrayComparer : IEqualityComparer<byte[]>
+		{
+			public bool Equals(byte[]? left, byte[]? right)
+			{
+				if (left == null || right == null)
+				{
+					return left == right;
+				}
+				return left.SequenceEqual(right);
+			}
+			public int GetHashCode(byte[] key)
+			{
+				if (key == null)
+					throw new ArgumentNullException("key");
+				return key.Sum(b => b);
+			}
+		}
 
-			
-		// 	for(byte y = 0; y<height; ++y)
-		// 	{
-		// 		for (byte x = 0; x < width; ++x)
-		// 		{
+		public static byte[] CompressTileData(byte[] tiles, Mode mode, byte width, byte height, byte[] targetTileMap, byte xOffset = 0, byte yOffset =0 )
+		{
+			// tile data -> map id
+			Dictionary<byte[], byte> tileMap = new(new ByteArrayComparer());
 
+			byte curMax = 0;
+			for(byte y = 0; y<height; ++y)
+			{
+				for (byte x = 0; x < width; ++x)
+				{
+					var idx = y * width * 8 + x * 8;
+					byte[] tile = new byte[(int)mode];
+					Array.ConstrainedCopy(tiles, idx, tile, 0, tile.Length);
+					//byte[] tile = tiles.Skip(idx).Take((int)mode).ToArray();	
+					byte id;
+					if (!tileMap.TryGetValue(tile, out id))
+					{
+						id = curMax++;
+						tileMap.Add(tile, id);						
+					}
+					var Y = y + yOffset;
+					var X =	x + xOffset;
+					targetTileMap[Y * 32 + X] = id;
+				}
+			}
 
-		// 		}
-		// 	}
-		// }
+			var orderd = tileMap.OrderBy(x => x.Value);
+			byte[] compressed = orderd.SelectMany(x=> x.Key).ToArray();
+			return compressed;//.SelectMany(x=>x).ToArray();
+		}
 	}
 }
