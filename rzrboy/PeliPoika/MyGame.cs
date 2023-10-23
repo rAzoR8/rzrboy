@@ -2,8 +2,9 @@
 {
 	using static rzr.StandardFunctions;
 	using static Palettes;
+    using System.Diagnostics;
 
-	public class Game : rzr.FunctionBuilder
+    public class Game : rzr.FunctionBuilder
 	{
 		public Game()
 		{
@@ -20,19 +21,34 @@
 
 		private Project Project { get; set; } = new Project();
 
-		private static ushort TileDataStart = 0x200;
-		private static byte[] TileMap = new byte[32*32];
+		private static string[] TileNames = {"8bit_bw_20x18_gaussian.tl8"};
+
+
 
 		protected override void WriteGameCode()
 		{
-			// TODO: find a tile that is clear / 0 and fint the index to it
+			// find a tile that is clear / 0 and fint the index to it
 			const byte TileMapClearId = 0xff;
-			Array.Fill( TileMap, TileMapClearId);
+			const ushort TileDataStart = 0x200;
 
-			// replace background tile
-			//var tileData = Project.GetTiles( "8bit_16x16_triangle.tl8", out var width, out var height, out var mode);
-			var tileData = Project.GetTiles( "8bit_16x16_triangle.tl8", targetTileMap: TileMap, x: 0, y: 0);
-			//tileData = Tiles.CompressTileData(tiles: tileData, mode: mode, width: width, height: height, targetTileMap: TileMap );
+			List<(ushort offset, byte[] data, byte[] map)> tileSets = new();
+
+			ushort tileOffset = TileDataStart;
+			foreach(string name in TileNames)
+			{
+				byte[] tileMap = new byte[32*32];
+				Array.Fill( tileMap, TileMapClearId);
+
+				var tileData = Project.GetTiles( name, out var width, out var height, out var mode);
+				tileData = Tiles.CompressTileData(tiles: tileData, mode: mode, width: width, height: height, targetTileMap: tileMap );
+				tileSets.Add((tileOffset, tileData, tileMap));
+				Ld(BC, tileOffset);
+				Push(BC);
+				tileOffset += (ushort)tileData.Length;
+				Ld(BC, tileOffset);
+				Push(BC);
+				tileOffset += (ushort)tileMap.Length;
+			}
 
 			// turn off audio
 			ushort Entry = Xor( B ); // A = 0
@@ -46,10 +62,11 @@
 			Xor( A );
 			Ldh( 0x40, A ); // rLCDC LCD control
 
-			this.memcopy( 0x8000, TileDataStart, (ushort)tileData.Length );
-			ushort TileMapStart = (ushort)(TileDataStart + tileData.Length) ;
-			this.memcopy( 0x9800, TileMapStart, (ushort)TileMap.Length );
+			// this.memcopy( 0x8000, TileDataStart, (ushort)tileData.Length );
+			// ushort TileMapStart = (ushort)(TileDataStart + tileData.Length) ;
+			// this.memcopy( 0x9800, TileMapStart, (ushort)TileMap.Length );
 
+			Push(AF);
 			//Turn the LCD on
 
 			// 7 LCD & PPU enable: 0 = Off; 1 = On
@@ -65,8 +82,6 @@
 			Ldh( 0x40, A );
 
 			// During the first( blank ) frame, initialize display registers
-
-			var oldPalette = 0xe4.FromPalette();
 			byte newPalette = BGColor.LightGray.Color1( BGColor.White ).Color2( BGColor.DarkGray ).Color3( BGColor.Black );
 			Ld( A, newPalette );
 			Ldh( 0x47, A ); // BGP palette
@@ -91,7 +106,24 @@
 			Inc( A );
 			Ldh( SCY, A );
 
-			Jp(restart); // remove
+			Cp(255);
+			Jp(isNZ, restart);
+
+			Pop(AF);
+
+			byte i = 0;
+			foreach(var (offset, data, map) in tileSets)
+			{				
+				//this.memcopy( 0x8000, TileDataStart, (ushort)tileData.Length );
+				//ushort TileMapStart = (ushort)(TileDataStart + tileData.Length) ;
+				//this.memcopy( 0x9800, TileMapStart, (ushort)TileMap.Length );
+			}
+
+			Inc(A);
+			Push(AF);
+
+
+			Jp(restart);
 
 			// Cp(255);
 			// Jp(isNZ, restart);
@@ -100,8 +132,14 @@
 			// Ldh( 0x47, A );
 			// Jp(restart);
 
-			Write( tileData, ip: TileDataStart );
-			Write( TileMap, ip: TileMapStart );
+			Debug.Assert(IP < TileDataStart);
+
+			foreach(var (offset, data, map) in tileSets)
+			{
+				Write( data, ip: offset );
+				Write( map, ip: offset + (uint)data.Length );
+			}
+			// todo: write index map
 		}
 	}
 }

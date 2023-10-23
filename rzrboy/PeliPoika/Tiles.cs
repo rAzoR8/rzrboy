@@ -139,7 +139,6 @@ namespace PeliPoika
 			// tile data -> map id
 			Dictionary<byte[], byte> tileMap = new(new ByteArrayComparer());
 
-			byte curMax = 0;
 			int idx = 0;
 			for(byte y = 0; y<height; ++y)
 			{
@@ -153,7 +152,10 @@ namespace PeliPoika
 					byte id;
 					if (!tileMap.TryGetValue(tile, out id))
 					{
-						id = curMax++;
+						if (tileMap.Count > 255)
+							throw new System.IndexOutOfRangeException("Tile data to big to compress");
+
+						id = (byte)tileMap.Count;
 						tileMap.Add(tile, id);						
 					}
 					var Y = y + yOffset;
@@ -162,9 +164,7 @@ namespace PeliPoika
 				}
 			}
 
-			var orderd = tileMap.OrderBy(x => x.Value);
-			byte[] compressed = orderd.SelectMany(x=> x.Key).ToArray();
-			return compressed;//.SelectMany(x=>x).ToArray();
+			return tileMap.Keys.SelectMany(x=>x).ToArray();
 		}
 	}
 }
