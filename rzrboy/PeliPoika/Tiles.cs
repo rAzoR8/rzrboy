@@ -140,14 +140,16 @@ namespace PeliPoika
 			Dictionary<byte[], byte> tileMap = new(new ByteArrayComparer());
 
 			byte curMax = 0;
+			int idx = 0;
 			for(byte y = 0; y<height; ++y)
 			{
 				for (byte x = 0; x < width; ++x)
 				{
-					var idx = y * width * 8 + x * 8;
-					byte[] tile = new byte[(int)mode];
+					int tileSize = (int)mode*2;
+					byte[] tile = new byte[tileSize];
 					Array.ConstrainedCopy(tiles, idx, tile, 0, tile.Length);
-					//byte[] tile = tiles.Skip(idx).Take((int)mode).ToArray();	
+					idx += tileSize;
+
 					byte id;
 					if (!tileMap.TryGetValue(tile, out id))
 					{
