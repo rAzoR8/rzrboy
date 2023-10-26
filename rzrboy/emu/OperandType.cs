@@ -106,6 +106,8 @@
 				case OperandType.A: return (byte)( offset + 0x07 );
 			}
 		}
+
+		public static bool IsReg(this OperandType type ) => type <= OperandType.SP;
 		// is A
 		public static bool IsA( this OperandType type ) => type == OperandType.A;
 		// is HL

@@ -63,9 +63,9 @@
 		Set
 	}
 
-	public class InvalidOperand : rzr.AsmException
+	public class InvalidOperandException : rzr.AsmException
 	{
-		public InvalidOperand( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at 0x{pc:X4}" )
+		public InvalidOperandException( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at 0x{pc:X4}" )
 		{
 		}
 	}
@@ -122,7 +122,7 @@
 		{
 			ushort pc = _pc;
 
-			void Throw() { if( throwException ) throw new rzr.InvalidOperand( pc: pc, type: Type ); }
+			void Throw() { if( throwException ) throw new rzr.InvalidOperandException( pc: pc, type: Type ); }
 
 			if( Count > 2 ) // no instruction has more than 2 operands
 			{

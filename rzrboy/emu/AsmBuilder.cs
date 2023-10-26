@@ -277,6 +277,17 @@ namespace rzr
 			return label;
 		}
 
+		// Helper for LD(a16), d16 // a16+1
+		public static ushort Ld( this AsmBuilder self, ushort adr, ushort val )
+		{
+			// TODO: optimize with LD (a16), SP or LD (HLi), A
+			var label = self.Ld( AsmBuilder.A, val.GetLsb() );
+			self.Ld( adr.Adr(), AsmBuilder.A );
+			self.Ld( AsmBuilder.A, val.GetMsb() );
+			self.Ld( (adr+1).Adr(), AsmBuilder.A );
+			return label;
+		}
+
 		public static ushort Db( this AsmBuilder self, byte first, params byte[] vals )
 		{
 			var label = self.Db( first );
@@ -287,6 +298,13 @@ namespace rzr
 
 			return label;
 		}
+
+		// http://unixwiz.net/techtips/x86-jumps.html
+		// jump if below (unsigned)
+		public static ushort Jb(this AsmBuilder self, ushort adr) => self.Jp(isC, adr);
+
+		// Jump if NOT below => jump if above or equal
+		public static ushort Jnb(this AsmBuilder self, ushort adr) => self.Jp(isNC, adr);
 
 		private static ushort Not( this AsmBuilder self, AsmOperand rhs )
 		{

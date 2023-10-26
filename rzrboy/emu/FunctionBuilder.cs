@@ -34,6 +34,7 @@ namespace rzr
 			{
 				Target = target;
 			}
+			// TODO: add source "from Stack"
 		}
 
 		public class BCAttribute : ParamStorageAttribute { public BCAttribute() : base( rzr.OperandType.BC ) { } }
@@ -48,20 +49,73 @@ namespace rzr
 				ParamStorageAttribute? storage = info?.GetCustomAttribute<ParamStorageAttribute>();
 				if( storage != null && dynParams[i] != null )
 				{
-					Instr( rzr.InstrType.Ld, storage.Target, new( dynParams[i] ) );
+					rzr.AsmOperand source = new( dynParams[i] );
+					bool skip = source.Type.IsReg() && source.Type == storage.Target; // dont need to load reg A to A etc.
+					if( !skip )
+					{
+						Instr( rzr.InstrType.Ld, storage.Target, source);
+						// TODO: pop from stack if storage.Target.Stack()
+					}
 				}
 			}
 		}
 
-		public delegate void F3<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
-		public F3<T1, T2, T3> Function<T1, T2, T3>( F3<T1, T2, T3> f )
+		public delegate void F0in();
+		public delegate ushort F0out();
+
+		public F0out Function( F0in f )
 		{
 			MethodInfo type = f.GetMethodInfo();
 			LinkageAttribute? linkAttrib = type.GetCustomAttribute<LinkageAttribute>();
 			Linkage linkage = linkAttrib != null ? linkAttrib.Linkage : Linkage.Call;
 
-			void Impl( T1 t1, T2 t2, T3 t3 )
+			ushort Impl()
 			{
+				ushort pc = PC;
+
+				if( linkage == Linkage.Call )
+				{
+					if( Functions.TryGetValue( type, out var label ) )
+					{
+						if( BankIdx != label.bank ) // far procedure call
+							this.SwitchBank( label.bank );
+
+						Call( label.pc );
+
+						if( BankIdx != label.bank )
+							this.SwitchBank( BankIdx );
+					}
+					else
+					{
+						f();
+						Ret();
+						Functions.Add( type, (pc, BankIdx) );
+					}
+				}
+				else if( linkage == Linkage.Inline )
+				{
+					f();
+				}
+
+				return pc;
+			}
+
+			return Impl;
+		}
+
+		public delegate void F3in<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
+		public delegate ushort F3out<T1, T2, T3>( T1 t1, T2 t2, T3 t3 );
+
+		public F3out<T1, T2, T3> Function<T1, T2, T3>( F3in<T1, T2, T3> f )
+		{
+			MethodInfo type = f.GetMethodInfo();
+			LinkageAttribute? linkAttrib = type.GetCustomAttribute<LinkageAttribute>();
+			Linkage linkage = linkAttrib != null ? linkAttrib.Linkage : Linkage.Call;
+
+			ushort Impl( T1 t1, T2 t2, T3 t3 )
+			{
+				ushort inPC = PC;
+
 				LoadParameters( type, t1, t2, t3 );
 
 				if( linkage == Linkage.Call )
@@ -88,6 +142,8 @@ namespace rzr
 				{
 					f( t1, t2, t3 );
 				}
+
+				return inPC;
 			}
 
 			return Impl;

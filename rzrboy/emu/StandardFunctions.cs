@@ -20,5 +20,13 @@ namespace rzr
 			self.Or( C );
 			self.Jp( isNZ, copy );
 		} )( dst, src, len );
+
+		public static void waitvsync(this FunctionBuilder self) =>
+		self.Function([Inline] () =>
+		{
+			ushort WaitVBlank = self.Ldh(A, 0x44);
+			self.Cp(144);
+			self.Jp(isC, WaitVBlank);
+		})();
 	}
 }
