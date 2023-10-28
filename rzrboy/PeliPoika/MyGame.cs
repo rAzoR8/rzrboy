@@ -24,7 +24,17 @@
 
 		private Project Project { get; set; } = new Project();
 
-		private static string[] TileNames = {"8bit_bw_20x18_gaussian.tl8", "8bit_16x16_lanczos3.tl8"}; 
+		private static readonly byte BGPalette = BGColor.LightGray.Color1( BGColor.White ).Color2( BGColor.DarkGray ).Color3( BGColor.Black );
+		private static (string name, byte x, byte y, byte palette)[] TileNames =
+		{
+			("8bit_taproom_20x18_lanczos3.tl8", 0, 0, BGPalette),
+			("8bit_both_20x18.tl8", 0, 0, BGPalette.Flip()),
+			("8bit_beerdog_16x16.tl8", 2, 2, BGPalette.Flip()),
+			("8bit_glass_11x18_thumbnail_lanczos3.tl8", 4, 2, BGPalette),
+			("8bit_16x16_triangle.tl8", 2, 2, BGPalette),
+			("8bit_18x18_jasonface.tl8", 1, 1, BGPalette.Flip()), 
+			("8bit_bw_20x18_gaussian.tl8", 0, 0, BGPalette), // first
+		}; 
 
 		// TODO: track with RAII / free-map
 		private ushort m_wram = 0xC000;
@@ -82,20 +92,11 @@
 			const byte BGP = 0x47;
 			// find a tile that is clear / 0 and fint the index to it
 			const byte TileMapClearId = 0xff;
-			const ushort TileDataStart = 0x200;
+			const ushort TileDataStart = 0x300;
 
 			// turn off audio
 			ushort Entry = Xor( A ); // A = 0
 			Ldh( rAUDENA, A ); // 0xFF26 rAUDENA 
-
-			// During the first( blank ) frame, initialize display registers
-			byte newPalette = BGColor.LightGray.Color1( BGColor.White ).Color2( BGColor.DarkGray ).Color3( BGColor.Black );
-			Ld( A, newPalette );
-			Ldh( BGP, A ); // BGP palette
-			Ld( L, A );
-
-			Xor(A); // A = 0
-			Ldh( SCY, A ); // SCY = 0
 
 			// 7 LCD & PPU enable: 0 = Off; 1 = On
 			// 6 Window tile map area: 0 = 9800–9BFF; 1 = 9C00–9FFF
@@ -118,14 +119,17 @@
 			List<(ushort offset, byte[] data, byte[] map)> tileSets = new();
 			{
 				ushort tileOffset = TileDataStart;
-				foreach(string name in TileNames)
+				foreach((string name, byte x, byte y, byte palette) in TileNames)
 				{
 					byte[] tileMap = new byte[32*32];
 					Array.Fill( tileMap, TileMapClearId);
 
 					var tileData = Project.GetTiles( name, out var width, out var height, out var mode);
-					tileData = Tiles.CompressTileData(tiles: tileData, mode: mode, width: width, height: height, targetTileMap: tileMap );
+					tileData = Tiles.CompressTileData(tiles: tileData, mode: mode, width: width, height: height, targetTileMap: tileMap, xOffset: x, yOffset: y);
 					tileSets.Add((tileOffset, tileData, tileMap));
+
+					Ld(BC, (ushort)(palette<<8));
+					Push(BC);
 
 					Ld(BC, tileOffset); // data offset
 					Push(BC);
@@ -137,13 +141,15 @@
 					Ld(BC, tileOffset); // map offset
 					Push(BC);
 
-					Ld(BC, (ushort)tileMap.Length); // map length
-					Push(BC);
 					tileOffset += (ushort)tileMap.Length;
+
+					if(tileOffset > 0xFFFF)
+					{
+						throw new System.IndexOutOfRangeException($"Not enough space tile {name} in this bank");
+						break;
+					}
 				}
 			}
-
-			//this.waitvsync();
 
 			const ushort delay = 100;
 			var restart = Ld( BC, delay );
@@ -153,7 +159,7 @@
 			Ldh( 0x40, A );
 
 			var vsync = Ldh( A, 0x44 );
-			Cp( 144 );
+			Cp( 148 );
 			Jp( isC, vsync );
 
 			Dec( BC );
@@ -165,7 +171,7 @@
 			Inc( A );
 			Ldh( SCY, A );
 
-			Cp(160);
+			Cp(1);
 			Jp(isNZ, restart);
 			
 			Ld(A, adrCurTile);
@@ -179,12 +185,11 @@
 				Xor( A );
 				Ldh( 0x40, A ); // rLCDC LCD control
 
-				//Ld( DE, TileDataStart );
-				//Ld( HL, 0x8000 );
-				//Ld( BC, (ushort)TileData.Length );
-
+				// pop in reverse order!
 				Ld(HL, 0x9800 ); // dst
-				Pop(BC); // length
+				
+				//Pop(BC); // length
+				Ld(BC, 32*32); // tile map length is constant
 				Pop(DE); // src map data
 				
 				ushort copyMap = Ld( A, adrDE );
@@ -207,17 +212,23 @@
 				Ld( A, B );
 				Or( C );
 				Jp( isNZ, copyData );
+
+				Pop(AF); // palette
+				Ldh( BGP, A ); // BGP palette
 			}
 			
 			Jp(restart);
 
-			Debug.Assert(IP < TileDataStart);
+			Debug.Assert(IP <= TileDataStart);
 
+			uint eod =0;
 			foreach(var (offset, data, map) in tileSets)
 			{
 				Write( data, ip: offset );
 				Write( map, ip: offset + (uint)data.Length );
+				eod = offset + (uint)data.Length;
 			}
+			Debug.WriteLine($"End of Data: {eod} ({Mbc.RomBankSize*2-eod} left)");
 		}
 	}
 }
