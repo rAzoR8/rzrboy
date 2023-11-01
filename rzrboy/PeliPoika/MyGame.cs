@@ -7,8 +7,145 @@
     using System.Diagnostics;
     using rzr;
 
-    public class Game : rzr.FunctionBuilder
+    [AttributeUsageAttribute(AttributeTargets.Field | AttributeTargets.Property)]
+	public class BankAttribute : System.Attribute
 	{
+		public ushort Index { get; }
+		public BankAttribute(ushort index)
+		{
+			Index = index;
+		}
+	}
+
+	public class BankedMem
+	{
+		public ushort Bank {get;}
+		public byte[] Data {get;}		
+		public ushort Address {get; private set;}
+
+		public BankedMem(ushort bank, byte[] data )
+		{
+			Bank = bank;
+			Data = data;
+		}
+
+		public void Write(ModuleBuilder mb)
+		{
+			// TODO: get next free address
+			uint ip = Bank * (uint)Mbc.RomBankSize;
+			mb.Write(Data, ip: ip);
+			Address = AsmBuilder.IPtoPC(ip);
+		}
+		//public static implicit operator ushort( BankedMem adr ) => adr.adr;
+	}
+
+	public class Variable : IDisposable
+	{
+		public ushort Start {get;}
+		public ushort Size {get;set;}
+
+		public rzr.Address Adr => new(Start);
+
+		private RamAllocator m_allocator;
+
+		public Variable(ushort start, ushort size, RamAllocator owner)
+		{
+			Start = start;
+			Size = size;
+			m_allocator = owner;
+		}
+
+        public void Dispose()
+        {
+            m_allocator.Free(this);
+        }
+    }
+    public class VariableComparer : IComparer<Variable>
+    {
+        public int Compare(Variable? x, Variable? y)
+        {
+			if(x == null && y == null) return 0;
+			if(x != null && y == null) return 1;
+			if(x == null && y != null) return -1;
+            return (x.Size).CompareTo(y.Size);
+        }
+    }
+
+    public class RamAllocator
+	{
+		public ushort Start {get;}
+		public ushort End {get;}
+		public ushort Cur {get; private set;}
+
+		private List<Variable> m_free = new();
+
+		public RamAllocator(ushort start, ushort end){ Start = Cur = start; End = end;}
+
+		private int Search(ushort size)
+		{
+			int min = 0;
+			int max = m_free.Count - 1;
+			while (min <= max)
+			{
+				int mid = (min + max) / 2;
+				if (size == m_free[mid].Size)
+				{
+					return mid;
+				}
+				else if (size < m_free[mid].Size)
+				{
+					max = mid - 1;
+				}
+				else
+				{
+					min = mid + 1;
+				}
+			}
+			return min;
+		}
+
+		public Variable? Alloc(ushort size)
+		{
+			if(Cur + size < End)			
+			{
+				var variable = new Variable(Cur, size, this);
+				Cur += size;
+				return variable;
+			}
+
+			if(m_free.Count > 0)
+			{
+				int idx = Search(size);
+				Variable v = m_free[idx];
+				if(v.Size >= size)
+				{
+					m_free.RemoveAt(idx);
+					if (v.Size > size) // split
+					{
+						ushort diff = (ushort)(v.Size - size);
+						v.Size = size;
+						Variable remainder = new Variable(start: (ushort)(v.Start + size), size: diff, this);
+						idx = Search(diff);
+						m_free.Insert(idx, remainder);
+					}
+					return v;
+				}
+			}
+
+			return null;
+		}
+
+		public void Free(Variable var)
+		{
+			int idx = Search(var.Size);
+			m_free.Insert(idx, var);
+			// TODO: defrag / merge
+		}
+	}
+
+	public class Game : rzr.FunctionBuilder
+	{
+		// TODO: whole game should be reconstructed on each write
 		public Game()
 		{
 			Title = "PeliPoika";
@@ -36,18 +173,18 @@
 			("8bit_bw_20x18_gaussian.tl8", 0, 0, BGPalette), // first
 		}; 
 
-		// TODO: track with RAII / free-map
-		private ushort m_wram = 0xC000;
-		private ushort WRAM1B => m_wram++;
-		private ushort WRAM2B { get { ushort ret = m_wram; m_wram += 2; return ret; } }
-		private ushort WRAM(ushort len) { ushort ret = m_wram; m_wram += len; return ret; }
-		private ushort[] WRAM(ushort count, byte elemSize)
+
+		private RamAllocator WRamAlloc = new RamAllocator(start: 0xC000, end: 0xD000); // in CGB end is 0xE000
+
+		private Variable WRAM1B => WRamAlloc.Alloc(1);
+		private Variable WRAM2B => WRamAlloc.Alloc(2);
+		private Variable WRAM(ushort len) => WRamAlloc.Alloc(len);
+		private Variable[] WRAM(ushort count, byte elemSize)
 		{ 
-			ushort[] ret = new ushort[count];
+			Variable[] ret = new Variable[count];
 			for (ushort i = 0; i < count; i++)
 			{
-				ret[i] = m_wram;
-				m_wram += elemSize;
+				ret[i] = WRAM(elemSize);
 			}
 			return ret;
 		}
@@ -111,10 +248,10 @@
 
 			byte TileCount = (byte)TileNames.Length;
 			// 1 Byte long variable in WRAM
-			Address adrCurTile = WRAM1B.Adr();
+			Variable adrCurTile = WRAM1B;
 
 			ushort resetStack = PC;
-			this.Ld(adr: adrCurTile, 0);
+			this.Ld(adr: adrCurTile.Adr, 0);
 
 			List<(ushort offset, byte[] data, byte[] map)> tileSets = new();
 			{
@@ -151,6 +288,11 @@
 				}
 			}
 
+			using(var a = WRamAlloc.Alloc(2))
+			{
+
+			}
+
 			const ushort delay = 100;
 			var restart = Ld( BC, delay );
 
@@ -174,9 +316,9 @@
 			Cp(1);
 			Jp(isNZ, restart);
 			
-			Ld(A, adrCurTile);
+			Ld(A, adrCurTile.Adr);
 			Inc(A);
-			Ld(adrCurTile, A);
+			Ld(adrCurTile.Adr, A);
 			Cp((byte)(TileCount+1));
 			this.Jnb(resetStack); // reset if varTileCount >= TileCount
 			
