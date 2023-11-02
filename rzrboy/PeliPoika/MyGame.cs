@@ -6,8 +6,9 @@
 	using static Palettes;
     using System.Diagnostics;
     using rzr;
+	using System.Globalization;
 
-    [AttributeUsageAttribute(AttributeTargets.Field | AttributeTargets.Property)]
+	[AttributeUsageAttribute(AttributeTargets.Field | AttributeTargets.Property)]
 	public class BankAttribute : System.Attribute
 	{
 		public ushort Index { get; }
@@ -37,115 +38,10 @@
 			Address = AsmBuilder.IPtoPC(ip);
 		}
 		//public static implicit operator ushort( BankedMem adr ) => adr.adr;
-	}
-
-	public class Variable : IDisposable
-	{
-		public ushort Start {get;}
-		public ushort Size {get;set;}
-
-		public rzr.Address Adr => new(Start);
-
-		private RamAllocator m_allocator;
-
-		public Variable(ushort start, ushort size, RamAllocator owner)
-		{
-			Start = start;
-			Size = size;
-			m_allocator = owner;
-		}
-
-        public void Dispose()
-        {
-            m_allocator.Free(this);
-        }
-    }
-    public class VariableComparer : IComparer<Variable>
-    {
-        public int Compare(Variable? x, Variable? y)
-        {
-			if(x == null && y == null) return 0;
-			if(x != null && y == null) return 1;
-			if(x == null && y != null) return -1;
-            return (x.Size).CompareTo(y.Size);
-        }
-    }
-
-    public class RamAllocator
-	{
-		public ushort Start {get;}
-		public ushort End {get;}
-		public ushort Cur {get; private set;}
-
-		private List<Variable> m_free = new();
-
-		public RamAllocator(ushort start, ushort end){ Start = Cur = start; End = end;}
-
-		private int Search(ushort size)
-		{
-			int min = 0;
-			int max = m_free.Count - 1;
-			while (min <= max)
-			{
-				int mid = (min + max) / 2;
-				if (size == m_free[mid].Size)
-				{
-					return mid;
-				}
-				else if (size < m_free[mid].Size)
-				{
-					max = mid - 1;
-				}
-				else
-				{
-					min = mid + 1;
-				}
-			}
-			return min;
-		}
-
-		public Variable? Alloc(ushort size)
-		{
-			if(Cur + size < End)			
-			{
-				var variable = new Variable(Cur, size, this);
-				Cur += size;
-				return variable;
-			}
-
-			if(m_free.Count > 0)
-			{
-				int idx = Search(size);
-				Variable v = m_free[idx];
-				if(v.Size >= size)
-				{
-					m_free.RemoveAt(idx);
-					if (v.Size > size) // split
-					{
-						ushort diff = (ushort)(v.Size - size);
-						v.Size = size;
-						Variable remainder = new Variable(start: (ushort)(v.Start + size), size: diff, this);
-						idx = Search(diff);
-						m_free.Insert(idx, remainder);
-					}
-					return v;
-				}
-			}
-
-			return null;
-		}
-
-		public void Free(Variable var)
-		{
-			int idx = Search(var.Size);
-			m_free.Insert(idx, var);
-			// TODO: defrag / merge
-		}
-	}
+	}	
 
 	public class Game : rzr.FunctionBuilder
 	{
-		// TODO: whole game should be reconstructed on each write
 		public Game()
 		{
 			Title = "PeliPoika";
@@ -173,15 +69,13 @@
 			("8bit_bw_20x18_gaussian.tl8", 0, 0, BGPalette), // first
 		}; 
 
-
-		private RamAllocator WRamAlloc = new RamAllocator(start: 0xC000, end: 0xD000); // in CGB end is 0xE000
-
-		private Variable WRAM1B => WRamAlloc.Alloc(1);
-		private Variable WRAM2B => WRamAlloc.Alloc(2);
-		private Variable WRAM(ushort len) => WRamAlloc.Alloc(len);
-		private Variable[] WRAM(ushort count, byte elemSize)
+		private BankedRamAllocator WRamAlloc = BankedRamAllocator.WRAM;
+		private RamVariable WRAM1B => WRamAlloc.Alloc(1);
+		private RamVariable WRAM2B => WRamAlloc.Alloc(2);
+		private RamVariable WRAM(ushort len) => WRamAlloc.Alloc(len);
+		private RamVariable[] WRAM(ushort count, byte elemSize)
 		{ 
-			Variable[] ret = new Variable[count];
+			RamVariable[] ret = new RamVariable[count];
 			for (ushort i = 0; i < count; i++)
 			{
 				ret[i] = WRAM(elemSize);
@@ -189,36 +83,37 @@
 			return ret;
 		}
 
-		public delegate void IfBlock( AsmRecorder self );
-		void If(rzr.AsmOperandTypes.Condtype cond, IfBlock ifBlock, IfBlock elseBlock )
+		public class LCDC
 		{
-			AsmRecorder self = new();
-			self.IP = IP;
-
-			// JP cond, if_block
-			// [else_block]
-			// Jp merge
-			// [if_block]
-			// merge
-
-			var jpCond = Asm.Jp(cond.Type, Asm.A16(0)); // placeholder
-			self.Consume(jpCond);
-			elseBlock(self);
-			var jpMerge = Asm.Jp( Asm.A16(0)); // placeholder
-			self.Consume(jpMerge);
-			ushort if_block = self.PC;
-			ifBlock(self);
-			ushort merge_block = self.PC;
-
-			// fixup
-			jpCond.R.d16 = if_block;
-			jpMerge.L.d16 = merge_block;
-
-			// assemble
-			foreach (AsmInstr instr in self)
+			public enum TileDataArea : byte
 			{
-				this.Consume(instr);
+				Adr8800 = 0, // 8800–97FF
+				Adr8000 = 1 // 8000–8FFF
 			}
+			public enum TileMapArea : byte
+			{
+				Adr9800 = 0, // 9800–9BFF
+				Adr9C00 = 1 // 9C00–9FFF
+			}
+			public enum ObjectSize : byte
+			{
+				Tile8x8 = 0,
+				Tile8x16 = 1
+			}
+
+			private byte m_value = 0;
+			public byte Value => m_value;
+
+			public bool LCDOn { get => m_value.IsBitSet(7); set => binutil.SetBit( ref m_value, 7, value);}
+			public bool PPUon => LCDOn;
+
+			public TileMapArea WinTileMap { get => m_value.IsBitSet(6) ? TileMapArea.Adr9800 : TileMapArea.Adr9C00; set => binutil.SetBit( ref m_value, 6, value == TileMapArea.Adr9C00 );}
+			public bool WindowOn { get => m_value.IsBitSet(5); set => binutil.SetBit( ref m_value, 5, value);}
+			public TileDataArea TileData { get => m_value.IsBitSet(4) ? TileDataArea.Adr8800 : TileDataArea.Adr8000; set => binutil.SetBit( ref m_value, 4, value == TileDataArea.Adr8000 );}
+			public TileMapArea BGTileMap { get => m_value.IsBitSet(3) ? TileMapArea.Adr9800 : TileMapArea.Adr9C00; set => binutil.SetBit( ref m_value, 3, value == TileMapArea.Adr9C00 );}
+			public ObjectSize ObjSize { get => m_value.IsBitSet(2) ? ObjectSize.Tile8x16 : ObjectSize.Tile8x8; set => binutil.SetBit( ref m_value, 2, value == ObjectSize.Tile8x16 );}
+			public bool ObjOn { get => m_value.IsBitSet(1); set => binutil.SetBit( ref m_value, 1, value);}
+			public bool BGWindow { get => m_value.IsBitSet(0); set => binutil.SetBit( ref m_value, 0, value);}
 		}
 
 		protected override void WriteGameCode()
@@ -248,7 +143,7 @@
 
 			byte TileCount = (byte)TileNames.Length;
 			// 1 Byte long variable in WRAM
-			Variable adrCurTile = WRAM1B;
+			RamVariable adrCurTile = WRAM1B;
 
 			ushort resetStack = PC;
 			this.Ld(adr: adrCurTile.Adr, 0);

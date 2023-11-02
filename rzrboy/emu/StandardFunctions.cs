@@ -28,5 +28,37 @@ namespace rzr
 			self.Cp(144);
 			self.Jp(isC, WaitVBlank);
 		})();
+
+		public delegate void IfBlock( AsmRecorder self );
+		static void If(this FunctionBuilder self, rzr.AsmOperandTypes.Condtype cond, IfBlock ifBlock, IfBlock elseBlock )
+		{
+			AsmRecorder temp = new();
+			temp.IP = self.IP;
+
+			// JP cond, if_block
+			// [else_block]
+			// Jp merge
+			// [if_block]
+			// merge
+
+			var jpCond = Asm.Jp(cond.Type, Asm.A16(0)); // placeholder
+			temp.Consume(jpCond);
+			elseBlock(temp);
+			var jpMerge = Asm.Jp( Asm.A16(0)); // placeholder
+			temp.Consume(jpMerge);
+			ushort if_block = temp.PC;
+			ifBlock(temp);
+			ushort merge_block = temp.PC;
+
+			// fixup
+			jpCond.R.d16 = if_block;
+			jpMerge.L.d16 = merge_block;
+
+			// assemble
+			foreach (AsmInstr instr in temp)
+			{
+				self.Consume(instr);
+			}
+		}
 	}
 }
