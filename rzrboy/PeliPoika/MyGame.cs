@@ -6,7 +6,6 @@
 	using static Palettes;
     using System.Diagnostics;
     using rzr;
-	using System.Globalization;
 
 	[AttributeUsageAttribute(AttributeTargets.Field | AttributeTargets.Property)]
 	public class BankAttribute : System.Attribute
@@ -83,39 +82,6 @@
 			return ret;
 		}
 
-		public class LCDC
-		{
-			public enum TileDataArea : byte
-			{
-				Adr8800 = 0, // 8800–97FF
-				Adr8000 = 1 // 8000–8FFF
-			}
-			public enum TileMapArea : byte
-			{
-				Adr9800 = 0, // 9800–9BFF
-				Adr9C00 = 1 // 9C00–9FFF
-			}
-			public enum ObjectSize : byte
-			{
-				Tile8x8 = 0,
-				Tile8x16 = 1
-			}
-
-			private byte m_value = 0;
-			public byte Value => m_value;
-
-			public bool LCDOn { get => m_value.IsBitSet(7); set => binutil.SetBit( ref m_value, 7, value);}
-			public bool PPUon => LCDOn;
-
-			public TileMapArea WinTileMap { get => m_value.IsBitSet(6) ? TileMapArea.Adr9800 : TileMapArea.Adr9C00; set => binutil.SetBit( ref m_value, 6, value == TileMapArea.Adr9C00 );}
-			public bool WindowOn { get => m_value.IsBitSet(5); set => binutil.SetBit( ref m_value, 5, value);}
-			public TileDataArea TileData { get => m_value.IsBitSet(4) ? TileDataArea.Adr8800 : TileDataArea.Adr8000; set => binutil.SetBit( ref m_value, 4, value == TileDataArea.Adr8000 );}
-			public TileMapArea BGTileMap { get => m_value.IsBitSet(3) ? TileMapArea.Adr9800 : TileMapArea.Adr9C00; set => binutil.SetBit( ref m_value, 3, value == TileMapArea.Adr9C00 );}
-			public ObjectSize ObjSize { get => m_value.IsBitSet(2) ? ObjectSize.Tile8x16 : ObjectSize.Tile8x8; set => binutil.SetBit( ref m_value, 2, value == ObjectSize.Tile8x16 );}
-			public bool ObjOn { get => m_value.IsBitSet(1); set => binutil.SetBit( ref m_value, 1, value);}
-			public bool BGWindow { get => m_value.IsBitSet(0); set => binutil.SetBit( ref m_value, 0, value);}
-		}
-
 		protected override void WriteGameCode()
 		{
 			const byte rAUDENA = 0x26;
@@ -130,15 +96,8 @@
 			ushort Entry = Xor( A ); // A = 0
 			Ldh( rAUDENA, A ); // 0xFF26 rAUDENA 
 
-			// 7 LCD & PPU enable: 0 = Off; 1 = On
-			// 6 Window tile map area: 0 = 9800–9BFF; 1 = 9C00–9FFF
-			// 5 Window enable: 0 = Off; 1 = On
-			// 4 BG & Window tile data area: 0 = 8800–97FF; 1 = 8000–8FFF
-			// 3 BG tile map area: 0 = 9800–9BFF; 1 = 9C00–9FFF
-			// 2 OBJ size: 0 = 8×8; 1 = 8×16
-			// 1 OBJ enable: 0 = Off; 1 = On
-			// 0 BG & Window enable / priority [Different meaning in CGB Mode]: 0 = Off; 1 = On
-			Ld( A, 0b1001_0001 );
+			var lcd = new LCDC { LCDOn = true, BGWindow = true, TileData = LCDC.Adr8000 };
+			Ld( A, lcd); // 0b1001_0001
 			Ldh( 0x40, A );
 
 			byte TileCount = (byte)TileNames.Length;

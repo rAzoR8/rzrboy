@@ -113,6 +113,7 @@ namespace rzr
 			int idx = Search(var.Size);
 			m_free.Insert(idx, var);
 			// TODO: defrag / merge
+			// we want to merge-on-free so that the next call to free() will have access to bigger allocations again
 		}
 	}
 
