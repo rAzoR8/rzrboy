@@ -7,8 +7,8 @@
 		{ }
 	}
 
-	public class Mem : ListSection
-    {
+	public class Mem : ISection
+	{
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort VRamSize = 0x2000; // 8KiB
         public const ushort ERamSize = 0x2000; // 8KiB
@@ -18,52 +18,71 @@
         public const ushort UnusedSize = 0xFF00 - 0xFEA0; // 60B
         public const ushort IOSize = 0xFF80 - 0xFF00;// 128B
         public const ushort HRamSize = 0xFFFF - 0xFF80; // 127B
-        
-        public Section cart { get; private set; }
-        public Section vram { get; } = new (0x8000, 0x2000, "vram"); // In CGB mode, switchable bank 0/1        
-        public Section wram0 { get; } = new (0xC000, 0x1000, "wram0");        
-        public Section wramx { get; } = new (0xD000, 0x1000, "wramx"); //In CGB mode, switchable bank 1-7
-        public RemapSection echo { get; }
-        public Section oam { get; } = new(0xFE00, OAMSize, "oam");
-        public Section unused { get; } = new(0xFEA0, UnusedSize, "unused");
-        public Section io { get; } = new(0xFF00, IOSize, "io");
-        public Section hram { get; } = new(0xFF80, HRamSize, "ram");
-        public ByteSection IE { get; } = new(0xFFFF, val: 0, name: "IE");
 
-        // helper sections:
-        public CombiSection wram { get; }
+		public bool Booting => io[0xFF50] == 0;
 
-        private readonly int m_romIndex;
-		private readonly int m_eRamIndex;
+		public Section boot { get; set; } = Boot.Minimal; // 0x0000
 
-		public Mem( Section mbc ) : base( start: 0, name: "Mem" )
+		public Mbc			cart { get; set; } = new(); // including eram (external)
+		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram", SectionAccess.ReadWrite ); // In CGB mode, switchable bank 0/1        
+		public WRam			wram { get; set; } = new(); // C000
+		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
+		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam", SectionAccess.ReadWrite );
+		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused", SectionAccess.None ); // for arbitrary roms it might be necessary to allow ReadWrite access
+		public Section		io { get; set; } = new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
+		public Section		hram { get; set; } = new( 0xFF80, HRamSize, "ram", SectionAccess.ReadWrite);
+		public ByteSection	IE { get; set; } = new( 0xFFFF, val: 0, name: "IE" );
+
+		// ISection
+		public ushort StartAddr => 0;
+		public ushort Length => 0xFFFF;
+
+		public List<OnRead> ReadCallbacks { get; } = new();
+		public List<OnWrite> WriteCallbacks { get; } = new();
+
+		private ISection GetSection( ushort address ) 
 		{
-            cart = mbc;
-			wram = new( wram0, wramx );
-			echo = new( ( ushort address ) => (ushort)( address - 0x2000 ), 0xE000, EchoRamSize, src: wram );
+			switch( address )
+			{
+				case >= 0x0000 and < 0x8000: return Booting ? boot : cart; // 0000-7FFF 32KiB switchable
+				case >= 0x8000 and < 0xA000: return vram;		// 8000-9FFF 8KiB
+				case >= 0xA000 and < 0xC000: return cart;		// A000-BFFF 8KiB external ram on cartridge
+				case >= 0xC000 and < 0xE000: return wram;       // C000-E000 4KiB + 4KiB banked
+				case >= 0xE000 and < 0xFE00: return echo;		// E000-FE00 7680B
+				case >= 0xFE00 and < 0xFEA0: return oam;		// FE00-FEA0 160B
+				case >= 0xFEA0 and < 0xFF00: return unused;		// FEA0-FEFF 60B Not Usable
+				case >= 0xFF00 and < 0xFF80: return io;			// FF00-FF80 128B
+				case >= 0xFF80 and < 0xFFFF: return hram;		// FF80-FFFF 127B
+				case 0xFFFF: return IE;							// 0xFFFF
+				default: throw new AddressNotMappedException( address );
+			}
+		}
 
-			m_romIndex =
-			Add( cart,   0x0000 ); // 0000-7FFF 32KiB switchable
-            Add( vram,   0x8000 ); // 8000-9FFF 8KiB
-			m_eRamIndex =
-			Add( cart,   0xA000 ); // A000-BFFF 8KiB external ram
-            Add( wram0,  0xC000 ); // C000-CFFF 4KiB
-            Add( wramx,  0xD000 ); // D000-DFFF 4KiB
-            Add( echo,   0xE000 ); // E000-FE00 7680B
-            Add( oam,    0xFE00 ); // FE00-FEA0 160B
-            Add( unused, 0xFEA0 ); // FEA0-FEFF 60B Not Usable
-            Add( io,     0xFF00 ); // FF00-FF80 128B
-            Add( hram,   0xFF80 ); // FF80-FFFF 127B
-            Add( IE,     0xFFFF ); // FFFF      1B
+		public byte this[ushort address]
+        {
+			get
+			{
+				var section = GetSection( address );
+				foreach( OnRead onRead in ReadCallbacks )
+				{
+					onRead( section, address );
+				}
+				return section[address];
+			}
+
+			set
+            {
+				var section = GetSection( address );
+				section[address] = value;
+				foreach( OnWrite onWrite in WriteCallbacks )
+				{
+					onWrite( section, address, value );
+				}
+			}
         }
 
-        public Mem() : this( new Mbc() ) { }
-
-        public void SwitchCart( Section mbc )
-        {
-            cart = mbc;
-            Set( m_romIndex, cart );
-            Set( m_eRamIndex, cart );
+		public Mem( )
+		{
         }
     }
 }

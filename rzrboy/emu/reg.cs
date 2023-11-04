@@ -16,11 +16,11 @@
         AF, BC, DE, HL, PC, SP,
     }
 
-    static class RegExtensions
+    public static class RegExtensions
     {
-        public static bool Is8(this Reg16 reg) => (byte)reg <= (byte)Reg8.L;
-        public static bool Is8(this RegX reg) => (byte)reg <= (byte)Reg8.L;
-        public static bool Is16(this RegX reg) => (byte)reg >= (byte)Reg16.AF;
+        public static bool Is8( this Reg16 reg ) => (byte)reg <= (byte)Reg8.L;
+        public static bool Is8( this RegX reg ) => (byte)reg <= (byte)Reg8.L;
+        public static bool Is16( this RegX reg ) => (byte)reg >= (byte)Reg16.AF;
 
         public static Reg8 To8( this RegX reg ) => (Reg8)reg;
         public static Reg16 To16( this RegX reg ) => (Reg16)reg;
@@ -28,6 +28,18 @@
         public static Reg16 To16( this Reg8 reg ) => (Reg16)reg;
         public static RegX ToX( this Reg16 reg ) => (RegX)reg;
         public static RegX ToX( this Reg8 reg ) => (RegX)reg;
+
+        public static Reg16 Fused( this Reg8 left, Reg8 right )
+        {
+            switch (left)
+            {
+                case Reg8.A when right == Reg8.F: return Reg16.AF;
+				case Reg8.B when right == Reg8.C: return Reg16.BC;
+				case Reg8.D when right == Reg8.E: return Reg16.DE;
+				case Reg8.H when right == Reg8.L: return Reg16.HL;
+                default: throw new ArgumentException( $"{left} can't be extended to 16 bit register with {right}" );
+			}
+		}
     }
 
     public enum IMEState

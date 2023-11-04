@@ -6,7 +6,7 @@
         {
         }
 
-        public void Tick( Reg reg, Mem mem )
+        public void Tick( Reg reg, ISection mem )
 		{
         }
     }

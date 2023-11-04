@@ -15,9 +15,10 @@ namespace rzr
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public delegate void Callback( Reg reg, Mem mem );
+        public delegate void Callback( Reg reg, ISection mem );
 
-        public List<Callback> StepCallbacks { get; } = new();
+		public List<Callback> PreStepCallbacks { get; } = new();
+		public List<Callback> PostStepCallbacks { get; } = new();
 
 		public Boy()
         {
@@ -32,13 +33,13 @@ namespace rzr
 
         public void LoadBootRom( byte[] boot )
         {
-            cart.Mbc.BootRom = new BootRom( () => mem.io[0xFF50] == 0, boot );
+            mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read, data: boot, offset: 0 );
         }
 
         public void LoadRom( byte[] rom )
         {
-            cart.Load( rom, cart.Mbc.BootRom );
-            mem.SwitchCart( cart );
+            cart.Load( rom );
+            mem.cart = cart.Mbc;
         }
 
         public async Task<ulong> Execute( CancellationToken token = default )
@@ -53,23 +54,37 @@ namespace rzr
                     while( true )
                     {
                         token.ThrowIfCancellationRequested();
-                        cycles += Step( false );
+                        cycles += Step( token: token, debugPrint: true );
                     }
                 } );
             }
-            catch( OperationCanceledException )
+            catch( OperationCanceledException e )
             {
-                IsRunning = false;
+                if(e.CancellationToken == token)
+                    IsRunning = false;
+                else
+                    return await Execute( token );
             }
 
             return cycles;
         }
 
-        public bool Tick() 
-        {
-            bool cont = cpu.Tick( reg, mem );
-			ppu.Tick( reg, mem );
-			apu.Tick( reg, mem );
+		public bool Tick( CancellationToken token = default )
+		{
+            bool cont;
+			try
+			{
+				cont = cpu.Tick( reg, mem );
+				ppu.Tick( reg, mem );
+				apu.Tick( reg, mem );
+			}
+			catch( rzr.ExecException e )
+			{
+				// TODO: handle
+				Debug.Write( e.Message );
+                cont = false;
+                throw new OperationCanceledException( message: e.Message, innerException: e, token );
+			}
 
 			return cont;
         }
@@ -78,12 +93,17 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( bool debugPrint )
+        public uint Step( bool debugPrint, CancellationToken token = default )
         {
             uint cycles = 1;
 
-            // execute all ops
-            while ( Tick() ) { ++cycles; }
+			foreach( Callback fun in PreStepCallbacks )
+			{
+				fun( reg, mem );
+			}
+
+			// execute all ops
+			while ( Tick( token ) ) { ++cycles; }
 
             if ( debugPrint )
             {
@@ -91,7 +111,7 @@ namespace rzr
                 Debug.WriteLine( $"{Isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
-            foreach ( Callback fun in StepCallbacks )
+            foreach ( Callback fun in PostStepCallbacks )
             {
                 fun( reg, mem );
             }

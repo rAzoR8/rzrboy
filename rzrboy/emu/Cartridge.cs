@@ -1,4 +1,6 @@
-﻿namespace rzr
+﻿using System.Diagnostics;
+
+namespace rzr
 {
 	public enum CartridgeType : byte
     {
@@ -93,14 +95,11 @@
         public Mbc Mbc { get; private set; }
 		public HeaderView Header => Mbc.Header;
 
-		public static implicit operator Section( Cartridge cart ) { return cart.Mbc; }
-        public static implicit operator HeaderView( Cartridge cart ) { return cart.Header; }
 		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
 
-		public Cartridge( byte[] cart, BootRom? boot = null ) 
+		public Cartridge( byte[] cart ) 
         {
 			Mbc = CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
-			Mbc.BootRom = boot;
 		}
 
 		public Cartridge( )
@@ -108,7 +107,7 @@
 			Mbc = new();
 		}
 
-		public void Load( byte[] cart, BootRom? boot = null )
+		public void Load( byte[] cart )
 		{
 			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 			if( type == Header.Type )
@@ -119,18 +118,11 @@
 			{
 				Mbc = CreateMbc( type, cart );			
 			}
-
-			if( boot != null )
-			{
-				Mbc.BootRom = boot;
-			}
 		}
 
 		public void ChangeType( CartridgeType type )
 		{
-			var boot = Mbc.BootRom;
 			Mbc = CreateMbc( type, Mbc.Rom() );
-			Mbc.BootRom = boot;
 			Header.Type = type;
 		}
 
@@ -155,7 +147,7 @@
 				case CartridgeType.ROM_ONLY:
 				case CartridgeType.ROM_RAM:
 				case CartridgeType.ROM_RAM_BATTERY:
-					mbc = new( cart );
+					mbc = new Mbc( cart );
 					break;
 				case CartridgeType.MBC1:
 				case CartridgeType.MBC1_RAM:
@@ -200,8 +192,10 @@
 
 			if( mbc == null )
 			{
-				mbc = new( cart ); // unkown cart type			
+				mbc = new Mbc( cart ); // unkown cart type			
 			}
+
+			Debug.Assert( mbc.Header.Type == type );
 
 			// TODO: restore ram
 			mbc.Header.Valid();

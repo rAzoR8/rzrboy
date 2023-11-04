@@ -63,9 +63,9 @@
 		Set
 	}
 
-	public class InvalidOperand : rzr.AsmException
+	public class InvalidOperandException : rzr.AsmException
 	{
-		public InvalidOperand( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at 0x{pc:X4}" )
+		public InvalidOperandException( ushort pc, InstrType type ) : base( $"Invalid Operand for {nameof(AsmInstr)} {type} at 0x{pc:X4}" )
 		{
 		}
 	}
@@ -77,7 +77,7 @@
 		public AsmInstr( InstrType type, params AsmOperand[] operands ) : base( operands ) { Type = type; }
 
 		public static implicit operator AsmInstr( InstrType type ) { return new AsmInstr( type ); }
-		public static AsmInstr operator +( AsmInstr i, AsmOperand op ) { i.Add(op); return i; }
+		public static AsmInstr operator +( AsmInstr i, AsmOperand op ) { i.Add( op ); return i; }
 		public static AsmInstr operator +( AsmInstr i, OperandType op ) { i.Add( op ); return i; }
 
 		public InstrType Type { get; set; }
@@ -88,7 +88,7 @@
 		public AsmOperand L { get => this[0]; set => this[0] = value; }
 		public AsmOperand R { get => this[1]; set => this[1] = value; }
 
-		public void SetL( AsmOperand op ) 
+		public void SetLhs( AsmOperand op )
 		{
 			if( Count == 0 )
 				Add( op );
@@ -96,7 +96,7 @@
 				this[0] = op;
 		}
 
-		public void SetR( AsmOperand op, OperandType defaultL = OperandType.A )
+		public void SetRhs( AsmOperand op, OperandType defaultL = OperandType.A )
 		{
 			if( Count == 0 )
 			{
@@ -109,6 +109,9 @@
 				this[1] = op;
 		}
 
+		// approximate length of a instruction, only correct if the instruction itself is valid
+		public byte ByteLength => (byte)( 1 + this.Sum( ( AsmOperand op ) => op.Type switch { OperandType.d8 => 1, OperandType.r8 => 1, OperandType.io8 => 1, OperandType.SPr8 => 1, OperandType.d16 => 2, OperandType.a16 => 2, _ => 0 } ) );
+
 		/// <summary>
 		/// Assemble to machine code
 		/// </summary>
@@ -119,7 +122,7 @@
 		{
 			ushort pc = _pc;
 
-			void Throw() { if( throwException ) throw new rzr.InvalidOperand( pc: pc, type: Type ); }
+			void Throw() { if( throwException ) throw new rzr.InvalidOperandException( pc: pc, type: Type ); }
 
 			if( Count > 2 ) // no instruction has more than 2 operands
 			{
@@ -162,7 +165,7 @@
 						case OperandType.BC when Rhs.IsD16(): Set( 0x01 ); Op2D16(); break;
 						case OperandType.DE when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
 						case OperandType.HL when Rhs.IsD16(): Set( 0x21 ); Op2D16(); break;
-						case OperandType.SP when Rhs.IsD16(): Set( 0x11 ); Op2D16(); break;
+						case OperandType.SP when Rhs.IsD16(): Set( 0x31 ); Op2D16(); break;
 						// LD (BC), A
 						case OperandType.AdrBC when Rhs == OperandType.A: Set( 0x02 ); break;
 						case OperandType.AdrDE when Rhs == OperandType.A: Set( 0x12 ); break;

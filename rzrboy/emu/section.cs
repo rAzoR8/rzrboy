@@ -2,13 +2,15 @@
 
 namespace rzr
 {
-    public class SectionReadAccessViolationException : System.AccessViolationException
-    {
-        public SectionReadAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be read from section {section.Name}" ) { }
+    public class SectionReadAccessViolationException : rzr.ExecException
+	{
+        public SectionReadAccessViolationException(string message) : base(message) { }
+		public SectionReadAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be read from section {section.Name}" ) { }
     }
 
-    public class SectionWriteAccessViolationException : System.AccessViolationException
-    {
+    public class SectionWriteAccessViolationException : rzr.ExecException
+	{
+        public SectionWriteAccessViolationException( string message ) : base(message) { }
         public SectionWriteAccessViolationException( ushort address, Section section ) : base( $"0x{address.ToString( "X4" )} can not be written to section {section.Name}" ) { }
     }
 
@@ -17,135 +19,134 @@ namespace rzr
         byte this[ushort address] { get; set; }
         public ushort StartAddr { get; }
         public ushort Length { get; }
+
+        public string Name => "unnamed";
+        public bool Accepts( ushort address ) => address >= StartAddr && address < (StartAddr + Length);
     }
 
-    public class Storage : ISection
-    {
-        public IList<byte> Data { get; }
-
-		/// <summary>
-		/// Wrapper over some storage to allow Section like access
-		/// </summary>
-		/// <param name="storage"></param>
-		/// <param name="storageOffset"></param>
-		/// <param name="startAddr"></param>
-		/// <param name="len"></param>
-		public Storage( IList<byte> storage, int storageOffset = 0, ushort startAddr = 0, ushort len = 0 )
-        {
-			Data = storage;
-            BufferOffset = storageOffset;
-            StartAddr = startAddr;
-			Length = len > 0 ? len : (ushort)( Data.Count - storageOffset );
-		}
-
-        public int BufferOffset { get; set; }
-		public byte this[ushort address]
-        {
-			get => Data[BufferOffset + ( address - StartAddr )];
-			set => Data[BufferOffset + ( address - StartAddr )] = value;
-		}
-        public ushort StartAddr { get; set; }
-        public ushort Length { get; set; }
-    }
-
-
-    public static class SectionExtensions
-    {
-		public static Storage AsStorage( this IList<byte> storage ) { return new Storage( storage ); }
+	// Dummy section that reads and writes nothing
+	public class NullSection : ISection
+	{
+		public byte this[ushort address] { get => 0; set { } }
+		public ushort StartAddr => 0;
+		public ushort Length => 0;
 	}
 
-    public class Section : ISection
+	public delegate void OnRead( ISection section, ushort address );
+	public delegate void OnWrite( ISection section, ushort address, byte value );
+
+	[Flags]
+	public enum SectionAccess
+	{
+		None = 0,
+		Read = 1 << 0,
+		Write = 1 << 1,
+		ReadWrite = Read | Write
+	}
+
+	/// <summary>
+	/// Section is the implementation of ISection that is backed by memory
+	/// </summary>
+	public class Section : ISection
     {
-        public virtual string Name { get; }
-        public virtual ushort StartAddr { get; }
-        public virtual ushort Length { get; }
+        // ISection
+        public string Name { get; }
+        public ushort StartAddr { get; }
+        public ushort Length { get; set; }
 
-        public byte[]? m_storage = null;
+		// Section
+		public IList<byte> Data { get; }
+		public int BufferOffset { get; set; } = 0;
+		public SectionAccess Access { get; } = SectionAccess.ReadWrite;
 
-        public Section( ushort start = 0, ushort len = 0, string? name = null, bool alloc = true )
+		public Section AsReadOnly() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.Read, data: Data, offset: BufferOffset );
+		public Section AsReadWrite() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.ReadWrite, data: Data, offset: BufferOffset );
+
+		// this constructor allocates a byte array of length len
+		public Section( ushort start, ushort len, string name, SectionAccess access )
         {
+            Name = $"{start}:{name}";
             StartAddr = start;
             Length = len;
-            if( alloc ) m_storage = new byte[len];
-            Name = $"{start}:{name}";
-        }
-
-        public Section( ushort start, ushort len, string name, byte[] init ) : this( start, len, name, alloc: true )
-        {
-			var size = (ushort)Math.Min( init.Length, len );
-            if( m_storage != null )
-            {
-                Array.Copy( init, m_storage, size );            
-            }
+            Data = new byte[len];
+			BufferOffset = 0;
+			Access = access;
 		}
 
-        public virtual bool Contains(ushort address )
+		// this constructor uses data passed in to back this section
+        public Section( ushort start, ushort len, string name, SectionAccess access, IList<byte> data, int offset = 0 )
         {
-            return address >= StartAddr && address < ( StartAddr + Length );
-        }
+			Name = $"{start}:{name}";
+			StartAddr = start;
+			Length = len;
+			Data = data;
+			BufferOffset = offset;
+			Access = access;
+		}
 
-        public override string ToString() { return Name; }
+		public override string ToString() { return Name; }
 
 		// mapped access for emulator, default impl
-		public virtual byte this[ushort address]
+		public byte this[ushort address]
         {
-            get
-            {
-                if( m_storage != null )
-                    return m_storage[address - StartAddr];
-                else
-                    throw new SectionReadAccessViolationException( address, this );
-            }
-            set
-            {
-                if( m_storage != null )
-                    m_storage[address - StartAddr] = value;
-                else
-                    throw new SectionWriteAccessViolationException( address, this );
-            }
-        }
+			get
+			{
+				if( Access.HasFlag( SectionAccess.Read ) && ( (ISection)this ).Accepts( address ) )
+					return Data[BufferOffset + address - StartAddr];
+				else
+					throw new SectionReadAccessViolationException( address, this );
+			}
+			set
+			{
+				if( Access.HasFlag( SectionAccess.Write ) && ( (ISection)this ).Accepts( address ) )
+					Data[BufferOffset + address - StartAddr] = value;
+				else
+					throw new SectionWriteAccessViolationException( address, this );
+			}
+		}
 
-        public void Write( byte[] src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
+        public void Write( IList<byte> src, int src_offset, ushort dst_offset = 0, ushort len = 0 )
         {
-            len = len != 0 ? Math.Min( len, (ushort)src.Length ) : (ushort)src.Length;
-            if( m_storage != null )
+            len = len != 0 ? Math.Min( len, (ushort)src.Count ) : (ushort)src.Count;
+            if( Data != null )
             {
-                Array.Copy( src, src_offset, m_storage, dst_offset, len );            
+				for( int i = 0; i < len; ++i ) 
+				{
+					Data[dst_offset + i] = src[src_offset + i];
+				}
             }
-        }
-    }
-
-    public class CombiSection : Section
-    {
-        public Section Low { get; set; }
-        public Section High { get; set; }
-
-        public CombiSection(Section low, Section high) { Low = low; High = high; }
-
-        public override string Name => $"({Low.Name})({High.Name})";
-        public override ushort StartAddr => Low.StartAddr;
-        public override ushort Length => (ushort)(Low.Length + High.Length);
-
-        public Section Select(ushort address) => address < High.StartAddr ? Low : High;
-
-        public override byte this[ushort address]
-        {
-            get => Select(address)[address];
-            set => Select(address)[address] = value;
         }
     }
 
-    public delegate byte ReadFunc( ushort address );
-    public delegate void WriteFunc( ushort address, byte value );
+	public class CombiSection : ISection
+	{
+		public ISection Low { get; set; }
+		public ISection High { get; set; }
 
-    public class RemapSection : Section
-    {
-        public delegate ushort MapFunc(ushort address);
-        public static MapFunc Identity = (ushort address) => address;
+		public CombiSection( ISection low, ISection high ) { Low = low; High = high; }
 
-        public MapFunc Map { get; set; } = Identity;
-        public Section Source { get; set; }
-		public RemapSection( MapFunc map, ushort start, ushort len, Section src )
+		public string Name => $"({Low.Name})({High.Name})";
+		public ushort StartAddr => Low.StartAddr;
+		public ushort Length => (ushort)( Low.Length + High.Length );
+
+		public ISection Select( ushort address ) => address < High.StartAddr ? Low : High;
+
+		public byte this[ushort address]
+		{
+			get => Select( address )[address];
+			set => Select( address )[address] = value;
+		}
+	}
+
+	public class RemapSection : ISection
+	{
+		public delegate ushort MapFunc( ushort address );
+		public static MapFunc Identity = ( ushort address ) => address;
+
+		public MapFunc Map { get; set; } = Identity;
+		public ISection Source { get; set; }
+
+		public RemapSection( MapFunc map, ushort start, ushort len, ISection src )
 		{
 			Map = map;
 			Source = src;
@@ -153,121 +154,17 @@ namespace rzr
 			Length = len;
 		}
 
-		public override string Name => $"{StartAddr}->{Map(StartAddr)}:{Source.Name}";
-        public override ushort StartAddr { get; }
-        public override ushort Length { get; }
-        public override byte this[ushort address]
-        {
-            get => Source[Map(address)];
-            set => Source[Map(address)] = value;
-        }
-    }
-
-    public class SectionComparer : IComparer<Section>
-    {
-        public int Compare(Section? x, Section? y)
-        {
-            if (x != null && y != null)
-                return x.StartAddr.CompareTo(y.StartAddr);
-
-            if (x == null && y != null) return -1; // x is less
-            else if (x != null && y == null) return 1; // x is more
-            return 0;
-        }
-    }
-
-    public class ListSection : Section
-    {
-        private class Entry
-        {
-            public Entry( Section sec, ushort start ) { Section = sec; Start = start; }
-            public Section Section;
-            public ushort Start;
-        }
-        private List<Entry> m_sections = new();
-
-        public ListSection( ushort start = 0, string? name = null ) : 
-            base( start: start, len: 0, name: name, alloc: false ) 
-        {
-        }
-
-		public override ushort Length
+		public string Name => $"{StartAddr}->{Map( StartAddr )}:{Source.Name}";
+		public ushort StartAddr { get; }
+		public ushort Length { get; }
+		public byte this[ushort address]
 		{
-			get
-			{
-               if( m_sections.Count == 0 )
-                    return 0;
-                Entry last = m_sections.Last();
-                return (ushort)(last.Start + last.Section.Length);
-            }
+			get => Source[Map( address )];
+			set => Source[Map( address )] = value;
 		}
-
-		protected int Add( Section section, ushort start )
-        {
-            m_sections.Add( new( section, start ) );
-            return m_sections.Count - 1;
-        }
-
-		protected void Set( int index, Section section )
-		{
-			m_sections[index].Section = section;
-		}
-
-		private Section Find( ushort address )
-        {
-            int min = 0;
-            int max = m_sections.Count - 1;
-
-            while( min <= max )
-            {
-                int mid = ( min + max ) / 2;
-                if( m_sections[mid].Section.Contains( address ) )
-                {
-                    return m_sections[mid].Section;
-                }
-                else if( address < m_sections[mid].Start )
-                {
-                    max = mid - 1;
-                }
-                else
-                {
-                    min = mid + 1;
-                }
-            }
-
-            throw new AddressNotMappedException( address );
-        }
-
-		public delegate void OnRead( ISection section, ushort address );
-		public delegate void OnWrite( ISection section, ushort address, byte value );
-
-		public List<OnRead> ReadCallbacks { get; } = new();
-        public List<OnWrite> WriteCallbacks { get; } = new();
-
-        public override byte this[ushort address]
-        {
-            get
-            {
-                Section section = Find( address );
-                foreach( OnRead onRead in ReadCallbacks )
-                {
-                    onRead( section, address );
-                }
-                return section[address];
-            }
-            set
-            {
-                Section section = Find( address );
-                section[address] = value;
-                foreach( OnWrite onWrite in WriteCallbacks )
-                {
-                    onWrite( section, address, value );
-                }
-            }
-        }
 	}
 
-    public class ByteSection : Section
+	public class ByteSection : ISection
     {
         public OnReadByte? OnRead { get; set; }
         public OnWriteByte? OnWrite { get; set; }
@@ -280,16 +177,21 @@ namespace rzr
             set { OnWrite?.Invoke( m_value, value ); m_value = value; }
         }
 
-		public ByteSection( ushort start, byte val, string name ) : base( start: start, len: 1, name: name )
+		public ushort StartAddr { get; }
+        public ushort Length => 1;
+        public string Name { get; }
+
+		public ByteSection( ushort start, byte val, string name )
 		{
 			Value = val;
+            Name = name;
 		}
 
         // value read
         public delegate void OnReadByte ( byte val );
         public delegate void OnWriteByte ( byte oldVal, byte newVal );
 
-		public override byte this[ushort address] { get => Value; set => Value = value; }
+		public byte this[ushort address] { get => Value; set => Value = value; }
 
         public static implicit operator byte( ByteSection sec ) { return sec.Value; }
     }

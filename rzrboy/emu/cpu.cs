@@ -28,7 +28,7 @@
         /// execute one M-cycle
         /// </summary>
         /// <returns>true if executing the same instruction, false after a new one is fetched</returns>
-        public bool Tick( Reg reg, Mem mem )
+        public bool Tick( Reg reg, ISection mem )
         {
 			bool sameInstr = true;
 
