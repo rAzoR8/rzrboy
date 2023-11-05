@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace rzr
 {
 	public class RamVariable : IDisposable
@@ -38,32 +40,32 @@ namespace rzr
 	{
 		public ushort Start { get; }
 		public ushort End { get; }
-		public ushort Cur { get; private set; }
 		public int Bank {get;}
 
-		private List<RamVariable> m_free = new();
+		private List<RamVariable> m_freeSize = new();
+		private List<RamVariable> m_freeAddress = new();
 
-		public RamAllocator(ushort start, ushort end, int bank = 0) { Start = Cur = start; End = end; Bank = bank; }
-
-		private enum SearchType
+		public RamAllocator(ushort start, ushort end, int bank = 0)
 		{
-			Size,
-			Address
+			Start = start; End = end; Bank = bank;
+			var whole = new RamVariable(start: start, size: (ushort)(end - start), this);
+			m_freeSize.Add(whole);
+			m_freeAddress.Add(whole);
 		}
 
-		private int Search( ushort value, SearchType search )
+		private int SearchSize( ushort size )
 		{
 			int min = 0;
-			int max = m_free.Count - 1;
+			int max = m_freeSize.Count - 1;
 			while (min <= max)
 			{
 				int mid = (min + max) / 2;
-				ushort cur = search == SearchType.Size ? m_free[mid].Size : m_free[mid].Start;
-				if (value == cur)
+				ushort cur = m_freeSize[mid].Size;
+				if (size == cur)
 				{
 					return mid;
 				}
-				else if (value < cur)
+				else if (size < cur)
 				{
 					max = mid - 1;
 				}
@@ -75,37 +77,57 @@ namespace rzr
 			return min;
 		}
 
-		private int SearchSize(ushort size) => Search(size, SearchType.Size);
-		private int SearchAddress(ushort address) => Search(address, SearchType.Address);
+		private int SearchAddress( ushort address )
+		{
+			int min = 0;
+			int max = m_freeAddress.Count - 1;
+			while (min <= max)
+			{
+				int mid = (min + max) / 2;
+				ushort cur = m_freeAddress[mid].Start;
+				if (address == cur)
+				{
+					return mid;
+				}
+				else if (address < cur)
+				{
+					max = mid - 1;
+				}
+				else
+				{
+					min = mid + 1;
+				}
+			}
+			return min;
+		}
 
 		public RamVariable Alloc(ushort size)
 		{
-			if (Cur + size < End)
-			{
-				var variable = new RamVariable(Cur, size, this);
-				Cur += size;
-				return variable;
-			}
+			Debug.Assert(m_freeAddress.Count == m_freeSize.Count);
 
-			if (m_free.Count > 0)
+			if (m_freeSize.Count > 0)
 			{
-				int idx = SearchSize(size);
-				RamVariable v = m_free[idx];
+				int sidx = SearchSize(size);
+				RamVariable v = m_freeSize[sidx];
 				if (v.Size >= size)
 				{
-					m_free.RemoveAt(idx);
+					m_freeSize.RemoveAt(sidx);
+					int aidx = SearchAddress(v.Start);
+					m_freeAddress.RemoveAt(aidx);
 					if (v.Size > size) // split
 					{
 						ushort diff = (ushort)(v.Size - size);
 						v.Size = size;
 						RamVariable remainder = new RamVariable(start: (ushort)(v.Start + size), size: diff, this);
-						idx = SearchSize(diff);
-						m_free.Insert(idx, remainder);
+
+						sidx = SearchSize(remainder.Size);
+						m_freeSize.Insert(sidx, remainder);
+						aidx = SearchAddress(remainder.Start);
+						m_freeAddress.Insert(aidx, remainder);
 					}
 					return v;
 				}
 			}
-
 			
 			throw new System.OutOfMemoryException($"Allocator {this} is out of memory and can't allocate {size} bytes in 0x{Start:X}-0x{End:X}");
 		}
@@ -113,50 +135,60 @@ namespace rzr
 		/// <summary>
 		/// Return a variable to its owner
 		/// </summary>
-		/// <param name="var"></param>
+		/// <param name="freed"></param>
 		/// <returns>true when </returns>
-		public void Free(RamVariable var)
+		public void Free(RamVariable freed)
 		{
-			if(var.Owner != this)
-				throw new System.ArgumentException($"Variable {var} not owned by this allocator {this}");
+			Debug.Assert(m_freeAddress.Count == m_freeSize.Count);
+
+			if(freed.Owner != this)
+				throw new System.ArgumentException($"Variable {freed} not owned by this allocator {this}");
 
 			// merge: we want to merge-on-free so that the next call to free() will have access to bigger allocations again
-			if(m_free.Count > 0)
+			if(m_freeAddress.Count > 0)
 			{
 				// try to merge first, if not mergable, just insert
-				int adr = SearchAddress(var.Start);
+				int adr = SearchAddress(freed.Start);
 
 				bool merged = false;
-				// TODO: merge all before and after var.Start, not just -1..0..+1
-				for(int i = adr > 0 ? adr-1 : adr; !merged && i < adr+1 && i < m_free.Count; ++i)
+				for(int i = adr > 0 ? adr-1 : adr; !merged && i < adr+1 && i < m_freeAddress.Count; ++i)
 				{
-					var o = m_free[i];
-					if(var.Start == o.Start + o.Size) // starts after old end
+					var m = m_freeAddress[i];
+					if(freed.Start == m.Start + m.Size) // starts after old end
 					{						
-						o.Size += var.Size; // just extend size
+						m_freeSize.RemoveAt(SearchSize(m.Size));
+						m.Size += freed.Size; // just extend size to the right
+						m_freeSize.Insert(SearchSize(m.Size), m);
+						// address didnt change, no need to update m_freeAddress
 						merged = true;
 					}
-					else if(var.Start+var.Size == o.Size) // ends at old star
+					else if(freed.Start+freed.Size == m.Start) // ends at old star
 					{
-						o.Size += var.Size;
-						o.Start = var.Start;
+						m_freeAddress.RemoveAt(i);
+						m_freeSize.RemoveAt(SearchSize(m.Size));
+
+						m.Size += freed.Size;
+						m.Start = freed.Start;
+
+						m_freeSize.Insert(SearchSize(m.Size), m);
+						m_freeAddress.Insert(SearchAddress(m.Start), m);
+
 						merged = true;
 					}
 				}
 
-				if(merged)
+				if(!merged) // unable to merge, just insert based on size
 				{
-					// TODO: need to re-sort on Size property!
-				}
-				else // unable to merge, just insert based on size
-				{
-					int len = SearchSize(var.Size);
-					m_free.Insert(len, var);
+					int sidx = SearchSize(freed.Size);
+					m_freeSize.Insert(sidx, freed);
+					int aidx = SearchSize(freed.Start);
+					m_freeAddress.Insert(aidx, freed);
 				}
 			}
 			else // nothing to merge with
 			{
-				m_free.Add(var);
+				m_freeSize.Add(freed);
+				m_freeAddress.Add(freed);
 			}
 		}
 	}
