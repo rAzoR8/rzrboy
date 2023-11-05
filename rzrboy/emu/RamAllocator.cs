@@ -2,7 +2,7 @@ namespace rzr
 {
 	public class RamVariable : IDisposable
 	{
-		public ushort Start { get; }
+		public ushort Start { get; set; }
 		public ushort Size { get; set; }
 		public int Bank => Owner.Bank;
 
@@ -45,18 +45,25 @@ namespace rzr
 
 		public RamAllocator(ushort start, ushort end, int bank = 0) { Start = Cur = start; End = end; Bank = bank; }
 
-		private int Search(ushort size)
+		private enum SearchType
+		{
+			Size,
+			Address
+		}
+
+		private int Search( ushort value, SearchType search )
 		{
 			int min = 0;
 			int max = m_free.Count - 1;
 			while (min <= max)
 			{
 				int mid = (min + max) / 2;
-				if (size == m_free[mid].Size)
+				ushort cur = search == SearchType.Size ? m_free[mid].Size : m_free[mid].Start;
+				if (value == cur)
 				{
 					return mid;
 				}
-				else if (size < m_free[mid].Size)
+				else if (value < cur)
 				{
 					max = mid - 1;
 				}
@@ -67,6 +74,9 @@ namespace rzr
 			}
 			return min;
 		}
+
+		private int SearchSize(ushort size) => Search(size, SearchType.Size);
+		private int SearchAddress(ushort address) => Search(address, SearchType.Address);
 
 		public RamVariable Alloc(ushort size)
 		{
@@ -79,7 +89,7 @@ namespace rzr
 
 			if (m_free.Count > 0)
 			{
-				int idx = Search(size);
+				int idx = SearchSize(size);
 				RamVariable v = m_free[idx];
 				if (v.Size >= size)
 				{
@@ -89,7 +99,7 @@ namespace rzr
 						ushort diff = (ushort)(v.Size - size);
 						v.Size = size;
 						RamVariable remainder = new RamVariable(start: (ushort)(v.Start + size), size: diff, this);
-						idx = Search(diff);
+						idx = SearchSize(diff);
 						m_free.Insert(idx, remainder);
 					}
 					return v;
@@ -110,10 +120,37 @@ namespace rzr
 			if(var.Owner != this)
 				throw new System.ArgumentException($"Variable {var} not owned by this allocator {this}");
 
-			int idx = Search(var.Size);
-			m_free.Insert(idx, var);
-			// TODO: defrag / merge
-			// we want to merge-on-free so that the next call to free() will have access to bigger allocations again
+			// merge: we want to merge-on-free so that the next call to free() will have access to bigger allocations again
+			if(m_free.Count > 0)
+			{
+				// try to merge first, if not mergable, just insert
+				int adr = SearchAddress(var.Start);
+
+				// TODO: merge all before and after var.Start, not just -1..0..+1
+				for(int i = adr > 0 ? adr-1 : adr; i < adr+1 && i < m_free.Count; ++i)
+				{
+					var o = m_free[i];
+					if(var.Start == o.Start + o.Size) // starts after old end
+					{						
+						o.Size += var.Size; // just extend size
+						break;
+					}
+					else if(var.Start+var.Size == o.Size) // ends at old star
+					{
+						o.Size += var.Size;
+						o.Start = var.Start;
+						break;
+					}
+				}				
+
+				//if()
+				//int len = SearchSize(var.Size);
+				//m_free.Insert(idx, var);
+			}
+			else
+			{
+				m_free.Add(var);
+			}
 		}
 	}
 
