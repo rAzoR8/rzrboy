@@ -126,28 +126,35 @@ namespace rzr
 				// try to merge first, if not mergable, just insert
 				int adr = SearchAddress(var.Start);
 
+				bool merged = false;
 				// TODO: merge all before and after var.Start, not just -1..0..+1
-				for(int i = adr > 0 ? adr-1 : adr; i < adr+1 && i < m_free.Count; ++i)
+				for(int i = adr > 0 ? adr-1 : adr; !merged && i < adr+1 && i < m_free.Count; ++i)
 				{
 					var o = m_free[i];
 					if(var.Start == o.Start + o.Size) // starts after old end
 					{						
 						o.Size += var.Size; // just extend size
-						break;
+						merged = true;
 					}
 					else if(var.Start+var.Size == o.Size) // ends at old star
 					{
 						o.Size += var.Size;
 						o.Start = var.Start;
-						break;
+						merged = true;
 					}
-				}				
+				}
 
-				//if()
-				//int len = SearchSize(var.Size);
-				//m_free.Insert(idx, var);
+				if(merged)
+				{
+					// TODO: need to re-sort on Size property!
+				}
+				else // unable to merge, just insert based on size
+				{
+					int len = SearchSize(var.Size);
+					m_free.Insert(len, var);
+				}
 			}
-			else
+			else // nothing to merge with
 			{
 				m_free.Add(var);
 			}
