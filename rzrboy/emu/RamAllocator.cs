@@ -243,6 +243,6 @@ namespace rzr
 			throw new System.OutOfMemoryException($"Allocator {this} is out of memory and can't allocate {size} bytes in 0x{Start:X}-0x{End:X}");
 		}
 
-		public RamVariable? Alloc(ushort size) => Alloc(size: size, out int _);
+		public RamVariable Alloc(ushort size) => Alloc(size: size, out int _);
 	}
 }
