@@ -11,3 +11,5 @@ rzrboy/PeliPoika/bin
 rzrboy/PeliPoika/obj
 rzrboy/Deploy/bin
 rzrboy/Deploy/obj
+rzrboy/Debugger/bin/*
+rzrboy/Debugger/obj/*
