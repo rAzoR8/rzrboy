@@ -290,6 +290,7 @@ namespace ImGuiNET
             if (_frameBegun)
             {
                 _frameBegun = false;
+				ImGui.DockSpaceOverViewport(ImGui.GetMainViewport());
                 ImGui.Render();
                 RenderImDrawData(ImGui.GetDrawData(), gd, cl);
             }

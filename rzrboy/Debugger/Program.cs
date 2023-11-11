@@ -27,7 +27,7 @@ window.Resized += () =>
 };
 
 dbg.Debugger debugger = new();
-dbg.Gui gui = new(debugger);
+dbg.ui.Gui gui = new(debugger);
 
 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 float deltaTime = 0f;
