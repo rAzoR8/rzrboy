@@ -7,7 +7,6 @@ namespace dbg.ui
 	{
 		private Debugger m_debugger;
 
-
 		//UI
 		private Logger m_logger = Logger.Instance;
 		private ViewMenu m_viewMenu = new();
@@ -38,6 +37,26 @@ namespace dbg.ui
 		{			
 			if (ImGui.BeginMainMenuBar())
             {
+				if(ImGui.BeginMenu("File"))
+				{
+					// https://github.com/mellinoe/synthapp/blob/master/src/synthapp/Widgets/FilePicker.cs
+					//https://gist.github.com/prime31/91d1582624eb2635395417393018016e
+					if(ImGui.Selectable("Load ROM"))
+					{
+						var picker = FilePicker.GetFolderPicker(this, Path.Combine(Environment.CurrentDirectory));
+						if(picker.SelectedFile != null)
+							m_debugger.LoadRom(picker.SelectedFile);
+					}
+
+					if(ImGui.Selectable("Load Bios"))
+					{
+						var picker = FilePicker.GetFolderPicker(this, Path.Combine(Environment.CurrentDirectory));
+						if(picker.SelectedFile != null)
+							m_debugger.LoadRom(picker.SelectedFile);
+					} 
+					ImGui.EndMenu();
+				}
+
                 if (ImGui.BeginMenu("Themes"))
                 {
                     if (ImGui.Selectable("Dark")) ImGui.StyleColorsDark();
@@ -54,7 +73,7 @@ namespace dbg.ui
 					}
 
                     ImGui.EndMenu();
-                }				
+                }
                 
 				m_viewMenu.Update();
 				// TODO: load rom/bios
