@@ -6,32 +6,36 @@ namespace dbg.ui
 	public class Gui : IUiElement
 	{
 		private Debugger m_debugger;
-		//private uint m_dockSpaceId = 0;
+
+
+		//UI
+		private Logger m_logger = Logger.Instance;
+		private ViewMenu m_viewMenu = new();
+		private RegisterWindow m_registers;
+		private AssemblyWindow m_assembly; // main/central window
+		private MemoryWindow m_memory;
 		private float m_scaleFactor = 0.5f;
 
 		public Gui(Debugger debugger)
 		{
 			m_debugger = debugger;
+			m_registers = new RegisterWindow(m_debugger.Emu);
+			m_assembly = new AssemblyWindow();
+			m_memory = new MemoryWindow();
 		}
-
 		
 		public void Init()
 		{
+			//private uint m_dockSpaceId = 0;
 			//m_dockSpaceId = ImGui.GetID("MyDockspace");
 			//ImGui.DockSpace(m_dockSpaceId, new Vector2(0, 0), ImGuiDockNodeFlags.PassthruCentralNode);
-			ImGui.SetWindowFontScale(2);		
+			ImGui.SetWindowFontScale(2);
+			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
 		// Update UI state
-		public void Update()
+		public bool Update()
 		{			
-			// ImGui.Text("");
-			// ImGui.Text(string.Empty);
-			// ImGui.Text("Hello, world!");
-			// ImGui.SliderFloat("float", ref m_f, 0, 1, m_f.ToString("0.000"));  
-
-			// ImGui.Text($"Mouse position: {ImGui.GetMousePos()}");
-
 			if (ImGui.BeginMainMenuBar())
             {
                 if (ImGui.BeginMenu("Themes"))
@@ -50,24 +54,20 @@ namespace dbg.ui
 					}
 
                     ImGui.EndMenu();
-                }
+                }				
                 
-                ImGui.EndMainMenuBar();
-            }
-			
-			// Test windows
-            for (int i = 0; i < 4; i++)
-            {
-                // if (ImGui.Begin($"TestWindow{i}"))
-                // {
-                //     ImGui.Text($"This is window {i}");
-                //     ImGui.End();
-                // }
+				m_viewMenu.Update();
+				// TODO: load rom/bios
 
-				var win = ImGuiScope.Window($"Window {i}");
-				win.Body = new FuncUiElement(() => ImGui.Text($"This is window {i}"));
-				win.Update();
-            }
+                ImGui.EndMainMenuBar();
+            }			
+
+            m_registers.Update();
+			m_assembly.Update();
+			m_memory.Update();
+			m_logger.Update();
+
+			return true;
 		}
 	}
 }
