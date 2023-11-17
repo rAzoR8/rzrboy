@@ -6,81 +6,37 @@ namespace dbg.ui
 	// https://gist.github.com/prime31/91d1582624eb2635395417393018016e
 	public class FilePicker : ImGuiScopeBase
 	{
-		static readonly Dictionary<object, FilePicker> _filePickers = new Dictionary<object, FilePicker>();
+		public string CurrentFolder { get; private set; }
+		public string? SelectedFile { get; private set; }
+		public bool FoldersOnly { get; }
+		public List<string>? AllowedExtensions { get; }
 
-		public static FilePicker GetFilePicker(object o, string startingPath, string searchFilter = null, bool onlyAllowFolders = false)
-		{
-			if (File.Exists(startingPath))
-			{
-				startingPath = new FileInfo(startingPath).DirectoryName;
-			}
-			else if (string.IsNullOrEmpty(startingPath) || !Directory.Exists(startingPath))
-			{
-				startingPath = Environment.CurrentDirectory;
-				if (string.IsNullOrEmpty(startingPath))
-					startingPath = AppContext.BaseDirectory;
-			}
+		private System.Numerics.Vector4 AccentColor = new( 0f, 0.75f, 0.75f, 1f );
+		public bool WantsToClose = false;
 
-			if (!_filePickers.TryGetValue(o, out FilePicker fp))
-			{
-				fp = new FilePicker();
-				fp.RootFolder = startingPath;
-				fp.CurrentFolder = startingPath;
-				fp.OnlyAllowFolders = onlyAllowFolders;
-
-				if (searchFilter != null)
-				{
-					if (fp.AllowedExtensions != null)
-						fp.AllowedExtensions.Clear();
-					else
-						fp.AllowedExtensions = new List<string>();
-
-					fp.AllowedExtensions.AddRange(searchFilter.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries));
-				}
-
-				_filePickers.Add(o, fp);
-			}
-
-			return fp;
-		}
-
-		public static void RemoveFilePicker(object o) => _filePickers.Remove(o);
-		public static FilePicker GetFolderPicker(object o, string startingPath)
-				=> GetFilePicker(o, startingPath, null, true);
-
-		private string m_path;
-
-		public string RootFolder;
-		public string CurrentFolder;
-		public string SelectedFile;
-		public List<string> AllowedExtensions;
-		public bool OnlyAllowFolders;
-
-		private bool m_isOpen = true;
-
-		protected override bool BeginFunc( string label )
-		{
-			//bool open = ImGui.BeginPopup( label );
-			//open &=  ImGui.BeginPopupModal( label, ref m_isOpen );
-			//return open;
-			return false;
-		}
-
-		//public FilePicker() : base( begin: ImGui.BeginPopupModal, end: ImGui.EndPopup, label: "filer-picker")
+		//protected override bool BeginFunc( string label )
 		//{
-		//	//m_path = path;
+		//	bool open = ImGui.BeginPopup( label );
+		//	open &= ImGui.BeginPopupModal( label, ref m_isOpen );
+		//	return open;
 		//}
 
-		public FilePicker() : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
+		public FilePicker(string startFolder, string allowedExtensions) : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
 		{
-			//m_path = path;
+			CurrentFolder = startFolder;
+			FoldersOnly = false;
+			AllowedExtensions = allowedExtensions.Split('|').ToList();
 		}
 
-		public System.Numerics.Vector4 AccentColor = new(0f, 0.75f, 0.75f, 1f);
+		public FilePicker( string startFolder ) : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
+		{
+			FoldersOnly = true;
+			CurrentFolder = startFolder;
+		}
 
 		protected override bool BodyFunc()
 		{
-			ImGui.Text("Current Folder: " + Path.GetFileName(RootFolder) + CurrentFolder.Replace(RootFolder, ""));
+			ImGui.Text(CurrentFolder);
 			bool result = false;
 
 			if (ImGui.BeginChildFrame(1, new System.Numerics.Vector2(400, 400)))
@@ -88,7 +44,7 @@ namespace dbg.ui
 				var di = new DirectoryInfo(CurrentFolder);
 				if (di.Exists)
 				{
-					if (di.Parent != null && CurrentFolder != RootFolder)
+					if (di.Parent != null)
 					{
 						ImGui.PushStyleColor(ImGuiCol.Text, AccentColor);
 						if (ImGui.Selectable("../", false, ImGuiSelectableFlags.DontClosePopups))
@@ -129,44 +85,19 @@ namespace dbg.ui
 			if (ImGui.Button("Cancel"))
 			{
 				result = false;
-				ImGui.CloseCurrentPopup();
+				WantsToClose = true;
 			}
 
-			if (OnlyAllowFolders)
+			ImGui.SameLine();
+			if( ImGui.Button( "Open" ) )
 			{
-				ImGui.SameLine();
-				if (ImGui.Button("Open"))
-				{
-					result = true;
-					SelectedFile = CurrentFolder;
-					ImGui.CloseCurrentPopup();
-				}
-			}
-			else if (SelectedFile != null)
-			{
-				ImGui.SameLine();
-				if (ImGui.Button("Open"))
-				{
-					result = true;
-					ImGui.CloseCurrentPopup();
-				}
+				result = true;
+				SelectedFile = FoldersOnly ? CurrentFolder : SelectedFile;
+				WantsToClose = true;
+				//ImGui.CloseCurrentPopup();
 			}
 
 			return result;
-		}
-
-		private bool TryGetFileInfo(string fileName, out FileInfo realFile)
-		{
-			try
-			{
-				realFile = new FileInfo(fileName);
-				return true;
-			}
-			catch
-			{
-				realFile = null;
-				return false;
-			}
 		}
 
 		private List<string> GetFileSystemEntries(string fullName)
@@ -180,7 +111,7 @@ namespace dbg.ui
 				{
 					dirs.Add(fse);
 				}
-				else if (!OnlyAllowFolders)
+				else if (!FoldersOnly)
 				{
 					if (AllowedExtensions != null)
 					{

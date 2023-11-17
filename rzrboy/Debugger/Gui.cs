@@ -32,29 +32,25 @@ namespace dbg.ui
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
+		string m_lastRomDir = Environment.CurrentDirectory;
+		string m_lastBiosDir = Environment.CurrentDirectory;
 		FilePicker? romLoadPicker = null;
 		FilePicker? biosLoadPicker = null;
 
 		// Update UI state
 		public bool Update()
 		{
-			if( ImGui.BeginPopup( "popup" ) )
-			{
-				ImGui.Text( "POPUP" );
-				ImGui.EndPopup();
-			}
-
 			if( ImGui.BeginMainMenuBar())
             {
 				if(ImGui.BeginMenu("File"))
 				{
 					if( ImGui.Selectable( "Load ROM" ) && romLoadPicker == null)
 					{
-						romLoadPicker = FilePicker.GetFolderPicker( this, Path.Combine( Environment.CurrentDirectory ) );
+						romLoadPicker = new FilePicker( startFolder: m_lastRomDir, allowedExtensions: ".gb|.gbc" );
 					}
 					else if( ImGui.Selectable( "Load Bios" ) && biosLoadPicker == null )
 					{
-						biosLoadPicker = FilePicker.GetFolderPicker( this, Path.Combine( Environment.CurrentDirectory ) );
+						biosLoadPicker = new FilePicker( startFolder: m_lastBiosDir, allowedExtensions: ".bin" );
 					}
 					ImGui.EndMenu();
 				}
@@ -82,19 +78,19 @@ namespace dbg.ui
 
                 ImGui.EndMainMenuBar();
             }
-
-
-
+			
 			// modal must be on top level
 			if( romLoadPicker != null )
 			{
-				romLoadPicker?.Update();
-				//if(romLoadPicker.Update() && romLoadPicker.SelectedFile != null)
-				//m_debugger.LoadRom( romLoadPicker.SelectedFile );
-			}
+				if( romLoadPicker.WantsToClose )
+				{
+					m_lastRomDir = romLoadPicker.CurrentFolder;
+					romLoadPicker = null;
+				}
 
-			if( biosLoadPicker != null && biosLoadPicker.Update() && biosLoadPicker.SelectedFile != null )
-				m_debugger.LoadBios( biosLoadPicker.SelectedFile );
+				if( (romLoadPicker?.Update() ?? false) && romLoadPicker.SelectedFile != null && romLoadPicker.WantsToClose )
+					m_debugger.LoadRom( romLoadPicker.SelectedFile );
+			}
 
 			m_registers.Update();
 			m_assembly.Update();
