@@ -32,28 +32,30 @@ namespace dbg.ui
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
+		FilePicker? romLoadPicker = null;
+		FilePicker? biosLoadPicker = null;
+
 		// Update UI state
 		public bool Update()
-		{			
-			if (ImGui.BeginMainMenuBar())
+		{
+			if( ImGui.BeginPopup( "popup" ) )
+			{
+				ImGui.Text( "POPUP" );
+				ImGui.EndPopup();
+			}
+
+			if( ImGui.BeginMainMenuBar())
             {
 				if(ImGui.BeginMenu("File"))
 				{
-					// https://github.com/mellinoe/synthapp/blob/master/src/synthapp/Widgets/FilePicker.cs
-					//https://gist.github.com/prime31/91d1582624eb2635395417393018016e
-					if(ImGui.Selectable("Load ROM"))
+					if( ImGui.Selectable( "Load ROM" ) && romLoadPicker == null)
 					{
-						var picker = FilePicker.GetFolderPicker(this, Path.Combine(Environment.CurrentDirectory));
-						if(picker.SelectedFile != null)
-							m_debugger.LoadRom(picker.SelectedFile);
+						romLoadPicker = FilePicker.GetFolderPicker( this, Path.Combine( Environment.CurrentDirectory ) );
 					}
-
-					if(ImGui.Selectable("Load Bios"))
+					else if( ImGui.Selectable( "Load Bios" ) && biosLoadPicker == null )
 					{
-						var picker = FilePicker.GetFolderPicker(this, Path.Combine(Environment.CurrentDirectory));
-						if(picker.SelectedFile != null)
-							m_debugger.LoadRom(picker.SelectedFile);
-					} 
+						biosLoadPicker = FilePicker.GetFolderPicker( this, Path.Combine( Environment.CurrentDirectory ) );
+					}
 					ImGui.EndMenu();
 				}
 
@@ -79,9 +81,22 @@ namespace dbg.ui
 				// TODO: load rom/bios
 
                 ImGui.EndMainMenuBar();
-            }			
+            }
 
-            m_registers.Update();
+
+
+			// modal must be on top level
+			if( romLoadPicker != null )
+			{
+				romLoadPicker?.Update();
+				//if(romLoadPicker.Update() && romLoadPicker.SelectedFile != null)
+				//m_debugger.LoadRom( romLoadPicker.SelectedFile );
+			}
+
+			if( biosLoadPicker != null && biosLoadPicker.Update() && biosLoadPicker.SelectedFile != null )
+				m_debugger.LoadBios( biosLoadPicker.SelectedFile );
+
+			m_registers.Update();
 			m_assembly.Update();
 			m_memory.Update();
 			m_logger.Update();

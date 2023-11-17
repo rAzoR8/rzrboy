@@ -119,6 +119,20 @@ namespace dbg.ui
 			base.Body = new FuncUiElement( BodyFunc );
 		}
 
+		protected ImGuiScopeBase( BeginFn begin,string label  ) : base( label: label )
+		{
+			base.Begin = begin;
+			base.End = EndFunc;
+			base.Body = new FuncUiElement( BodyFunc );
+		}
+
+		protected ImGuiScopeBase( EndFn end, string label ) : base( label: label )
+		{
+			base.Begin = BeginFunc;
+			base.End = end;
+			base.Body = new FuncUiElement( BodyFunc );
+		}
+
 		protected virtual bool BeginFunc(string label) {return false;}
 		protected virtual void EndFunc() {}
 		protected abstract bool BodyFunc();

@@ -2,6 +2,8 @@ using ImGuiNET;
 
 namespace dbg.ui
 {
+	// https://github.com/mellinoe/synthapp/blob/master/src/synthapp/Widgets/FilePicker.cs
+	// https://gist.github.com/prime31/91d1582624eb2635395417393018016e
 	public class FilePicker : ImGuiScopeBase
 	{
 		static readonly Dictionary<object, FilePicker> _filePickers = new Dictionary<object, FilePicker>();
@@ -54,7 +56,22 @@ namespace dbg.ui
 		public List<string> AllowedExtensions;
 		public bool OnlyAllowFolders;
 
-		public FilePicker() : base(begin: ImGui.BeginPopupModal, end: ImGui.EndPopup, label: "File Picker")
+		private bool m_isOpen = true;
+
+		protected override bool BeginFunc( string label )
+		{
+			//bool open = ImGui.BeginPopup( label );
+			//open &=  ImGui.BeginPopupModal( label, ref m_isOpen );
+			//return open;
+			return false;
+		}
+
+		//public FilePicker() : base( begin: ImGui.BeginPopupModal, end: ImGui.EndPopup, label: "filer-picker")
+		//{
+		//	//m_path = path;
+		//}
+
+		public FilePicker() : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
 		{
 			//m_path = path;
 		}
