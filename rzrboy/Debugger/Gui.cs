@@ -1,4 +1,5 @@
 using ImGuiNET;
+using System;
 //using static ImGuiNET.ImGuiNative;
 
 namespace dbg.ui
@@ -28,13 +29,34 @@ namespace dbg.ui
 			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
 		}
 
+		private unsafe void LoadFonts() 
+		{
+			byte[] buffer = EmbeddedResource.Load( "monaspace-neon.ttf" );
+			fixed( byte* p = buffer )
+			{
+				IntPtr ptr = (IntPtr)p;
+				//var font = ImGui.GetIO().Fonts.AddFontFromMemoryTTF( ptr, buffer.Length, 20f );
+				var font = ImGui.GetIO().Fonts.AddFontFromFileTTF( "C:\\Users\\razor\\Projects\\rzrboy\\rzrboy\\Debugger\\Fontsmonaspace-neon.ttf", 20f );
+				//ImGui.GetIO().FontDefault
+				ImGui.PushFont( font );
+				// Do your stuff here
+			}
+		}
+
 		public void Init()
 		{
+			//ImGui.GetIO().KeysDown.Data[(int)ImGuiKey.F10];
 			//private uint m_dockSpaceId = 0;
 			//m_dockSpaceId = ImGui.GetID("MyDockspace");
 			//ImGui.DockSpace(m_dockSpaceId, new Vector2(0, 0), ImGuiDockNodeFlags.PassthruCentralNode);
 			ImGui.SetWindowFontScale(2);
+			LoadFonts();
 			Logger.Log("Welcome to rzrBoy Studio");
+		}
+
+		private void Step()
+		{
+			m_debugger.Emu.Step( debugPrint: true );
 		}
 
 		// Update UI state
@@ -45,13 +67,9 @@ namespace dbg.ui
 				if(ImGui.BeginMenu("File"))
 				{
 					if( ImGui.Selectable( "Load ROM" ))
-					{
 						m_romLoadPicker.Visible = true;
-					}
 					if( ImGui.Selectable( "Load Bios" ) )
-					{
 						m_biosLoadPicker.Visible = true;
-					}
 					ImGui.EndMenu();
 				}
 
@@ -72,7 +90,15 @@ namespace dbg.ui
 
                     ImGui.EndMenu();
                 }
-                
+				//"⏮⏭⏵⏸⏹"
+				if(ImGui.BeginMenu( "⏵" ) )
+				{
+					Step();
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.IsKeyPressed( ImGuiKey.F11 ) ) Step();
+
 				m_viewMenu.Update();
 
                 ImGui.EndMainMenuBar();

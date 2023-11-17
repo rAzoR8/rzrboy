@@ -25,6 +25,9 @@
     <EmbeddedResource Include="Shaders/SPIR-V/imgui-frag.spv" LogicalName="imgui-frag.spv" />
     <EmbeddedResource Include="Shaders/Metal/imgui-vertex.metallib" LogicalName="imgui-vertex.metallib" />
     <EmbeddedResource Include="Shaders/Metal/imgui-frag.metallib" LogicalName="imgui-frag.metallib" />
+
+	<EmbeddedResource Include="Fonts/monaspace-neon.ttf" LogicalName="monaspace-neon.ttf" />
+
   </ItemGroup>
 
 </Project>
