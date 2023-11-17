@@ -7,37 +7,44 @@ namespace dbg.ui
 	public class FilePicker : ImGuiScopeBase
 	{
 		public string CurrentFolder { get; private set; }
-		public string? SelectedFile { get; private set; }
 		public bool FoldersOnly { get; }
 		public List<string>? AllowedExtensions { get; }
+		public bool Visible { get; set; } = false;
+
+		public delegate void OnSelectFn( string path );
+		private OnSelectFn OnSelect;
 
 		private System.Numerics.Vector4 AccentColor = new( 0f, 0.75f, 0.75f, 1f );
-		public bool WantsToClose = false;
+		private string m_selectedFile = string.Empty;
 
-		//protected override bool BeginFunc( string label )
-		//{
-		//	bool open = ImGui.BeginPopup( label );
-		//	open &= ImGui.BeginPopupModal( label, ref m_isOpen );
-		//	return open;
-		//}
+		protected override bool BeginFunc( string label )
+		{
+			return Visible && ImGui.Begin( label ) ;
+			//bool open = ImGui.BeginPopup( label );
+			//open &= ImGui.BeginPopupModal( label, ref m_isOpen );
+			//return open;
+		}
 
-		public FilePicker(string startFolder, string allowedExtensions) : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
+		public FilePicker( OnSelectFn onSelect, string startFolder, string allowedExtensions) : base( /*begin: ImGui.Begin, */end: ImGui.End, label: "filer-picker" )
 		{
 			CurrentFolder = startFolder;
 			FoldersOnly = false;
 			AllowedExtensions = allowedExtensions.Split('|').ToList();
+			OnSelect = onSelect;
 		}
 
-		public FilePicker( string startFolder ) : base( begin: ImGui.Begin, end: ImGui.End, label: "filer-picker" )
+		public FilePicker( OnSelectFn onSelect, string startFolder ) : base( /*begin: ImGui.Begin,*/ end: ImGui.End, label: "filer-picker" )
 		{
 			FoldersOnly = true;
 			CurrentFolder = startFolder;
+			OnSelect = onSelect;
 		}
 
 		protected override bool BodyFunc()
 		{
-			ImGui.Text(CurrentFolder);
 			bool result = false;
+
+			ImGui.Text(CurrentFolder);
 
 			if (ImGui.BeginChildFrame(1, new System.Numerics.Vector2(400, 400)))
 			{
@@ -67,9 +74,9 @@ namespace dbg.ui
 						else
 						{
 							var name = Path.GetFileName(fse);
-							bool isSelected = SelectedFile == fse;
+							bool isSelected = m_selectedFile == fse;
 							if (ImGui.Selectable(name, isSelected, ImGuiSelectableFlags.DontClosePopups))
-								SelectedFile = fse;
+								m_selectedFile = fse;
 
 							if (ImGui.IsMouseDoubleClicked(0))
 							{
@@ -85,15 +92,15 @@ namespace dbg.ui
 			if (ImGui.Button("Cancel"))
 			{
 				result = false;
-				WantsToClose = true;
+				Visible = false;
 			}
 
 			ImGui.SameLine();
 			if( ImGui.Button( "Open" ) )
 			{
 				result = true;
-				SelectedFile = FoldersOnly ? CurrentFolder : SelectedFile;
-				WantsToClose = true;
+				OnSelect( FoldersOnly ? CurrentFolder : m_selectedFile );
+				Visible = false;
 				//ImGui.CloseCurrentPopup();
 			}
 

@@ -13,6 +13,9 @@ namespace dbg.ui
 		private RegisterWindow m_registers;
 		private AssemblyWindow m_assembly; // main/central window
 		private MemoryWindow m_memory;
+		private FilePicker m_romLoadPicker;
+		private FilePicker m_biosLoadPicker;
+
 		private float m_scaleFactor = 0.5f;
 
 		public Gui(Debugger debugger)
@@ -21,8 +24,10 @@ namespace dbg.ui
 			m_registers = new RegisterWindow(m_debugger.Emu);
 			m_assembly = new AssemblyWindow();
 			m_memory = new MemoryWindow();
+			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: Environment.CurrentDirectory, allowedExtensions: ".gb|.gbc");
+			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
 		}
-		
+
 		public void Init()
 		{
 			//private uint m_dockSpaceId = 0;
@@ -32,11 +37,6 @@ namespace dbg.ui
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
-		string m_lastRomDir = Environment.CurrentDirectory;
-		string m_lastBiosDir = Environment.CurrentDirectory;
-		FilePicker? romLoadPicker = null;
-		FilePicker? biosLoadPicker = null;
-
 		// Update UI state
 		public bool Update()
 		{
@@ -44,13 +44,13 @@ namespace dbg.ui
             {
 				if(ImGui.BeginMenu("File"))
 				{
-					if( ImGui.Selectable( "Load ROM" ) && romLoadPicker == null)
+					if( ImGui.Selectable( "Load ROM" ))
 					{
-						romLoadPicker = new FilePicker( startFolder: m_lastRomDir, allowedExtensions: ".gb|.gbc" );
+						m_romLoadPicker.Visible = true;
 					}
-					else if( ImGui.Selectable( "Load Bios" ) && biosLoadPicker == null )
+					if( ImGui.Selectable( "Load Bios" ) )
 					{
-						biosLoadPicker = new FilePicker( startFolder: m_lastBiosDir, allowedExtensions: ".bin" );
+						m_biosLoadPicker.Visible = true;
 					}
 					ImGui.EndMenu();
 				}
@@ -74,23 +74,15 @@ namespace dbg.ui
                 }
                 
 				m_viewMenu.Update();
-				// TODO: load rom/bios
 
                 ImGui.EndMainMenuBar();
             }
 			
-			// modal must be on top level
-			if( romLoadPicker != null )
-			{
-				if( romLoadPicker.WantsToClose )
-				{
-					m_lastRomDir = romLoadPicker.CurrentFolder;
-					romLoadPicker = null;
-				}
+			if( m_romLoadPicker.Visible )
+				m_romLoadPicker.Update();
 
-				if( (romLoadPicker?.Update() ?? false) && romLoadPicker.SelectedFile != null && romLoadPicker.WantsToClose )
-					m_debugger.LoadRom( romLoadPicker.SelectedFile );
-			}
+			if( m_biosLoadPicker.Visible )
+				m_biosLoadPicker.Update();
 
 			m_registers.Update();
 			m_assembly.Update();
