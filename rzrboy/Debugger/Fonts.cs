@@ -15,8 +15,6 @@ namespace dbg.ui
 
 		private static GCHandle Awesome6Range = GCHandle.Alloc(new ushort[]{ IconFonts.FontAwesome6.IconMin, IconFonts.FontAwesome6.IconMax, 0 }, GCHandleType.Pinned);
 
-		//public static float Size { set{ MonaspaceNeon.FontSize *= value; Icons.FontSize *= value; } }
-
 		public static void Init() 
 		{
 			unsafe
