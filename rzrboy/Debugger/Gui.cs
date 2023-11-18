@@ -30,6 +30,7 @@ namespace dbg.ui
 		public void Init()
 		{
 			//ImGui.SetWindowFontScale(2);
+			Fonts.MonaspaceNeon.FontSize *= 2f;
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
@@ -41,7 +42,8 @@ namespace dbg.ui
 		// Update UI state
 		public bool Update()
 		{
-			Fonts.AwesomeSolid.Push();
+			Fonts.MonaspaceNeon.Push();
+
 			if( ImGui.BeginMainMenuBar())
             {
 				if(ImGui.BeginMenu("File"))
@@ -71,21 +73,21 @@ namespace dbg.ui
                     ImGui.EndMenu();
                 }
 
-				string play = "\uf049";
-				//"⏮⏭⏵⏸⏹"
-				if(ImGui.BeginMenu( play ) )
+				m_viewMenu.Update();
+
+				if(ImGui.BeginMenu( IconFonts.FontAwesome6.Play ) )
 				{
-					Step();
+					if(ImGui.IsItemClicked())
+						Step();
+
+					ImGui.Text("F11");
 					ImGui.EndMenu();
 				}
 
 				if( ImGui.IsKeyPressed( ImGuiKey.F11 ) ) Step();
 
-				m_viewMenu.Update();
-
                 ImGui.EndMainMenuBar();
             }
-			Fonts.Pop();
 			
 			if( m_romLoadPicker.Visible )
 				m_romLoadPicker.Update();
@@ -97,6 +99,10 @@ namespace dbg.ui
 			m_assembly.Update();
 			m_memory.Update();
 			m_logger.Update();
+
+			ImGui.ShowDemoWindow();
+
+			Fonts.Pop();
 
 			return true;
 		}
