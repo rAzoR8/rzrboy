@@ -29,28 +29,16 @@ namespace dbg.ui
 			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
 		}
 
-		private unsafe void LoadFonts() 
-		{
-			byte[] buffer = EmbeddedResource.Load( "monaspace-neon.ttf" );
-			fixed( byte* p = buffer )
-			{
-				IntPtr ptr = (IntPtr)p;
-				//var font = ImGui.GetIO().Fonts.AddFontFromMemoryTTF( ptr, buffer.Length, 20f );
-				var font = ImGui.GetIO().Fonts.AddFontFromFileTTF( "C:\\Users\\razor\\Projects\\rzrboy\\rzrboy\\Debugger\\Fontsmonaspace-neon.ttf", 20f );
-				//ImGui.GetIO().FontDefault
-				ImGui.PushFont( font );
-				// Do your stuff here
-			}
-		}
-
 		public void Init()
 		{
 			//ImGui.GetIO().KeysDown.Data[(int)ImGuiKey.F10];
 			//private uint m_dockSpaceId = 0;
 			//m_dockSpaceId = ImGui.GetID("MyDockspace");
 			//ImGui.DockSpace(m_dockSpaceId, new Vector2(0, 0), ImGuiDockNodeFlags.PassthruCentralNode);
-			ImGui.SetWindowFontScale(2);
-			LoadFonts();
+			//ImGui.SetWindowFontScale(2);
+			Fonts.Init();
+			Fonts.MonaspaceNeon.Push();
+			Fonts.AwesomeSolid.Push();
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
