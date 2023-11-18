@@ -1,4 +1,4 @@
-﻿using ImGuiNET;
+using ImGuiNET;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
@@ -25,6 +25,9 @@ window.Resized += () =>
 	gpu.MainSwapchain.Resize((uint)window.Width, (uint)window.Height);
 	controller.WindowResized(window.Width, window.Height);
 };
+
+dbg.ui.Fonts.Init( pixelSize: 10f );
+controller.RecreateFontDeviceTexture( gpu );
 
 dbg.Debugger debugger = new();
 dbg.ui.Gui gui = new(debugger);

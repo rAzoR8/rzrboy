@@ -12,10 +12,11 @@ namespace dbg.ui
 		public static void Push( this ImFontPtr fontPtr ) => ImGui.PushFont( fontPtr );
 		public static void Pop() => ImGui.PopFont();
 
-		public static void Init() 
+		public static void Init( float pixelSize ) 
 		{
-			MonaspaceNeon = LoadEmbedded( "monaspace-neon.ttf", 10f );
-			AwesomeSolid = LoadFile( "fa-solid-900.ttf", 10f );
+			//ImGui.GetIO().Fonts.AddFontDefault();
+			MonaspaceNeon = LoadEmbedded( "monaspace-neon.ttf", pixelSize );
+			AwesomeSolid = LoadFile( "fa-solid-900.ttf", pixelSize );
 		}
 
 		private static string SearchFontsFolder(string? start = null) 
@@ -38,17 +39,30 @@ namespace dbg.ui
 			byte[] buffer = EmbeddedResource.Load( fileName );
 			fixed( byte* p = buffer )
 			{
-				ImFontConfig font_cfg;
-				font_cfg.FontDataOwnedByAtlas = 0;
 				IntPtr ptr = (IntPtr)p;
-				return ImGui.GetIO().Fonts.AddFontFromMemoryTTF( ptr, buffer.Length, pixelSize, &font_cfg );
+
+				var nativeConfig = ImGuiNative.ImFontConfig_ImFontConfig();
+				var config = new ImFontConfigPtr( nativeConfig );
+				config.SizePixels = pixelSize;
+				config.OversampleH = config.OversampleV = 1;
+				config.PixelSnapH = true;
+				config.FontDataOwnedByAtlas = false;
+				return ImGui.GetIO().Fonts.AddFontFromMemoryTTF( ptr, buffer.Length, pixelSize, config );
 			}
 		}
 
-		private static ImFontPtr LoadFile( string fileName, float pixelSize ) 
+		private unsafe static ImFontPtr LoadFile( string fileName, float pixelSize ) 
 		{
 			string path = Path.Combine( FontsFolder, fileName );
-			return ImGui.GetIO().Fonts.AddFontFromFileTTF( path, pixelSize );
+
+			var nativeConfig = ImGuiNative.ImFontConfig_ImFontConfig();
+			var config = new ImFontConfigPtr( nativeConfig );
+			config.SizePixels = pixelSize;
+			config.OversampleH = config.OversampleV = 1;
+			config.PixelSnapH = true;
+			var ptr = ImGui.GetIO().Fonts.AddFontFromFileTTF( path, pixelSize, config );
+			config.Destroy();
+			return ptr;
 		}
 	}
 }

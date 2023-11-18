@@ -1,6 +1,4 @@
 using ImGuiNET;
-using System;
-//using static ImGuiNET.ImGuiNative;
 
 namespace dbg.ui
 {
@@ -31,14 +29,7 @@ namespace dbg.ui
 
 		public void Init()
 		{
-			//ImGui.GetIO().KeysDown.Data[(int)ImGuiKey.F10];
-			//private uint m_dockSpaceId = 0;
-			//m_dockSpaceId = ImGui.GetID("MyDockspace");
-			//ImGui.DockSpace(m_dockSpaceId, new Vector2(0, 0), ImGuiDockNodeFlags.PassthruCentralNode);
 			//ImGui.SetWindowFontScale(2);
-			Fonts.Init();
-			Fonts.MonaspaceNeon.Push();
-			Fonts.AwesomeSolid.Push();
 			Logger.Log("Welcome to rzrBoy Studio");
 		}
 
@@ -50,6 +41,7 @@ namespace dbg.ui
 		// Update UI state
 		public bool Update()
 		{
+			Fonts.AwesomeSolid.Push();
 			if( ImGui.BeginMainMenuBar())
             {
 				if(ImGui.BeginMenu("File"))
@@ -78,8 +70,10 @@ namespace dbg.ui
 
                     ImGui.EndMenu();
                 }
+
+				string play = "\uf049";
 				//"⏮⏭⏵⏸⏹"
-				if(ImGui.BeginMenu( "⏵" ) )
+				if(ImGui.BeginMenu( play ) )
 				{
 					Step();
 					ImGui.EndMenu();
@@ -91,6 +85,7 @@ namespace dbg.ui
 
                 ImGui.EndMainMenuBar();
             }
+			Fonts.Pop();
 			
 			if( m_romLoadPicker.Visible )
 				m_romLoadPicker.Update();

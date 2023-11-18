@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using System.Reflection;
-using System.IO;
 using Veldrid;
 using System.Runtime.CompilerServices;
 
@@ -91,7 +88,6 @@ namespace ImGuiNET
             _vertexBuffer.Name = "ImGui.NET Vertex Buffer";
             _indexBuffer = factory.CreateBuffer(new BufferDescription(2000, BufferUsage.IndexBuffer | BufferUsage.Dynamic));
             _indexBuffer.Name = "ImGui.NET Index Buffer";
-            RecreateFontDeviceTexture(gd);
 
             _projMatrixBuffer = factory.CreateBuffer(new BufferDescription(64, BufferUsage.UniformBuffer | BufferUsage.Dynamic));
             _projMatrixBuffer.Name = "ImGui.NET Projection Buffer";
@@ -130,7 +126,7 @@ namespace ImGuiNET
                 _projMatrixBuffer,
                 gd.PointSampler));
 
-            _fontTextureResourceSet = factory.CreateResourceSet(new ResourceSetDescription(_textureLayout, _fontTextureView));
+			RecreateFontDeviceTexture( gd );
         }
 
         /// <summary>
@@ -277,7 +273,9 @@ namespace ImGuiNET
             _fontTextureView = gd.ResourceFactory.CreateTextureView(_fontTexture);
 
             io.Fonts.ClearTexData();
-        }
+
+			_fontTextureResourceSet = gd.ResourceFactory.CreateResourceSet( new ResourceSetDescription( _textureLayout, _fontTextureView ) );
+		}
 
         /// <summary>
         /// Renders the ImGui draw list data.
