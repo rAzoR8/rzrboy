@@ -20,8 +20,8 @@ namespace dbg.ui
 		public Gui(Debugger debugger)
 		{
 			m_debugger = debugger;
-			m_registers = new RegisterWindow(m_debugger.Emu);
-			m_assembly = new AssemblyWindow();
+			m_registers = new RegisterWindow(m_debugger.CurrentState);
+			m_assembly = new AssemblyWindow(m_debugger.CurrentState);
 			m_memory = new MemoryWindow();
 			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: Environment.CurrentDirectory, allowedExtensions: ".gb|.gbc");
 			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
@@ -31,7 +31,7 @@ namespace dbg.ui
 		{
 			//ImGui.SetWindowFontScale(2);
 			Fonts.MonaspaceNeon.FontSize *= 2f;
-			Logger.Log("Welcome to rzrBoy Studio");
+			Logger.LogMsg("Welcome to rzrBoy Studio");
 		}
 
 		private void Step()

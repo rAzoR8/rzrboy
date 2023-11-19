@@ -1,16 +1,59 @@
+using ImGuiNET;
+using rzr;
+
 namespace dbg.ui
 {
 	public class AssemblyWindow : Window
 	{
-		public AssemblyWindow() : base(label: "Assembly")
+		private rzr.State m_state;
+		public int Range { get; set; } = 20;
+
+		public AssemblyWindow(rzr.State state) : base(label: "Assembly")
 		{
+			m_state = state;
 		}
 
+		private class Instruction : IUiElement
+		{
+			public Instruction? Prev = null;
+			public ushort PC;
+			public rzr.ISection Mem;
+			
+			public ushort PCnext;
+			public bool Update()
+			{
+				ushort pc = Prev?.PCnext ?? PC;
+				ushort _pc = pc;
+				
+				rzr.AsmInstr instr = rzr.Asm.DisassembleInstr(ref pc, Mem, unknownOp: UnknownOpHandling.AsDb);
+	
+				byte op0 = Mem[_pc];
+				string op1 = PC > _pc + 1 ? $"{Mem[(ushort)( _pc + 1 )]:X2}" : "__";
+				string op2 = PC > _pc + 2 ? $"{Mem[(ushort)( _pc + 2 )]:X2}" : "__";
+
+				ImGui.Text( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] {instr.ToString( _pc ).ToUpper()}" );
+
+				PCnext = pc;
+				return true;
+			}
+		}
 
 		protected override bool BodyFunc()
 		{
-			return true;
-		}
+			List<Instruction> instructions = new();
+			ListBox listBox = new("Instructions", instructions);
 
+			int start = m_state.reg.PC - Range * 3; // 3byte per instr
+			start = start < 0 ? 0 : start;
+			
+			for (int i = 0; i < Range * 2; ++i)
+			{
+				Instruction? prev = i > 0 ? instructions[i-1] : null;
+				Instruction instr = new() { Prev = prev, PC = (ushort)start, Mem = m_state.mem };
+				instructions.Add(instr);
+			}
+
+			return listBox.Update();
+		}
 	}
 }

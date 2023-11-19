@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-
-namespace rzr
+﻿namespace rzr
 {
     public class Emu
     {
@@ -8,6 +6,8 @@ namespace rzr
 		public Cpu cpu { get; }
         public Apu apu { get; }
 
+        public ILogger Logger { get; }
+        
 		public bool IsRunning { get; private set; }
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
@@ -17,11 +17,12 @@ namespace rzr
 		public List<Callback> PreStepCallbacks { get; } = new();
 		public List<Callback> PostStepCallbacks { get; } = new();
 
-		public Emu()
+		public Emu(ILogger logger)
         {
             cpu = new Cpu();
             ppu = new Ppu();
             apu = new Apu();
+            Logger = logger;
         }
 
 		public delegate State NextStateFn();
@@ -63,8 +64,7 @@ namespace rzr
 			}
 			catch( rzr.ExecException e )
 			{
-				// TODO: handle
-				Debug.Write( e.Message );
+				Logger.Log( e.Message );
                 cont = false;
                 throw new OperationCanceledException( message: e.Message, innerException: e, token );
 			}
@@ -91,7 +91,7 @@ namespace rzr
             if ( debugPrint )
             {
                 ushort pc = cpu.prevInstrPC;
-                Debug.WriteLine( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
+                Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
             foreach ( Callback fun in PostStepCallbacks )

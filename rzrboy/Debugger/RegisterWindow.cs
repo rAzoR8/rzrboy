@@ -2,10 +2,10 @@ namespace dbg.ui
 {
 	public class RegisterWindow : Window
 	{
-		private rzr.Emu m_emu;
-		public RegisterWindow(rzr.Emu emu) : base(label: "Registers")
+		private rzr.State m_state;
+		public RegisterWindow(rzr.State state) : base(label: "Registers")
 		{
-			m_emu = emu;
+			m_state = state;
 		}
 
 		protected override bool BodyFunc()

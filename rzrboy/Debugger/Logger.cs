@@ -2,7 +2,7 @@ using ImGuiNET;
 
 namespace dbg.ui
 {
-	public class Logger : ImGuiScopeBase
+	public class Logger : ImGuiScopeBase, rzr.ILogger
 	{
 		public static Logger Instance {get;} = new();
 
@@ -39,7 +39,7 @@ namespace dbg.ui
 			m_listBox = new(label: "Messages", m_messages);
 		}
 
-		public static void Log(string msg, Action? action = null)
+		public static void LogMsg(string msg, Action? action = null)
 		{
 			Instance.m_messages.Add(new Message{What = msg, Action = action});
 		}
@@ -47,6 +47,11 @@ namespace dbg.ui
 		protected override bool BodyFunc()
 		{
 			return m_listBox.Update();
+		}
+
+		public void Log(string msg, Action? action = null)
+		{
+			m_messages.Add(new Message{What = msg, Action = action});
 		}
 	}
 }

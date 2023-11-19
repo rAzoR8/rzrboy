@@ -12,7 +12,7 @@ ImGuiController controller;
 
 // Create window, GraphicsDevice, and all resources necessary for the demo.
 VeldridStartup.CreateWindowAndGraphicsDevice(
-	new WindowCreateInfo(50, 50, 1280, 720, WindowState.Normal, "rzrBoy Studio"),
+	new WindowCreateInfo(50, 50, 1920, 1080, WindowState.Normal, "rzrBoy Studio"),
 	new GraphicsDeviceOptions(true, null, true, ResourceBindingModel.Improved, true, true),
 	out window,
 	out gpu);
@@ -35,11 +35,10 @@ dbg.ui.Gui gui = new(debugger);
 gui.Init();
 
 var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-float deltaTime = 0f;
 
 while (window.Exists)
 {
-	deltaTime = stopwatch.ElapsedTicks / (float)System.Diagnostics.Stopwatch.Frequency;
+	float deltaTime = stopwatch.ElapsedTicks / (float)System.Diagnostics.Stopwatch.Frequency;
 	stopwatch.Restart();
 
 	InputSnapshot snapshot = window.PumpEvents();
