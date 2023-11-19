@@ -41,7 +41,7 @@ namespace dbg.ui
 
 		private void Step()
 		{
-			m_debugger.Step( );
+			m_debugger.Step();
 		}
 
 		// Update UI state

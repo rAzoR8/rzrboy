@@ -6,7 +6,7 @@ namespace dbg.ui
 	public class AssemblyWindow : Window
 	{
 		private rzr.State m_state;
-		public int Range { get; set; } = 10;
+		public int Range { get; set; } = 32;
 
 		public AssemblyWindow(rzr.State state) : base(label: "Assembly")
 		{
@@ -42,10 +42,14 @@ namespace dbg.ui
 				ushort pc = Prev?.PCnext ?? PC;
 				ushort _pc = pc;
 
+				rzr.ISection mem = State.mem;
+				if( State.mem.Booting && pc >= State.mem.boot.Length )
+					mem = State.mem.mbc;
+
 				rzr.AsmInstr instr;
 				try
 				{
-					instr = rzr.Asm.DisassembleInstr(ref pc, State.mem, unknownOp: rzr.UnknownOpHandling.AsDb);
+					instr = rzr.Asm.DisassembleInstr(ref pc, mem, unknownOp: rzr.UnknownOpHandling.AsDb);
 				}
 				catch( rzr.Exception e )
 				{
@@ -53,11 +57,11 @@ namespace dbg.ui
 					return false;
 				}
 	
-				byte op0 = State.mem[_pc];
-				string op1 = PC > _pc + 1 ? $"{State.mem[(ushort)( _pc + 1 )]:X2}" : "__";
-				string op2 = PC > _pc + 2 ? $"{State.mem[(ushort)( _pc + 2 )]:X2}" : "__";
+				byte op0 = mem[_pc];
+				string op1 = pc > _pc + 1 ? $"{mem[(ushort)( _pc + 1 )]:X2}" : "__";
+				string op2 = pc > _pc + 2 ? $"{mem[(ushort)( _pc + 2 )]:X2}" : "__";
 
-				bool isCur = State.reg.PC >= _pc && State.reg.PC < pc;
+				bool isCur = _pc == State.curInstrPC;
 				
 				if(isCur) ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.75f, 0,0, 1));
 				ImGui.Selectable( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] {instr.ToString( _pc ).ToUpper()}" );
@@ -74,7 +78,7 @@ namespace dbg.ui
 			ListBox listBox = new("Instructions", instructions);
 
 			// only do this on start up, just need to update the PC
-			instructions.Add( new( m_state.reg.PC, m_state ) );
+			instructions.Add( new( m_state.curInstrPC, m_state ) );
 			for (int i = 1; i < Range; ++i)
 			{
 				instructions.Add(new(prev: instructions[i - 1], m_state));

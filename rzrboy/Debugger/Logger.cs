@@ -1,4 +1,5 @@
 using ImGuiNET;
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 
 namespace dbg.ui
@@ -71,6 +72,7 @@ namespace dbg.ui
 				m_messages.Last().Count++;
 				return;
 			}
+			Debug.WriteLine( msg );
 			m_messages.Add(new Message{What = msg, Action = action});
 		}
 	}

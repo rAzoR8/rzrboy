@@ -1,18 +1,8 @@
-﻿namespace rzr
+namespace rzr
 {
     public class Cpu
     {
         private IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
-
-        public ulong tick { get; private set; } // current cycle/tick
-        public byte curOpCode { get; private set; } = 0; // opcode od the currenlty executed instruction
-        public ushort curInstrPC { get; private set; } = 0; // start ProgramCounter of the currently executed instruction
-        public ushort prevInstrPC { get; private set; } = 0; // start ProgramCounter of the previously executed instruction
-
-        public byte prevInstrCycles { get; private set; } = 1; // number of non-fetch cycles spend on the previous instructions
-        public byte curInstrCycle { get; private set; } = 1; // number of Non-fetch cycles already spent on executing the current instruction
-
-        private IEnumerator<Op>? m_curOp = null;
 
 		public Cpu( ) 
         {
@@ -28,57 +18,56 @@
         /// execute one M-cycle
         /// </summary>
         /// <returns>true if executing the same instruction, false after a new one is fetched</returns>
-        public bool Tick( Reg reg, ISection mem )
+        public bool Tick( State state )
         {
-			bool sameInstr = true;
-
-            if( m_curOp != null )
+			bool moreOps = true;
+            if( state.curOp != null )
             {
-                m_curOp.Current( reg, mem );
-                ++curInstrCycle;
+				state.curOp.Current( state.reg, state.mem );
+				moreOps = state.curOp.MoveNext();
+				++state.curInstrCycle;
             }
 
-            if( m_curOp == null || m_curOp.MoveNext() == false )
+			// fetch
+            if( state.curOp == null || !moreOps )
             {
-                sameInstr = m_curOp == null ;
+				state.prevInstrCycles = state.curInstrCycle;
+				state.curInstrCycle = 1;
 
-                prevInstrCycles = curInstrCycle;
-                curInstrCycle = 1;
-
-                prevInstrPC = curInstrPC;
-                curInstrPC = reg.PC;
+				state.prevInstrPC = state.curInstrPC;
+				state.curInstrPC = state.reg.PC;
 
                 // handle interrupts, if any
-                if( reg.IME == IMEState.Enabled ) 
+                if( state.reg.IME == IMEState.Enabled ) 
 				{
-					byte interrupts = (byte)( mem[0xFF0F] & mem[0xFFFF] );
+					byte interrupts = (byte)( state.mem[0xFF0F] & state.mem[0xFFFF] );
 					if( interrupts != 0 )
 					{
-                        reg.Halted = false;
+						state.reg.Halted = false;
 
-						m_curOp = Interrupt.HandlePending().GetEnumerator();
-						m_curOp.MoveNext();
-						return false;
+						state.curOp = Interrupt.HandlePending().GetEnumerator();
+						state.curOp.MoveNext();
+						return false; // TODO: check if this is still correct
 					}
 				}
-				else if( reg.IME == IMEState.RequestEnabled )
-					reg.IME = IMEState.Enabled;
+				else if( state.reg.IME == IMEState.RequestEnabled )
+					state.reg.IME = IMEState.Enabled;
 
                 // handle HALT & STOP
-                if( reg.Halted )
+                if( state.reg.Halted )
                 {
                     return false;
                 }
 
-				curOpCode = mem[curInstrPC]; // fetch
-                ++reg.PC;
+				state.curOpCode = state.mem[state.curInstrPC]; // fetch
+                ++state.reg.PC;
 
-                m_curOp = m_instr[curOpCode].GetEnumerator();
-                m_curOp.MoveNext();
+				state.curOp = m_instr[state.curOpCode].GetEnumerator();
+				state.curOp.MoveNext();
             }
 
-            tick++;
-            return sameInstr;
+			state.tick++;
+            return moreOps;
         }
     }
 }

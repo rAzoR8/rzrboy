@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
     public class Emu
     {
@@ -58,7 +58,7 @@
             bool cont;
 			try
 			{
-				cont = cpu.Tick( state.reg, state.mem );
+				cont = cpu.Tick( state );
 				ppu.Tick( state.reg, state.mem );
 				apu.Tick( state.reg, state.mem );
 			}
@@ -90,8 +90,8 @@
 
             if ( debugPrint )
             {
-                ushort pc = cpu.prevInstrPC;
-                Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
+                ushort pc = state.prevInstrPC;
+                Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{state.prevInstrCycles} cycles|fetch" );
             }
 
             foreach ( Callback fun in PostStepCallbacks )
