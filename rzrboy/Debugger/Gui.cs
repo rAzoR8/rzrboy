@@ -36,7 +36,7 @@ namespace dbg.ui
 
 		private void Step()
 		{
-			m_debugger.Emu.Step( debugPrint: true );
+			m_debugger.Step( );
 		}
 
 		// Update UI state

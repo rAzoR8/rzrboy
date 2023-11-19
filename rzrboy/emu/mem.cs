@@ -23,7 +23,7 @@
 
 		public Section boot { get; set; } = Boot.Minimal; // 0x0000
 
-		public Mbc			cart { get; set; } = new(); // including eram (external)
+		public Mbc			mbc { get; set; } = new(); // including eram (external)
 		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram", SectionAccess.ReadWrite ); // In CGB mode, switchable bank 0/1        
 		public WRam			wram { get; set; } = new(); // C000
 		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
@@ -44,9 +44,9 @@
 		{
 			switch( address )
 			{
-				case >= 0x0000 and < 0x8000: return Booting ? boot : cart; // 0000-7FFF 32KiB switchable
+				case >= 0x0000 and < 0x8000: return Booting ? boot : mbc; // 0000-7FFF 32KiB switchable
 				case >= 0x8000 and < 0xA000: return vram;		// 8000-9FFF 8KiB
-				case >= 0xA000 and < 0xC000: return cart;		// A000-BFFF 8KiB external ram on cartridge
+				case >= 0xA000 and < 0xC000: return mbc;		// A000-BFFF 8KiB external ram on cartridge
 				case >= 0xC000 and < 0xE000: return wram;       // C000-E000 4KiB + 4KiB banked
 				case >= 0xE000 and < 0xFE00: return echo;		// E000-FE00 7680B
 				case >= 0xFE00 and < 0xFEA0: return oam;		// FE00-FEA0 160B

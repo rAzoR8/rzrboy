@@ -90,55 +90,25 @@ namespace rzr
 		}
 	}
 
-    public class Cartridge
+    public static class Cartridge
     {
-        public Mbc Mbc { get; private set; }
-		public HeaderView Header => Mbc.Header;
+		public static string GetFileName( this Mbc mbc, string extension = ".gb" ) => $"{mbc.Header.Title.ToLower().Replace( ' ', '_' )}_v{mbc.Header.Version}{extension}";
 
-		public string GetFileName( string extension = ".gb" ) => $"{Header.Title.ToLower().Replace( ' ', '_' )}_v{Header.Version}{extension}";
-
-		public Cartridge( byte[] cart ) 
-        {
-			Mbc = CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
-		}
-
-		public Cartridge( )
+		public static Mbc CreateMbc( byte[] cart ) => CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
+		
+		public static void SaveRom( this Mbc mbc, string path ) 
 		{
-			Mbc = new();
+			mbc.FinalizeRom();
+
+			System.IO.File.WriteAllBytes( path, mbc.Rom() );
 		}
 
-		public void Load( byte[] cart )
+		public static void SaveRam( this Mbc mbc, string path )
 		{
-			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
-			if( type == Header.Type )
-			{
-				Mbc.LoadRom( cart );
-			}
-			else
-			{
-				Mbc = CreateMbc( type, cart );			
-			}
+			System.IO.File.WriteAllBytes( path, mbc.Ram() );
 		}
 
-		public void ChangeType( CartridgeType type )
-		{
-			Mbc = CreateMbc( type, Mbc.Rom() );
-			Header.Type = type;
-		}
-
-		public void SaveRom( string path ) 
-		{
-			Mbc.FinalizeRom();
-
-			System.IO.File.WriteAllBytes( path, Mbc.Rom() );
-		}
-
-		public void SaveRam( string path )
-		{
-			System.IO.File.WriteAllBytes( path, Mbc.Ram() );
-		}
-
-		private static Mbc CreateMbc( CartridgeType type, byte[] cart )
+		public static Mbc CreateMbc( CartridgeType type, byte[] cart )
 		{
 			Mbc? mbc = null;
 
@@ -192,7 +162,7 @@ namespace rzr
 
 			if( mbc == null )
 			{
-				mbc = new Mbc( cart ); // unkown cart type			
+				mbc = new Mbc( cart ); // unknown cart type			
 			}
 
 			Debug.Assert( mbc.Header.Type == type );

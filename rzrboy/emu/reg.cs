@@ -52,14 +52,17 @@
     public class Reg
     {
         private byte _flags;       
-
-        // REGISTERS
+        
         public byte A; public byte F { get => _flags; set => _flags = (byte)(value & FlagMask8); }
         public byte B, C;
         public byte D, E;
         public byte H, L;
         public ushort SP;
         public ushort PC;
+        
+        public IMEState IME = IMEState.Disabled;
+        public bool Halted = false;
+        //public bool Stopped = false;
 
         public ushort AF { get { return A.Combine( F ); } set { binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
         public ushort BC { get { return B.Combine( C ); } set { binutil.Split( value, out B, out C ); } }
@@ -70,12 +73,7 @@
         public bool Sub { get => _flags.IsBitSet( 6 ); set { binutil.SetBit( ref _flags, 6, value ); } }
         public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { binutil.SetBit( ref _flags, 5, value); } }
         public bool Carry { get => _flags.IsBitSet( 4 ); set { binutil.SetBit( ref _flags, 4, value); } }
-
-        public IMEState IME = IMEState.Disabled;
-
-        public bool Halted = false;
-        //public bool Stopped = false;
-
+        
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {
             Zero = Z;
@@ -83,6 +81,22 @@
             HalfCarry = H;
             Carry = C;
         }
+        
+        public Reg Clone() => new Reg
+        {
+	        _flags = this._flags,
+	        A = this.A,
+	        B = this.B,
+	        C = this.C,
+	        D = this.D,
+	        E = this.E,
+	        H = this.H,
+	        L = this.L,
+	        SP = this.SP,
+	        PC = this.PC,
+	        IME =  this.IME,
+	        Halted = this.Halted
+        };
 
         public byte this[Reg8 type]
         {

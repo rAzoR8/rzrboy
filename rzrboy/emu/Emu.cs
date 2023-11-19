@@ -2,47 +2,30 @@
 
 namespace rzr
 {
-    public class Boy
+    public class Emu
     {
-		public Mem mem { get; }
 		public Ppu ppu { get; }
 		public Cpu cpu { get; }
-        public Reg reg { get; }
         public Apu apu { get; }
-		public Cartridge cart { get; }
 
 		public bool IsRunning { get; private set; }
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public delegate void Callback( Reg reg, ISection mem );
+        public delegate void Callback( State state );
 
 		public List<Callback> PreStepCallbacks { get; } = new();
 		public List<Callback> PostStepCallbacks { get; } = new();
 
-		public Boy()
+		public Emu()
         {
-            cart = new Cartridge();
-            mem = new Mem(); // TODO: move outside
-            reg = new Reg();
-
             cpu = new Cpu();
             ppu = new Ppu();
             apu = new Apu();
         }
 
-        public void LoadBootRom( byte[] boot )
-        {
-            mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read, data: boot, offset: 0 );
-        }
-
-        public void LoadRom( byte[] rom )
-        {
-            cart.Load( rom );
-            mem.cart = cart.Mbc;
-        }
-
-        public async Task<ulong> Execute( CancellationToken token = default )
+		public delegate State NextStateFn();
+        public async Task<ulong> Execute( NextStateFn nextState, CancellationToken token = default )
         {
             ulong cycles = 0;
 
@@ -54,7 +37,7 @@ namespace rzr
                     while( true )
                     {
                         token.ThrowIfCancellationRequested();
-                        cycles += Step( token: token, debugPrint: true );
+                        cycles += Step( state: nextState(), token: token, debugPrint: true );
                     }
                 } );
             }
@@ -63,20 +46,20 @@ namespace rzr
                 if(e.CancellationToken == token)
                     IsRunning = false;
                 else
-                    return await Execute( token );
+                    return await Execute( nextState: nextState, token );
             }
 
             return cycles;
         }
 
-		public bool Tick( CancellationToken token = default )
+		public bool Tick( State state, CancellationToken token = default )
 		{
             bool cont;
 			try
 			{
-				cont = cpu.Tick( reg, mem );
-				ppu.Tick( reg, mem );
-				apu.Tick( reg, mem );
+				cont = cpu.Tick( state.reg, state.mem );
+				ppu.Tick( state.reg, state.mem );
+				apu.Tick( state.reg, state.mem );
 			}
 			catch( rzr.ExecException e )
 			{
@@ -93,27 +76,27 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( bool debugPrint, CancellationToken token = default )
+        public uint Step( State state, bool debugPrint, CancellationToken token = default )
         {
             uint cycles = 1;
 
 			foreach( Callback fun in PreStepCallbacks )
 			{
-				fun( reg, mem );
+				fun( state );
 			}
 
 			// execute all ops
-			while ( Tick( token ) ) { ++cycles; }
+			while ( Tick( state, token ) ) { ++cycles; }
 
             if ( debugPrint )
             {
                 ushort pc = cpu.prevInstrPC;
-                Debug.WriteLine( $"{Isa.Disassemble( ref pc, mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
+                Debug.WriteLine( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{cpu.prevInstrCycles} cycles|fetch" );
             }
 
             foreach ( Callback fun in PostStepCallbacks )
             {
-                fun( reg, mem );
+                fun( state );
             }
 
             return cycles;
