@@ -1,4 +1,5 @@
 using ImGuiNET;
+using rzr;
 
 namespace dbg.ui
 {
@@ -13,8 +14,12 @@ namespace dbg.ui
 		protected override bool BodyFunc()
 		{
 			var reg = m_state.reg;
+			var IO = m_state.mem.io;
+			var mem = m_state.mem;
+
 			ImGui.Text($"Halted: {reg.Halted}");
-			
+			ImGui.Text( $"Booting: {mem.Booting}" );
+
 			ImGui.Text($"A 0x{reg.A:x2}{reg.F:x2} F");
 			ImGui.Text($"B 0x{reg.B:x2}{reg.C:x2} C");
 			ImGui.Text($"D 0x{reg.D:x2}{reg.E:x2} E");
@@ -26,7 +31,15 @@ namespace dbg.ui
 			ImGui.Text($"H {reg.HalfCarry} Half Carry"); 
 			ImGui.Text($"C {reg.Carry} Carry"); 
 			
+
 			ImGui.Text($"IME {reg.IME}");
+			ImGui.Text($"IE {mem.IE.Value}");
+
+			for( ushort i = IO.StartAddr; i < IO.StartAddr + IO.Length/2; )
+			{
+				ImGui.Text( $"0x{i:X4}: {IO[i++]} | 0x{i:X4}: {IO[i++]}" );
+			}
+
 			return true;
 		}
 	}

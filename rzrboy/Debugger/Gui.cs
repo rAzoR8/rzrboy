@@ -17,6 +17,11 @@ namespace dbg.ui
 
 		private float m_scaleFactor = 0.5f;
 
+		private bool m_showMetrics = false;
+		private bool m_showStyleEditor = false;
+		private bool m_showStackTool = false;
+		private bool m_showDebugLog = false;
+
 		public Gui(Debugger debugger)
 		{
 			m_debugger = debugger;
@@ -30,7 +35,7 @@ namespace dbg.ui
 		public void Init()
 		{
 			//ImGui.SetWindowFontScale(2);
-			Fonts.MonaspaceNeon.FontSize *= 2f;
+			//Fonts.MonaspaceNeon.FontSize *= 2f;
 			Logger.LogMsg("Welcome to rzrBoy Studio");
 		}
 
@@ -73,6 +78,16 @@ namespace dbg.ui
                     ImGui.EndMenu();
                 }
 
+				if( ImGui.BeginMenu( "ImGui" ) )
+				{
+					if( ImGui.Selectable( "Metrics" ) ) m_showMetrics = !m_showMetrics;
+					if( ImGui.Selectable( "StackTool" ) ) m_showStackTool = !m_showStackTool;
+					if( ImGui.Selectable( "StyleEditor" ) ) m_showStyleEditor = !m_showStyleEditor;
+					if( ImGui.Selectable( "DebugLog" ) ) m_showDebugLog = !m_showDebugLog;
+
+					ImGui.EndMenu();
+				}
+
 				m_viewMenu.Update();
 
 				if(ImGui.BeginMenu( IconFonts.FontAwesome6.Play ) )
@@ -101,7 +116,10 @@ namespace dbg.ui
 			m_memory.Update();
 			m_logger.Update();
 
-			ImGui.ShowDemoWindow();
+			if(m_showMetrics) ImGui.ShowMetricsWindow();
+			if(m_showStyleEditor) ImGui.ShowStyleEditor();
+			if(m_showStackTool) ImGui.ShowStackToolWindow();
+			if(m_showDebugLog) ImGui.ShowDebugLogWindow();
 
 			Fonts.Pop();
 
