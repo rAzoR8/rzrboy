@@ -1,14 +1,19 @@
+using System.Numerics;
 using ImGuiNET;
-using rzr;
 
 namespace dbg.ui
 {
 	public class AssemblyWindow : Window
 	{
 		private rzr.State m_state;
-		public int Range { get; set; } = 20;
+		public int Range { get; set; } = 10;
 
 		public AssemblyWindow(rzr.State state) : base(label: "Assembly")
+		{
+			m_state = state;
+		}
+
+		public void SetState(rzr.State state)
 		{
 			m_state = state;
 		}
@@ -17,7 +22,7 @@ namespace dbg.ui
 		{
 			public Instruction? Prev = null;
 			public ushort PC;
-			public rzr.ISection Mem;
+			public rzr.State State;
 			
 			public ushort PCnext;
 			public bool Update()
@@ -25,14 +30,18 @@ namespace dbg.ui
 				ushort pc = Prev?.PCnext ?? PC;
 				ushort _pc = pc;
 				
-				rzr.AsmInstr instr = rzr.Asm.DisassembleInstr(ref pc, Mem, unknownOp: UnknownOpHandling.AsDb);
+				rzr.AsmInstr instr = rzr.Asm.DisassembleInstr(ref pc, State.mem, unknownOp: rzr.UnknownOpHandling.AsDb);
 	
-				byte op0 = Mem[_pc];
-				string op1 = PC > _pc + 1 ? $"{Mem[(ushort)( _pc + 1 )]:X2}" : "__";
-				string op2 = PC > _pc + 2 ? $"{Mem[(ushort)( _pc + 2 )]:X2}" : "__";
+				byte op0 = State.mem[_pc];
+				string op1 = PC > _pc + 1 ? $"{State.mem[(ushort)( _pc + 1 )]:X2}" : "__";
+				string op2 = PC > _pc + 2 ? $"{State.mem[(ushort)( _pc + 2 )]:X2}" : "__";
 
-				ImGui.Text( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] {instr.ToString( _pc ).ToUpper()}" );
-
+				bool isCur = _pc >= State.reg.PC && State.reg.PC < pc;
+				
+				if(isCur) ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.75f, 0,0, 1));
+				ImGui.Selectable( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] {instr.ToString( _pc ).ToUpper()}" );
+				if(isCur) ImGui.PopStyleColor();
+				
 				PCnext = pc;
 				return true;
 			}
@@ -46,10 +55,11 @@ namespace dbg.ui
 			int start = m_state.reg.PC - Range * 3; // 3byte per instr
 			start = start < 0 ? 0 : start;
 			
+			// only do this on start up, just need to update the PC
 			for (int i = 0; i < Range * 2; ++i)
 			{
 				Instruction? prev = i > 0 ? instructions[i-1] : null;
-				Instruction instr = new() { Prev = prev, PC = (ushort)start, Mem = m_state.mem };
+				Instruction instr = new() { Prev = prev, PC = (ushort)start, State = m_state };
 				instructions.Add(instr);
 			}
 

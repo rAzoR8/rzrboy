@@ -1,3 +1,6 @@
+using System.Numerics;
+using ImGuiNET;
+
 namespace dbg.ui
 {
 	public class ListBox : ImGuiScopeBase
@@ -5,7 +8,13 @@ namespace dbg.ui
 		public IEnumerable<IUiElement>? Elements{get; set;}
 		public int SelectedIndex {get; private set;} = -1;
 		public IUiElement? Selected {get; private set;} = null;
-		public ListBox(string label, IEnumerable<IUiElement>? elements = null) : base(ImGuiNET.ImGui.BeginListBox, ImGuiNET.ImGui.EndListBox, label: label)
+
+		protected override bool BeginFunc(string label)
+		{
+			return ImGuiNET.ImGui.BeginListBox(label, new Vector2(-1, -1));
+		}
+
+		public ListBox(string label, IEnumerable<IUiElement>? elements = null) : base( ImGuiNET.ImGui.EndListBox, label: label)
 		{
 			Elements = elements;
 		}

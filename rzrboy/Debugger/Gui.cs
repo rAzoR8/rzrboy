@@ -96,6 +96,7 @@ namespace dbg.ui
 				m_biosLoadPicker.Update();
 
 			m_registers.Update();
+			m_assembly.SetState(m_debugger.CurrentState);
 			m_assembly.Update();
 			m_memory.Update();
 			m_logger.Update();
