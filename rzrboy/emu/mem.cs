@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
 	public class AddressNotMappedException : rzr.ExecException
 	{
@@ -9,6 +9,14 @@
 
 	public class Mem : ISection
 	{
+		public enum HWMode
+		{
+			DMG,
+			GBC
+		}
+
+		public HWMode Mode { get; set; } = HWMode.DMG;
+
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort VRamSize = 0x2000; // 8KiB
         public const ushort ERamSize = 0x2000; // 8KiB
@@ -29,7 +37,7 @@
 		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
 		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam", SectionAccess.ReadWrite );
 		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused", SectionAccess.None ); // for arbitrary roms it might be necessary to allow ReadWrite access
-		public Section		io { get; set; } = new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
+		public IOSection	io { get; set; } //  new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
 		public Section		hram { get; set; } = new( 0xFF80, HRamSize, "ram", SectionAccess.ReadWrite);
 		public ByteSection	IE { get; set; } = new( 0xFFFF, val: 0, name: "IE" );
 
@@ -53,7 +61,7 @@
 				case >= 0xFEA0 and < 0xFF00: return unused;		// FEA0-FEFF 60B Not Usable
 				case >= 0xFF00 and < 0xFF80: return io;			// FF00-FF80 128B
 				case >= 0xFF80 and < 0xFFFF: return hram;		// FF80-FFFF 127B
-				case 0xFFFF: return IE;							// 0xFFFF
+				case 0xFFFF: return IE;							// 0xFFFF	 1B
 				default: throw new AddressNotMappedException( address );
 			}
 		}
@@ -83,6 +91,7 @@
 
 		public Mem( )
 		{
+			io = new( this );
         }
     }
 }

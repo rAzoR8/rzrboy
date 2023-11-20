@@ -1,6 +1,6 @@
-﻿namespace rzr
+namespace rzr
 {
-    public static class binutil
+    public static class Binutil
     {
         public static (byte low, byte high) Nibbles( this byte val ) => ((byte)( val & 0xF ), (byte)( val >> 4 ));
         public static ushort Combine( this byte msb, byte lsb ) { return (ushort)( ( msb << 8 ) | lsb ); }
@@ -15,7 +15,9 @@
         public static void SetMsb( ref ushort target, byte msb ) { target = (ushort)( ( target & 0x00FF ) | ( msb << 8 ) ); }
 
         public static bool IsBitSet( this byte value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
-        public static byte SetBit( ref byte target, byte index, bool value )
+		public static byte GetBit( this byte value, byte bit ) { return (byte)(( value & ( 1 << bit ) ) >> bit); }
+
+		public static byte SetBit( ref byte target, byte index, bool value )
         {
             if ( value )
                 target |= (byte)( 1 << index );
@@ -25,7 +27,9 @@
         }
 
         public static bool IsBitSet( this ushort value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
-        public static ushort SetBit( ref ushort target, byte index, bool value )
+		public static ushort GetBit( this ushort value, byte bit ) { return (ushort)( ( value & ( 1 << bit ) ) >> bit ); }
+
+		public static ushort SetBit( ref ushort target, byte index, bool value )
         {
             if ( value )
                 target |= (byte)( 1 << index );

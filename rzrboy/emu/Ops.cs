@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
 	public static class Ops
 	{
@@ -69,8 +69,8 @@
 		private static IEnumerable<Op> LdReg16( Reg16 dst, Reg16 src )
 		{
 			// simulate 16 bit register being written in two cycles
-			yield return ( reg, mem ) => reg[dst] = binutil.SetLsb( reg[dst], reg[src].GetLsb() );
-			yield return ( reg, mem ) => reg[dst] = binutil.SetMsb( reg[dst], reg[src].GetMsb() );
+			yield return ( reg, mem ) => reg[dst] = Binutil.SetLsb( reg[dst], reg[src].GetLsb() );
+			yield return ( reg, mem ) => reg[dst] = Binutil.SetMsb( reg[dst], reg[src].GetMsb() );
 		}
 
 		// LD r8, (r16) 2-cycle
@@ -552,8 +552,8 @@
 				byte lsb = 0; byte msb = 0;
 				yield return ( reg, mem ) => lsb = mem[reg.SP++];
 				yield return ( reg, mem ) => msb = mem[reg.SP++];
-				yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, lsb );
-				yield return ( reg, mem ) => reg.PC = binutil.SetMsb( reg.PC, msb );
+				yield return ( reg, mem ) => reg.PC = Binutil.SetLsb( reg.PC, lsb );
+				yield return ( reg, mem ) => reg.PC = Binutil.SetMsb( reg.PC, msb );
 			}
 		}
 
@@ -563,10 +563,10 @@
 			byte lsb = 0; byte msb = 0;
 			yield return ( reg, mem ) => lsb = mem[reg.SP++];
 			yield return ( reg, mem ) => msb = mem[reg.SP++];
-			yield return ( reg, mem ) => reg.PC = binutil.SetLsb( reg.PC, lsb );
+			yield return ( reg, mem ) => reg.PC = Binutil.SetLsb( reg.PC, lsb );
 			yield return ( reg, mem ) =>
 			{
-				reg.PC = binutil.SetMsb( reg.PC, msb );
+				reg.PC = Binutil.SetMsb( reg.PC, msb );
 				reg.IME = IMEState.Enabled;
 			};
 		}
@@ -599,7 +599,7 @@
 			byte lsb = 0; byte msb = 0;
 			yield return ( reg, mem ) => lsb = mem[reg.SP++];
 			yield return ( reg, mem ) => msb = mem[reg.SP++];
-			yield return ( reg, mem ) => reg[dst] = binutil.Combine( msb, lsb );
+			yield return ( reg, mem ) => reg[dst] = Binutil.Combine( msb, lsb );
 		}
 
 		// RST n, 4 cycles
@@ -608,7 +608,7 @@
 			yield return Nop;
 			yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
 			yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetLsb();
-			yield return ( reg, mem ) => reg.PC = binutil.Combine( 0x00, vec );
+			yield return ( reg, mem ) => reg.PC = Binutil.Combine( 0x00, vec );
 		}
 
 		// CCF

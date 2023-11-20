@@ -18,13 +18,13 @@
 		}
 
 		// Action button selected
-		public bool Action { get => m_value.IsBitSet( 5 ) == false; set => binutil.SetBit( ref m_value, 5, !value ); }
-		public bool Direction { get => m_value.IsBitSet( 4 ) == false; set => binutil.SetBit( ref m_value, 4, !value ); }
+		public bool Action { get => m_value.IsBitSet( 5 ) == false; set => Binutil.SetBit( ref m_value, 5, !value ); }
+		public bool Direction { get => m_value.IsBitSet( 4 ) == false; set => Binutil.SetBit( ref m_value, 4, !value ); }
 
-		public bool Down { get => m_value.IsBitSet( 3 ) == false; set => binutil.SetBit( ref m_value, 3, !value ); }
-		public bool Up { get => m_value.IsBitSet( 2 ) == false; set => binutil.SetBit( ref m_value, 2, !value ); }
-		public bool Left { get => m_value.IsBitSet( 1 ) == false; set => binutil.SetBit( ref m_value, 1, !value ); }
-		public bool Right { get => m_value.IsBitSet( 0 ) == false; set => binutil.SetBit( ref m_value, 0, !value ); }
+		public bool Down { get => m_value.IsBitSet( 3 ) == false; set => Binutil.SetBit( ref m_value, 3, !value ); }
+		public bool Up { get => m_value.IsBitSet( 2 ) == false; set => Binutil.SetBit( ref m_value, 2, !value ); }
+		public bool Left { get => m_value.IsBitSet( 1 ) == false; set => Binutil.SetBit( ref m_value, 1, !value ); }
+		public bool Right { get => m_value.IsBitSet( 0 ) == false; set => Binutil.SetBit( ref m_value, 0, !value ); }
 
 		public bool Start => Down;
 		public bool Select => Up;

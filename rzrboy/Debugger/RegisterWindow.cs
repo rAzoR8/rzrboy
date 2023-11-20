@@ -6,7 +6,13 @@ namespace dbg.ui
 	public class RegisterWindow : Window
 	{
 		private rzr.State m_state;
-		public RegisterWindow(rzr.State state) : base(label: "Registers")
+		public RegisterWindow( rzr.State state ) : base(label: "Registers")
+		{
+			Scale = 1f;
+			m_state = state;
+		}
+
+		public void SetState( rzr.State state )
 		{
 			m_state = state;
 		}
@@ -17,27 +23,21 @@ namespace dbg.ui
 			var IO = m_state.mem.io;
 			var mem = m_state.mem;
 
-			ImGui.Text($"Halted: {reg.Halted}");
-			ImGui.Text( $"Booting: {mem.Booting}" );
+			ImGui.Text($"Halted: {reg.Halted} Booting: {mem.Booting}" );
 
-			ImGui.Text($"A 0x{reg.A:x2}{reg.F:x2} F");
-			ImGui.Text($"B 0x{reg.B:x2}{reg.C:x2} C");
-			ImGui.Text($"D 0x{reg.D:x2}{reg.E:x2} E");
-			ImGui.Text($"H 0x{reg.H:x2}{reg.L:x2} L");
-			ImGui.Text($"SP 0x{reg.SP:x4}");
-			ImGui.Text($"PC 0x{reg.PC:x4}");
-			ImGui.Text($"Z {reg.Zero} Zero");
-			ImGui.Text($"N {reg.Sub} Sub"); 
-			ImGui.Text($"H {reg.HalfCarry} Half Carry"); 
-			ImGui.Text($"C {reg.Carry} Carry"); 
-			
+			ImGui.Text($"A {reg.A:X2}{reg.F:X2} F | Z {reg.F.GetBit(7)} Zero");
+			ImGui.Text($"B {reg.B:X2}{reg.C:X2} C | N {reg.F.GetBit(6)} Sub" );
+			ImGui.Text($"D {reg.D:X2}{reg.E:X2} E | H {reg.F.GetBit(5)} Half" );
+			ImGui.Text($"H {reg.H:X2}{reg.L:X2} L | C {reg.F.GetBit(4)} Carry" );
+			ImGui.Text($"SP {reg.SP:X4} PC {reg.PC:X4}" );
 
-			ImGui.Text($"IME {reg.IME}");
-			ImGui.Text($"IE {mem.IE.Value}");
+			ImGui.Text($"IE {mem.IE.Value}\tIME {reg.IME}" );
+
+			ImGui.Separator();
 
 			for( ushort i = IO.StartAddr; i < IO.StartAddr + IO.Length/2; )
 			{
-				ImGui.Text( $"0x{i:X4}: {IO[i++]} | 0x{i:X4}: {IO[i++]}" );
+				ImGui.Text( $"{i:X4}: {IO[i++]} | {i:X4}: {IO[i++]}" );
 			}
 
 			return true;

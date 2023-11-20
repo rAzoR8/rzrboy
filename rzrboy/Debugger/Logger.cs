@@ -30,6 +30,7 @@ namespace dbg.ui
 		private List<Message> m_messages = new();
 		private ListBox m_listBox;
 		private bool m_throw = false;
+		private bool m_autoScroll = false;
 
 		// Default logger window
 		public Logger(): base(ImGuiNET.ImGui.Begin, ImGuiNET.ImGui.End, label: "Logger")
@@ -55,7 +56,12 @@ namespace dbg.ui
 		protected override bool BodyFunc()
 		{
 			ImGui.Checkbox( "Re-Throw Exceptions", ref m_throw );
-			return m_listBox.Update();
+			ImGui.SameLine();
+			if( ImGui.Checkbox( "Auto Scroll", ref m_autoScroll ) )
+				m_listBox.ScrollToEnd = m_autoScroll;
+
+			var ret = m_listBox.Update();
+			return ret;
 		}
 
 		public void Log( rzr.Exception e )

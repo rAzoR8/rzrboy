@@ -55,7 +55,7 @@ namespace rzr
 
         public ushort RomChecksum
         {
-            get => binutil.Combine( msb: m_data[(ushort)HeaderOffsets.RomChecksumStart], lsb: m_data[(ushort)HeaderOffsets.RomChecksumEnd] );
+            get => Binutil.Combine( msb: m_data[(ushort)HeaderOffsets.RomChecksumStart], lsb: m_data[(ushort)HeaderOffsets.RomChecksumEnd] );
             set
             {
                 m_data[(ushort)HeaderOffsets.RomChecksumStart] = value.GetMsb();
@@ -65,7 +65,7 @@ namespace rzr
 
 		public ushort NewLicenseeCode
 		{
-			get => binutil.Combine( msb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeStart], lsb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeEnd] );
+			get => Binutil.Combine( msb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeStart], lsb: m_data[(ushort)HeaderOffsets.NewLicenseeCodeEnd] );
 			set
 			{
 				m_data[(ushort)HeaderOffsets.NewLicenseeCodeStart] = value.GetMsb();

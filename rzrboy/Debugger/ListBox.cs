@@ -1,3 +1,4 @@
+using ImGuiNET;
 using System.Numerics;
 
 namespace dbg.ui
@@ -7,6 +8,9 @@ namespace dbg.ui
 		public IEnumerable<IUiElement>? Elements{get; set;}
 		public int SelectedIndex {get; private set;} = -1;
 		public IUiElement? Selected {get; private set;} = null;
+
+		public bool ScrollToEnd { get; set; } = false;
+		public int ScrollToIndex { get; private set; } = -1;
 
 		protected override bool BeginFunc(string label)
 		{
@@ -35,9 +39,15 @@ namespace dbg.ui
 					updated = true;
 					ImGuiNET.ImGui.SetItemDefaultFocus();
 				}
+
+				if(ScrollToIndex == i && !ScrollToEnd)
+					ImGui.SetScrollHereY( 1f );
+
 				++i;
 			}
 
+			if(ScrollToEnd) 
+				ImGui.SetScrollHereY( 1f );
 			return updated;
 		}
 	}

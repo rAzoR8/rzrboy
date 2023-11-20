@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
     public enum Reg8 : byte
     {
@@ -64,15 +64,15 @@
         public bool Halted = false;
         //public bool Stopped = false;
 
-        public ushort AF { get { return A.Combine( F ); } set { binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
-        public ushort BC { get { return B.Combine( C ); } set { binutil.Split( value, out B, out C ); } }
-        public ushort DE { get { return D.Combine( E ); } set { binutil.Split( value, out D, out E ); } }
-        public ushort HL { get { return H.Combine( L ); } set { binutil.Split( value, out H, out L ); } }
+        public ushort AF { get { return A.Combine( F ); } set { Binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
+        public ushort BC { get { return B.Combine( C ); } set { Binutil.Split( value, out B, out C ); } }
+        public ushort DE { get { return D.Combine( E ); } set { Binutil.Split( value, out D, out E ); } }
+        public ushort HL { get { return H.Combine( L ); } set { Binutil.Split( value, out H, out L ); } }
 
-        public bool Zero { get => _flags.IsBitSet(7); set { binutil.SetBit( ref _flags, 7, value ); } }
-        public bool Sub { get => _flags.IsBitSet( 6 ); set { binutil.SetBit( ref _flags, 6, value ); } }
-        public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { binutil.SetBit( ref _flags, 5, value); } }
-        public bool Carry { get => _flags.IsBitSet( 4 ); set { binutil.SetBit( ref _flags, 4, value); } }
+        public bool Zero { get => _flags.IsBitSet(7); set { Binutil.SetBit( ref _flags, 7, value ); } }
+        public bool Sub { get => _flags.IsBitSet( 6 ); set { Binutil.SetBit( ref _flags, 6, value ); } }
+        public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { Binutil.SetBit( ref _flags, 5, value); } }
+        public bool Carry { get => _flags.IsBitSet( 4 ); set { Binutil.SetBit( ref _flags, 4, value); } }
         
         public void SetFlags( bool Z, bool N, bool H, bool C )
         {

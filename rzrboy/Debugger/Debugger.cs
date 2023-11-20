@@ -2,7 +2,7 @@ namespace dbg
 {
 	public class Debugger
 	{
-		public rzr.State CurrentState { get; } = new();
+		public rzr.State CurrentState { get; private set; } = new();
 		private rzr.Emu m_emu;
 
 		public Debugger()
@@ -13,6 +13,15 @@ namespace dbg
 		public void Step()
 		{
 			m_emu.Step(CurrentState, debugPrint: true);
+		}
+
+		public void Restart()
+		{
+			var rom = CurrentState.mem.mbc.Rom();
+			var boot = CurrentState.mem.boot.Data.ToArray();
+			CurrentState = new();
+			CurrentState.LoadRom(rom);
+			CurrentState.LoadBootRom(boot);
 		}
 
 		public void LoadRom(string path) {

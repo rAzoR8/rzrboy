@@ -25,8 +25,8 @@ namespace dbg.ui
 		public Gui(Debugger debugger)
 		{
 			m_debugger = debugger;
-			m_registers = new RegisterWindow(m_debugger.CurrentState);
-			m_assembly = new AssemblyWindow(m_debugger.CurrentState);
+			m_registers = new RegisterWindow( m_debugger.CurrentState );
+			m_assembly = new AssemblyWindow( m_debugger.CurrentState );
 			m_memory = new MemoryWindow();
 			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: Environment.CurrentDirectory, allowedExtensions: ".gb|.gbc");
 			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
@@ -34,7 +34,6 @@ namespace dbg.ui
 
 		public void Init()
 		{
-			//ImGui.SetWindowFontScale(2);
 			//Fonts.MonaspaceNeon.FontSize *= 2f;
 			Logger.LogMsg("Welcome to rzrBoy Studio");
 		}
@@ -42,6 +41,11 @@ namespace dbg.ui
 		private void Step()
 		{
 			m_debugger.Step();
+		}
+
+		private void Restart()
+		{
+			m_debugger.Restart();
 		}
 
 		// Update UI state
@@ -90,7 +94,7 @@ namespace dbg.ui
 
 				m_viewMenu.Update();
 
-				if(ImGui.BeginMenu( IconFonts.FontAwesome6.Play ) )
+				if(ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRightToBracket ) )
 				{
 					if(ImGui.IsItemClicked())
 						Step();
@@ -101,7 +105,18 @@ namespace dbg.ui
 
 				if( ImGui.IsKeyPressed( ImGuiKey.F11 ) ) Step();
 
-                ImGui.EndMainMenuBar();
+				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRotateRight ) )
+				{
+					if( ImGui.IsItemClicked() )
+						Restart();
+
+					ImGui.Text( "F12" );
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.IsKeyPressed( ImGuiKey.F12 ) ) Restart();
+
+				ImGui.EndMainMenuBar();
             }
 			
 			if( m_romLoadPicker.Visible )
@@ -110,6 +125,7 @@ namespace dbg.ui
 			if( m_biosLoadPicker.Visible )
 				m_biosLoadPicker.Update();
 
+			m_registers.SetState(m_debugger.CurrentState);
 			m_registers.Update();
 			m_assembly.SetState(m_debugger.CurrentState);
 			m_assembly.Update();
