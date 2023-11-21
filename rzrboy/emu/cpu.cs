@@ -2,7 +2,7 @@ namespace rzr
 {
     public class Cpu
     {
-        private static IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
+        private static IEnumerable<CpuOp>[] m_instr = new IEnumerable<CpuOp>[256];
 
 		static Cpu( ) 
         {

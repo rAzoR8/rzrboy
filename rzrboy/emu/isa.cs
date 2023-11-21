@@ -23,13 +23,13 @@ namespace rzr
         {
             public ExtInstr( ) : base( ExtOps ) {}
 
-            private static IEnumerable<Op> ExtOps()
+            private static IEnumerable<CpuOp> ExtOps()
             {
                 byte opcode = 0;
                 yield return ( reg, mem ) => opcode = mem[reg.PC++]; // fetch, 1 M-cycle
 
                 ExecInstr ext = m_extInstructions[opcode];
-                foreach ( Op op in ext.Make() )
+                foreach ( CpuOp op in ext.Make() )
                 {
                     yield return op;
                 }
@@ -168,26 +168,26 @@ namespace rzr
             this[0xE9] = JpHl;
 
             // JP NZ, a16
-            this[0xC2] = JpCcImm16( Ops.NZ );
-            this[0xD2] = JpCcImm16( Ops.NC );
+            this[0xC2] = JpCcImm16( CpuOps.NZ );
+            this[0xD2] = JpCcImm16( CpuOps.NC );
 
             // JP a16
             this[0xC3] = JpImm16;
 
             // JP Z, a16
-            this[0xCA] = JpCcImm16( Ops.Z );
-            this[0xDA] = JpCcImm16( Ops.C );
+            this[0xCA] = JpCcImm16( CpuOps.Z );
+            this[0xDA] = JpCcImm16( CpuOps.C );
 
             // JR NZ, e8
-            this[0x20] = JrCcImm( Ops.NZ );
-            this[0x30] = JrCcImm( Ops.NC );
+            this[0x20] = JrCcImm( CpuOps.NZ );
+            this[0x30] = JrCcImm( CpuOps.NC );
 
             // JR e8
             this[0x18] = JrImm;
 
             // JR Z, e8
-            this[0x28] = JrCcImm( Ops.Z );
-            this[0x38] = JrCcImm( Ops.C );
+            this[0x28] = JrCcImm( CpuOps.Z );
+            this[0x38] = JrCcImm( CpuOps.C );
 
             this[0x03] = Inc( Reg16.BC );
             this[0x13] = Inc( Reg16.DE );
@@ -220,19 +220,19 @@ namespace rzr
             this[0x3D] = Dec( Reg8.A );
 
             // CALL cc, nn
-            this[0xC4] = CallCc( Ops.NZ );
-            this[0xD4] = CallCc( Ops.NC );
-            this[0xCC] = CallCc( Ops.Z );
-            this[0xDC] = CallCc( Ops.C );
+            this[0xC4] = CallCc( CpuOps.NZ );
+            this[0xD4] = CallCc( CpuOps.NC );
+            this[0xCC] = CallCc( CpuOps.Z );
+            this[0xDC] = CallCc( CpuOps.C );
 
             // CALL nn
             this[0xCD] = Call;
 
             // RET cc
-            this[0xC0] = RetCc( Ops.NZ );
-            this[0xD0] = RetCc( Ops.NC );
-            this[0xC8] = RetCc( Ops.Z );
-            this[0xD8] = RetCc( Ops.C );
+            this[0xC0] = RetCc( CpuOps.NZ );
+            this[0xD0] = RetCc( CpuOps.NC );
+            this[0xC8] = RetCc( CpuOps.Z );
+            this[0xD8] = RetCc( CpuOps.C );
 
             // RET
             this[0xC9] = Ret;
@@ -430,48 +430,48 @@ namespace rzr
         // ###################################################
 
         // INVALID
-        private static readonly ExecInstr Invalid = Ops.Nop;
+        private static readonly ExecInstr Invalid = CpuOps.Nop;
 
         // NOP
-        private static readonly ExecInstr Nop = Ops.Nop;
+        private static readonly ExecInstr Nop = CpuOps.Nop;
 
         // HALT
-        private static readonly ExecInstr Halt = Ops.Halt;
+        private static readonly ExecInstr Halt = CpuOps.Halt;
 
         // STOP
-        private static readonly ExecInstr Stop = new ( Ops.Stop );
+        private static readonly ExecInstr Stop = new ( CpuOps.Stop );
 
         // INC r8
-        private static ExecInstr Inc( Reg8 dst ) => Ops.Inc( dst );
+        private static ExecInstr Inc( Reg8 dst ) => CpuOps.Inc( dst );
         // INC r16
-        private static ExecInstr Inc( Reg16 dst ) => new ( () => Ops.Inc( dst ) );
+        private static ExecInstr Inc( Reg16 dst ) => new ( () => CpuOps.Inc( dst ) );
         // INC (HL)
-        private static readonly ExecInstr IncHl = new ( Ops.IncHl );
+        private static readonly ExecInstr IncHl = new ( CpuOps.IncHl );
 
         // INC r8
-        private static ExecInstr Dec( Reg8 dst ) => Ops.Dec( dst );
+        private static ExecInstr Dec( Reg8 dst ) => CpuOps.Dec( dst );
         // INC r16
-        private static ExecInstr Dec( Reg16 dst ) => new ( () => Ops.Dec( dst ) );
+        private static ExecInstr Dec( Reg16 dst ) => new ( () => CpuOps.Dec( dst ) );
         // INC (HL)
-        private static readonly ExecInstr DecHl = new ( Ops.DecHl );
+        private static readonly ExecInstr DecHl = new ( CpuOps.DecHl );
 
         // BIT i, [r8, (HL)]
-        private static ExecInstr Bit( byte bit, RegX target ) => new ( () => Ops.Bit( bit, target ) );
+        private static ExecInstr Bit( byte bit, RegX target ) => new ( () => CpuOps.Bit( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static ExecInstr Set( byte bit, RegX target ) => new ( () => Ops.Set( bit, target ) );
+        private static ExecInstr Set( byte bit, RegX target ) => new ( () => CpuOps.Set( bit, target ) );
 
         // SET i, [r8, (HL)]
-        private static ExecInstr Res( byte bit, RegX target ) => new ( () => Ops.Res( bit, target ) );
+        private static ExecInstr Res( byte bit, RegX target ) => new ( () => CpuOps.Res( bit, target ) );
 
         // XOR A, [r8, (HL)]
-        private static ExecInstr Xor( RegX target ) => new ( () => Ops.Xor( target ) );
+        private static ExecInstr Xor( RegX target ) => new ( () => CpuOps.Xor( target ) );
 
         // XOR A, db8
-        private static readonly ExecInstr XorImm8 = new ( Ops.XorImm8 );
+        private static readonly ExecInstr XorImm8 = new ( CpuOps.XorImm8 );
 
         // LD r8, db8 LD r16, db16
-        private static ExecInstr LdImm( RegX dst ) => new ( () => Ops.LdImm( dst ) );
+        private static ExecInstr LdImm( RegX dst ) => new ( () => CpuOps.LdImm( dst ) );
 
         /// <summary>
         /// LD r8, r8' 
@@ -482,166 +482,166 @@ namespace rzr
         /// <param name="dst"></param>
         /// <param name="src"></param>
         /// <returns></returns>
-        private static ExecInstr Ld( RegX dst, RegX src ) => new( () => Ops.LdRegOrAddr( dst, src ) );
+        private static ExecInstr Ld( RegX dst, RegX src ) => new( () => CpuOps.LdRegOrAddr( dst, src ) );
 
         // LD (HL+), A
-        private static readonly ExecInstr LdHlPlusA = new ( Ops.LdHlPlusA );
+        private static readonly ExecInstr LdHlPlusA = new ( CpuOps.LdHlPlusA );
         // LD (HL-), A
-        private static readonly ExecInstr LdHlMinusA = new ( Ops.LdHlMinusA );
+        private static readonly ExecInstr LdHlMinusA = new ( CpuOps.LdHlMinusA );
 
         // LD A, (HL+)
-        private static readonly ExecInstr LdAHlPlus = new ( Ops.LdAHlPlus );
+        private static readonly ExecInstr LdAHlPlus = new ( CpuOps.LdAHlPlus );
         // LD A, (HL-)
-        private static readonly ExecInstr LdAHlMinus = new ( Ops.LdAHlMinus );
+        private static readonly ExecInstr LdAHlMinus = new ( CpuOps.LdAHlMinus );
 
         // LD A, (0xFF00+C)
-        private static readonly ExecInstr LdhAc = new ( Ops.LdhAc );
+        private static readonly ExecInstr LdhAc = new ( CpuOps.LdhAc );
 
         // LD (0xFF00+C), A
-        private static readonly ExecInstr LdhCa = new ( Ops.LdhCa );
+        private static readonly ExecInstr LdhCa = new ( CpuOps.LdhCa );
 
         // LD A, (0xFF00+db8)
-        private static readonly ExecInstr LdhAImm = new ( Ops.LdhAImm );
+        private static readonly ExecInstr LdhAImm = new ( CpuOps.LdhAImm );
 
         // LD (0xFF00+db8), A
-        private static readonly ExecInstr LdhImmA = new ( Ops.LdhImmA );
+        private static readonly ExecInstr LdhImmA = new ( CpuOps.LdhImmA );
 
         // LD (a16), SP
-        private static readonly ExecInstr LdImm16Sp = new ( Ops.LdImm16Sp );
+        private static readonly ExecInstr LdImm16Sp = new ( CpuOps.LdImm16Sp );
 
         // LD (a16), A
-        private static readonly ExecInstr LdImmAddrA = new ( Ops.LdImmAddrA ) ;
+        private static readonly ExecInstr LdImmAddrA = new ( CpuOps.LdImmAddrA ) ;
 
         // LD A, (a16)
-        private static readonly ExecInstr LdAImmAddr = new ( Ops.LdAImmAddr );
+        private static readonly ExecInstr LdAImmAddr = new ( CpuOps.LdAImmAddr );
 
         // LD HL,SP + r8 - 3 cycles
-        private static readonly ExecInstr LdHlSpR8 = new ( Ops.LdHlSpR8 );
+        private static readonly ExecInstr LdHlSpR8 = new ( CpuOps.LdHlSpR8 );
 
 
         // ADD A, [r8 (HL)]
-        private static ExecInstr Add( RegX src ) => new ( () => Ops.Add( src ) );
+        private static ExecInstr Add( RegX src ) => new ( () => CpuOps.Add( src ) );
 
         // ADD HL, r16
-        private static ExecInstr AddHl( Reg16 src ) => new ( () => Ops.AddHl( src ) ) ;
+        private static ExecInstr AddHl( Reg16 src ) => new ( () => CpuOps.AddHl( src ) ) ;
 
         // ADD A, db8
-        private static readonly ExecInstr AddImm8 = new ( () => Ops.AddImm8( carry: 0 ));
+        private static readonly ExecInstr AddImm8 = new ( () => CpuOps.AddImm8( carry: 0 ));
 
         // ADC A, db8
-        private static readonly ExecInstr AdcImm8 = new ( () => Ops.AddImm8( carry: 1 ) ) ;
+        private static readonly ExecInstr AdcImm8 = new ( () => CpuOps.AddImm8( carry: 1 ) ) ;
         
         // ADD SP, R8
-        private static readonly ExecInstr AddSpR8 = new ( Ops.AddSpR8 );
+        private static readonly ExecInstr AddSpR8 = new ( CpuOps.AddSpR8 );
 
         // ADD A, [r8 (HL)]
-        private static ExecInstr Adc( RegX src ) => new ( () => Ops.Add( src, carry: 1 ) );
+        private static ExecInstr Adc( RegX src ) => new ( () => CpuOps.Add( src, carry: 1 ) );
 
 
         // SUB A, [r8 (HL)]
-        private static ExecInstr Sub( RegX src ) => new ( () => Ops.Sub( src ) );
+        private static ExecInstr Sub( RegX src ) => new ( () => CpuOps.Sub( src ) );
 
         // SUB A, db8
-        private static readonly ExecInstr SubImm8 = new ( () => Ops.SubImm8( carry: 0 ) );
+        private static readonly ExecInstr SubImm8 = new ( () => CpuOps.SubImm8( carry: 0 ) );
 
         // SBC A, [r8 (HL)]
-        private static ExecInstr Sbc( RegX src ) => new ( () => Ops.Sub( src, carry: 1 ) );
+        private static ExecInstr Sbc( RegX src ) => new ( () => CpuOps.Sub( src, carry: 1 ) );
 
         // SBC A, db8
-        private static readonly ExecInstr SbcImm8 = new ( () => Ops.SubImm8( carry: 1 ) );
+        private static readonly ExecInstr SbcImm8 = new ( () => CpuOps.SubImm8( carry: 1 ) );
 
         // AND A, [r8 (HL)]
-        private static ExecInstr And( RegX src ) => new ( () => Ops.And( src ) );
+        private static ExecInstr And( RegX src ) => new ( () => CpuOps.And( src ) );
 
         // AND A, db8
-        private static readonly ExecInstr AndImm8 = new ( Ops.AndImm8 );
+        private static readonly ExecInstr AndImm8 = new ( CpuOps.AndImm8 );
 
         // OR A, [r8 (HL)]
-        private static ExecInstr Or( RegX src ) => new ( () => Ops.Or( src ) );
+        private static ExecInstr Or( RegX src ) => new ( () => CpuOps.Or( src ) );
 
         // OR A, db8
-        private static readonly ExecInstr OrImm8 = new ( Ops.OrImm8 );
+        private static readonly ExecInstr OrImm8 = new ( CpuOps.OrImm8 );
 
         // CP A, [r8 (HL)]
-        private static ExecInstr Cp( RegX src ) => new ( () => Ops.Cp( src ) );
+        private static ExecInstr Cp( RegX src ) => new ( () => CpuOps.Cp( src ) );
 
         // CP A, db8
-        private static readonly ExecInstr CpImm8 = new ( Ops.CpImm8 ) ;
+        private static readonly ExecInstr CpImm8 = new ( CpuOps.CpImm8 ) ;
 
         // JP HL
-        private static readonly ExecInstr JpHl = Ops.JpHl;
+        private static readonly ExecInstr JpHl = CpuOps.JpHl;
 
         // JP a16
-        private static readonly ExecInstr JpImm16 = new ( () => Ops.JpImm16());
+        private static readonly ExecInstr JpImm16 = new ( () => CpuOps.JpImm16());
 
         // JP cc, a16
-        private static ExecInstr JpCcImm16( Ops.Condition cc ) => new ( () => Ops.JpImm16( cc ) );
+        private static ExecInstr JpCcImm16( CpuOps.Condition cc ) => new ( () => CpuOps.JpImm16( cc ) );
 
         // JR e8
-        private static readonly ExecInstr JrImm = new ( () => Ops.JrImm() );
+        private static readonly ExecInstr JrImm = new ( () => CpuOps.JrImm() );
 
         // JR cc, e8
-        private static ExecInstr JrCcImm( Ops.Condition cc ) => new ( () => Ops.JrImm( cc ) );
+        private static ExecInstr JrCcImm( CpuOps.Condition cc ) => new ( () => CpuOps.JrImm( cc ) );
 
         // CALL nn
-        private static readonly ExecInstr Call = new ( () => Ops.Call() ) ;
+        private static readonly ExecInstr Call = new ( () => CpuOps.Call() ) ;
 
         // CALL cc, nn
-        private static ExecInstr CallCc( Ops.Condition cc ) => new ( () => Ops.Call( cc ) );
+        private static ExecInstr CallCc( CpuOps.Condition cc ) => new ( () => CpuOps.Call( cc ) );
 
         // RETI
-        private static readonly ExecInstr Reti = new ( Ops.Reti );
+        private static readonly ExecInstr Reti = new ( CpuOps.Reti );
 
         // EI
-        private static readonly ExecInstr Ei = new ( Ops.Ei  );
+        private static readonly ExecInstr Ei = new ( CpuOps.Ei  );
 
         // DI
-        private static readonly ExecInstr Di = new ( Ops.Di );
+        private static readonly ExecInstr Di = new ( CpuOps.Di );
 
         // RET
-        private static readonly ExecInstr Ret = new ( () => Ops.Ret() );
+        private static readonly ExecInstr Ret = new ( () => CpuOps.Ret() );
 
         // RET cc
-        private static ExecInstr RetCc( Ops.Condition cc ) => new ( () => Ops.Ret( cc ) );
+        private static ExecInstr RetCc( CpuOps.Condition cc ) => new ( () => CpuOps.Ret( cc ) );
 
         // PUSH r16
-        private static ExecInstr Push( Reg16 src ) => new ( () => Ops.Push( src ) );
+        private static ExecInstr Push( Reg16 src ) => new ( () => CpuOps.Push( src ) );
 
         // POP r16
-        private static ExecInstr Pop( Reg16 dst ) => new ( () => Ops.Pop( dst ) );
+        private static ExecInstr Pop( Reg16 dst ) => new ( () => CpuOps.Pop( dst ) );
 
         // RST vec 0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
-        private static ExecInstr Rst( byte vec ) => new ( () => Ops.Rst( vec ) );
+        private static ExecInstr Rst( byte vec ) => new ( () => CpuOps.Rst( vec ) );
 
         // CCF
-        private static readonly ExecInstr Ccf = new ( Ops.Ccf );
+        private static readonly ExecInstr Ccf = new ( CpuOps.Ccf );
         // SCF
-        private static readonly ExecInstr Scf = new ( Ops.Scf );
+        private static readonly ExecInstr Scf = new ( CpuOps.Scf );
         // SCF
-        private static readonly ExecInstr Cpl = new ( Ops.Cpl );
+        private static readonly ExecInstr Cpl = new ( CpuOps.Cpl );
         // DAA
-        private static readonly ExecInstr Daa = new ( Ops.Daa );
+        private static readonly ExecInstr Daa = new ( CpuOps.Daa );
 
         // RLC
-        private static ExecInstr Rlc( RegX dst ) => new ( () => Ops.Rlc( dst ) );
+        private static ExecInstr Rlc( RegX dst ) => new ( () => CpuOps.Rlc( dst ) );
         // RRC
-        private static ExecInstr Rrc( RegX dst ) => new ( () => Ops.Rrc( dst ));
+        private static ExecInstr Rrc( RegX dst ) => new ( () => CpuOps.Rrc( dst ));
 
         // RL
-        private static ExecInstr Rl( RegX dst ) => new ( () => Ops.Rl( dst ));
+        private static ExecInstr Rl( RegX dst ) => new ( () => CpuOps.Rl( dst ));
         // RR
-        private static ExecInstr Rr( RegX dst ) => new ( () => Ops.Rr( dst ) );
+        private static ExecInstr Rr( RegX dst ) => new ( () => CpuOps.Rr( dst ) );
 
         // SLA
-        private static ExecInstr Sla( RegX dst ) => new ( () => Ops.Sla( dst ) );
+        private static ExecInstr Sla( RegX dst ) => new ( () => CpuOps.Sla( dst ) );
         // SRA
-        private static ExecInstr Sra( RegX dst ) => new ( () => Ops.Sra( dst ));
+        private static ExecInstr Sra( RegX dst ) => new ( () => CpuOps.Sra( dst ));
 
         // SWAP
-        private static ExecInstr Swap( RegX dst ) => new ( () => Ops.Swap( dst ) );
+        private static ExecInstr Swap( RegX dst ) => new ( () => CpuOps.Swap( dst ) );
 
         // SRL
-        private static ExecInstr Srl( RegX dst ) => new ( () => Ops.Srl( dst )) ;
+        private static ExecInstr Srl( RegX dst ) => new ( () => CpuOps.Srl( dst )) ;
 
 		public IEnumerator<ExecInstr> GetEnumerator()
 		{

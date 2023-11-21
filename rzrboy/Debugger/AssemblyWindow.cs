@@ -19,33 +19,6 @@ namespace dbg.ui
 			m_state = state;
 		}
 
-		private class Instruction : IUiElement
-		{
-			public ushort PC = 0xFFFF;
-			public Instruction? Prev = null;
-			public rzr.State State;
-
-			public Instruction( Instruction prev, rzr.State state )
-			{
-				Prev = prev;
-				State = state;
-			}
-
-			public Instruction( ushort pc, rzr.State state )
-			{
-				PC = pc;
-				State = state;
-			}
-
-			public ushort PCnext;
-			public bool Update()
-			{
-				
-
-				return true;
-			}
-		}
-
 		// bank idx -> sorted list of PCs we've seen
 		private Dictionary<int, List<ushort>> m_bankPCs = new();
 

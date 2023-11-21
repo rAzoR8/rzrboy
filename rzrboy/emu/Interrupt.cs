@@ -32,7 +32,7 @@ namespace rzr
 		/// Handle one pending interrupt, 5 cycles
 		/// </summary>
 		/// <returns></returns>
-		public static IEnumerable<Op> HandlePending()
+		public static IEnumerable<CpuOp> HandlePending()
         {
             byte IF = 0; byte IE = 0;
             yield return ( reg, mem ) => IF = mem[0xFF0F];

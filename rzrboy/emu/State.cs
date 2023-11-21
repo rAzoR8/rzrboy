@@ -16,7 +16,7 @@ namespace rzr
 		public byte prevInstrCycles { get; set; } = 1; // number of non-fetch cycles spend on the previous instructions
 		public byte curInstrCycle { get; set; } = 1; // number of Non-fetch cycles already spent on executing the current instruction
 
-		public IEnumerator<Op>? curOp = null;
+		public IEnumerator<CpuOp>? curOp = null;
 
 		public State()
 		{

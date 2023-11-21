@@ -1,14 +1,14 @@
 namespace rzr
 {
-	public static class Ops
+	public static class CpuOps
 	{
 		/// <summary>
 		/// OPERATIONS
 		/// </summary>
 
-		public static readonly Op Nop = ( reg, mem ) => { };
+		public static readonly CpuOp Nop = ( reg, mem ) => { };
 
-		public static readonly Op Halt = ( reg, mem ) =>
+		public static readonly CpuOp Halt = ( reg, mem ) =>
 		{
 			byte IF = mem[0xFF0F];
 			byte IE = mem[0xFFFF];
@@ -22,7 +22,7 @@ namespace rzr
 			reg.Halted = true;
 		};
 
-		public static IEnumerable<Op> Stop()
+		public static IEnumerable<CpuOp> Stop()
 		{
 			byte IE = 0; byte IF = 0; bool IME = false;
 
@@ -41,7 +41,7 @@ namespace rzr
 		}
 
 		// read next byte from mem[pc++], 2 m-cycles
-		private static IEnumerable<Op> LdImm8( Reg8 target )
+		private static IEnumerable<CpuOp> LdImm8( Reg8 target )
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg.PC++;
@@ -49,7 +49,7 @@ namespace rzr
 		}
 
 		// read two bytes from instruction stream, write to 16bit reg: 3 m-cycles
-		private static IEnumerable<Op> LdImm16( Reg16 target )
+		private static IEnumerable<CpuOp> LdImm16( Reg16 target )
 		{
 			ushort val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -57,16 +57,16 @@ namespace rzr
 			yield return ( reg, mem ) => reg[target] = val;
 		}
 
-		public static IEnumerable<Op> LdImm( RegX target ) => target.Is8() ? LdImm8( target.To8() ) : LdImm16( target.To16() );
+		public static IEnumerable<CpuOp> LdImm( RegX target ) => target.Is8() ? LdImm8( target.To8() ) : LdImm16( target.To16() );
 
 		// LD r8, r8' 1-cycle
-		private static IEnumerable<Op> LdReg8( Reg8 dst, Reg8 src )
+		private static IEnumerable<CpuOp> LdReg8( Reg8 dst, Reg8 src )
 		{
 			yield return ( reg, mem ) => { reg[dst] = reg[src]; };
 		}
 
 		// LD r16, r16' 2-cycles
-		private static IEnumerable<Op> LdReg16( Reg16 dst, Reg16 src )
+		private static IEnumerable<CpuOp> LdReg16( Reg16 dst, Reg16 src )
 		{
 			// simulate 16 bit register being written in two cycles
 			yield return ( reg, mem ) => reg[dst] = Binutil.SetLsb( reg[dst], reg[src].GetLsb() );
@@ -74,7 +74,7 @@ namespace rzr
 		}
 
 		// LD r8, (r16) 2-cycle
-		private static IEnumerable<Op> LdAddr( Reg8 dst, Reg16 src_addr )
+		private static IEnumerable<CpuOp> LdAddr( Reg8 dst, Reg16 src_addr )
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg[src_addr];
@@ -82,14 +82,14 @@ namespace rzr
 		}
 
 		// LD (r16), r8 2-cycle
-		private static IEnumerable<Op> LdAddr( Reg16 dst_addr, Reg8 src )
+		private static IEnumerable<CpuOp> LdAddr( Reg16 dst_addr, Reg8 src )
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg[dst_addr];
 			yield return ( reg, mem ) => mem[address] = reg[src];
 		}
 
-		public static IEnumerable<Op> LdRegOrAddr( RegX dst, RegX src )
+		public static IEnumerable<CpuOp> LdRegOrAddr( RegX dst, RegX src )
 		{
 			if( dst.Is8() && src.Is8() ) return LdReg8( dst.To8(), src.To8() );
 			if( dst.Is16() && src.Is16() ) return LdReg16( dst.To16(), src.To16() );
@@ -98,7 +98,7 @@ namespace rzr
 		}
 
 		// LD (HL+), A
-		public static IEnumerable<Op> LdHlPlusA()
+		public static IEnumerable<CpuOp> LdHlPlusA()
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg.HL++;
@@ -106,7 +106,7 @@ namespace rzr
 		}
 
 		// LD (HL-), A
-		public static IEnumerable<Op> LdHlMinusA()
+		public static IEnumerable<CpuOp> LdHlMinusA()
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg.HL--;
@@ -114,7 +114,7 @@ namespace rzr
 		}
 
 		// LD A, (HL+)
-		public static IEnumerable<Op> LdAHlPlus()
+		public static IEnumerable<CpuOp> LdAHlPlus()
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg.HL++;
@@ -122,7 +122,7 @@ namespace rzr
 		}
 
 		// LD A, (HL-)
-		public static IEnumerable<Op> LdAHlMinus()
+		public static IEnumerable<CpuOp> LdAHlMinus()
 		{
 			ushort address = 0;
 			yield return ( reg, mem ) => address = reg.HL--;
@@ -130,7 +130,7 @@ namespace rzr
 		}
 
 		// LD A, (0xFF00+C)
-		public static IEnumerable<Op> LdhAc()
+		public static IEnumerable<CpuOp> LdhAc()
 		{
 			ushort address = 0xFF00;
 			yield return ( reg, mem ) => { address += reg.C; };
@@ -138,7 +138,7 @@ namespace rzr
 		}
 
 		// LD (0xFF00+C), A
-		public static IEnumerable<Op> LdhCa()
+		public static IEnumerable<CpuOp> LdhCa()
 		{
 			ushort address = 0xFF00;
 			yield return ( reg, mem ) => { address += reg.C; };
@@ -146,7 +146,7 @@ namespace rzr
 		}
 
 		// LD A, (0xFF00+db8)
-		public static IEnumerable<Op> LdhAImm()
+		public static IEnumerable<CpuOp> LdhAImm()
 		{
 			byte lsb = 0; ushort address = 0xFF00;
 			yield return ( reg, mem ) => lsb = mem[reg.PC++];
@@ -155,7 +155,7 @@ namespace rzr
 		}
 
 		// LD (0xFF00+db8), A
-		public static IEnumerable<Op> LdhImmA()
+		public static IEnumerable<CpuOp> LdhImmA()
 		{
 			byte lsb = 0; ushort address = 0xFF00;
 			yield return ( reg, mem ) => lsb = mem[reg.PC++];
@@ -164,7 +164,7 @@ namespace rzr
 		}
 
 		// LD (a16), SP
-		public static IEnumerable<Op> LdImm16Sp()
+		public static IEnumerable<CpuOp> LdImm16Sp()
 		{
 			ushort nn = 0;
 			yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -174,7 +174,7 @@ namespace rzr
 		}
 
 		// LD HL,SP + r8 - 3 cycles
-		public static IEnumerable<Op> LdHlSpR8()
+		public static IEnumerable<CpuOp> LdHlSpR8()
 		{
 			byte rhs = 0; ushort res = 0;
 			yield return ( reg, mem ) => rhs = mem[reg.PC++];
@@ -183,7 +183,7 @@ namespace rzr
 		}
 
 		// LD (a16), A - 4 cycles
-		public static IEnumerable<Op> LdImmAddrA( )
+		public static IEnumerable<CpuOp> LdImmAddrA( )
 		{
 			ushort nn = 0;
 			yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -193,7 +193,7 @@ namespace rzr
 		}
 
 		// LD A, (a16) - 4 cycles
-		public static IEnumerable<Op> LdAImmAddr()
+		public static IEnumerable<CpuOp> LdAImmAddr()
 		{
 			ushort nn = 0;
 			yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -216,7 +216,7 @@ namespace rzr
 		}
 
 		// ADD|ADC A, [r8, (HL)] 1-2 cycles
-		public static IEnumerable<Op> Add( RegX src, byte carry = 0 )
+		public static IEnumerable<CpuOp> Add( RegX src, byte carry = 0 )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -240,7 +240,7 @@ namespace rzr
 		} 
 
 		// ADD SP, R8 - 4 cycles
-		public static IEnumerable<Op> AddSpR8()
+		public static IEnumerable<CpuOp> AddSpR8()
 		{
 			byte rhs = 0; ushort res = 0;
 			yield return ( reg, mem ) => rhs = mem[reg.PC++];
@@ -250,7 +250,7 @@ namespace rzr
 		}
 
 		// ADD A, db8 2-cycle
-		public static IEnumerable<Op> AddImm8( byte carry = 0 )
+		public static IEnumerable<CpuOp> AddImm8( byte carry = 0 )
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -258,7 +258,7 @@ namespace rzr
 		}
 
 		// ADD HL, r16 2 cycles
-		public static IEnumerable<Op> AddHl( Reg16 src )
+		public static IEnumerable<CpuOp> AddHl( Reg16 src )
 		{
 			yield return Nop;
 			yield return ( Reg reg, ISection mem ) =>
@@ -287,7 +287,7 @@ namespace rzr
 		}
 
 		// SUB|SBC A, [r8, (HL)] 1-2 cycles
-		public static IEnumerable<Op> Sub( RegX src, byte carry = 0 )
+		public static IEnumerable<CpuOp> Sub( RegX src, byte carry = 0 )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -299,7 +299,7 @@ namespace rzr
 		}
 
 		// SUB|SBC A, db8 2-cycle
-		public static IEnumerable<Op> SubImm8( byte carry = 0 )
+		public static IEnumerable<CpuOp> SubImm8( byte carry = 0 )
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -307,7 +307,7 @@ namespace rzr
 		}
 
 		// AND A, [r8, (HL)] 1-2 -cycle
-		public static IEnumerable<Op> And( RegX src )
+		public static IEnumerable<CpuOp> And( RegX src )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -319,7 +319,7 @@ namespace rzr
 		}
 
 		// AND A, db8 2-cycle
-		public static IEnumerable<Op> AndImm8()
+		public static IEnumerable<CpuOp> AndImm8()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -327,7 +327,7 @@ namespace rzr
 		}
 
 		// Or A, [r8, (HL)] 1-2 -cycle
-		public static IEnumerable<Op> Or( RegX src )
+		public static IEnumerable<CpuOp> Or( RegX src )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -339,7 +339,7 @@ namespace rzr
 		}
 
 		// Or A, db8 2-cycle
-		public static IEnumerable<Op> OrImm8()
+		public static IEnumerable<CpuOp> OrImm8()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -356,7 +356,7 @@ namespace rzr
 		}
 
 		// CP A, [r8, (HL)] 1-2 -cycle
-		public static IEnumerable<Op> Cp( RegX src )
+		public static IEnumerable<CpuOp> Cp( RegX src )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -368,7 +368,7 @@ namespace rzr
 		}
 
 		// Or A, db8 2-cycle
-		public static IEnumerable<Op> CpImm8()
+		public static IEnumerable<CpuOp> CpImm8()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -376,7 +376,7 @@ namespace rzr
 		}
 
 		// JP HL 1 cycle
-		public static readonly Op JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
+		public static readonly CpuOp JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
 
 		public delegate bool Condition( Reg reg );
 		public readonly static Condition NZ = ( Reg reg ) => !reg.Zero;
@@ -385,7 +385,7 @@ namespace rzr
 		public readonly static Condition C = ( Reg reg ) => reg.Carry;
 
 		// JP cc, a16 3/4 cycles
-		public static IEnumerable<Op> JpImm16( Condition? cc = null )
+		public static IEnumerable<CpuOp> JpImm16( Condition? cc = null )
 		{
 			ushort nn = 0; bool takeBranch = true;
 			yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -398,7 +398,7 @@ namespace rzr
 		}
 
 		// JR cc, e8 2/3 ycles
-		public static IEnumerable<Op> JrImm( Condition? cc = null )
+		public static IEnumerable<CpuOp> JrImm( Condition? cc = null )
 		{
 			byte offset = 0; bool takeBranch = true;
 			yield return ( reg, mem ) => offset = mem[reg.PC++];
@@ -410,7 +410,7 @@ namespace rzr
 		}
 
 		// XOR A, [r8, (HL)]  1-2 cycles
-		public static IEnumerable<Op> Xor( RegX src )
+		public static IEnumerable<CpuOp> Xor( RegX src )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -422,7 +422,7 @@ namespace rzr
 		}
 
 		// XOR A, [r8, (HL)]  1-2 cycles
-		public static IEnumerable<Op> XorImm8()
+		public static IEnumerable<CpuOp> XorImm8()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.PC++];
@@ -430,7 +430,7 @@ namespace rzr
 		}
 
 		// BIT i, [r8, (HL)] 1-2 -cycle
-		public static IEnumerable<Op> Bit( byte bit, RegX src )
+		public static IEnumerable<CpuOp> Bit( byte bit, RegX src )
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -443,7 +443,7 @@ namespace rzr
 			};
 		}
 
-		public static IEnumerable<Op> Set( byte bit, RegX target )
+		public static IEnumerable<CpuOp> Set( byte bit, RegX target )
 		{
 			byte val = 0;
 			if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -455,7 +455,7 @@ namespace rzr
 			if( target.Is16() ) yield return ( reg, mem ) => mem[reg.HL] = val;
 		}
 
-		public static IEnumerable<Op> Res( byte bit, RegX target )
+		public static IEnumerable<CpuOp> Res( byte bit, RegX target )
 		{
 			byte val = 0;
 			if( target.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
@@ -468,7 +468,7 @@ namespace rzr
 		}
 
 		// INC r16: 16bit alu op => 2 cycles
-		public static IEnumerable<Op> Inc( Reg16 dst )
+		public static IEnumerable<CpuOp> Inc( Reg16 dst )
 		{
 			yield return Nop;
 			yield return ( reg, mem ) => { reg[dst] += 1; };
@@ -484,10 +484,10 @@ namespace rzr
 		}
 
 		// INC r8: 1 cycle
-		public static Op Inc( Reg8 dst ) => ( reg, mem ) => reg[dst] = Inc8Helper( reg[dst], reg );
+		public static CpuOp Inc( Reg8 dst ) => ( reg, mem ) => reg[dst] = Inc8Helper( reg[dst], reg );
 
 		// INC (HL): 3 cycles
-		public static IEnumerable<Op> IncHl()
+		public static IEnumerable<CpuOp> IncHl()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.HL];
@@ -496,7 +496,7 @@ namespace rzr
 		}
 
 		// DEC r16: 16bit alu op => 2 cycles
-		public static IEnumerable<Op> Dec( Reg16 dst )
+		public static IEnumerable<CpuOp> Dec( Reg16 dst )
 		{
 			yield return Nop;
 			yield return ( reg, mem ) => { reg[dst] -= 1; };
@@ -512,10 +512,10 @@ namespace rzr
 		}
 
 		// DEC r8: 1 cycle
-		public static Op Dec( Reg8 dst ) => ( reg, mem ) => reg[dst] = Dec8Helper( reg[dst], reg );
+		public static CpuOp Dec( Reg8 dst ) => ( reg, mem ) => reg[dst] = Dec8Helper( reg[dst], reg );
 
 		// DEC (HL): 3 cycles
-		public static IEnumerable<Op> DecHl()
+		public static IEnumerable<CpuOp> DecHl()
 		{
 			byte val = 0;
 			yield return ( reg, mem ) => val = mem[reg.HL];
@@ -524,7 +524,7 @@ namespace rzr
 		}
 
 		// CALL cc, nn, 3-6 cycles
-		public static IEnumerable<Op> Call( Condition? cc = null )
+		public static IEnumerable<CpuOp> Call( Condition? cc = null )
 		{
 			ushort nn = 0; bool takeBranch = true;
 			yield return ( reg, mem ) => nn = mem[reg.PC++];
@@ -539,7 +539,7 @@ namespace rzr
 		}
 
 		// RET, 4 cycles Ret cc 2/5 cycles
-		public static IEnumerable<Op> Ret( Condition? cc = null )
+		public static IEnumerable<CpuOp> Ret( Condition? cc = null )
 		{
 			bool takeBranch = true;
 			yield return ( reg, mem ) => takeBranch = cc == null || cc( reg );
@@ -558,7 +558,7 @@ namespace rzr
 		}
 
 		// RETI 4 cycles
-		public static IEnumerable<Op> Reti()
+		public static IEnumerable<CpuOp> Reti()
 		{
 			byte lsb = 0; byte msb = 0;
 			yield return ( reg, mem ) => lsb = mem[reg.SP++];
@@ -572,19 +572,19 @@ namespace rzr
 		}
 
 		// EI 1 + 1' cycles
-		public static IEnumerable<Op> Ei()
+		public static IEnumerable<CpuOp> Ei()
 		{
 			yield return ( reg, mem ) => reg.IME = IMEState.RequestEnabled;
 		}
 
 		// DI 1 cycle
-		public static IEnumerable<Op> Di()
+		public static IEnumerable<CpuOp> Di()
 		{
 			yield return ( reg, mem ) => reg.IME = IMEState.Disabled;
 		}
 
 		// PUSH r16 4-cycle
-		public static IEnumerable<Op> Push( Reg16 src )
+		public static IEnumerable<CpuOp> Push( Reg16 src )
 		{
 			byte lsb = 0; byte msb = 0;
 			yield return ( reg, mem ) => msb = reg[src].GetMsb();
@@ -594,7 +594,7 @@ namespace rzr
 		}
 
 		// POP r16 3-cycle
-		public static IEnumerable<Op> Pop( Reg16 dst )
+		public static IEnumerable<CpuOp> Pop( Reg16 dst )
 		{
 			byte lsb = 0; byte msb = 0;
 			yield return ( reg, mem ) => lsb = mem[reg.SP++];
@@ -603,7 +603,7 @@ namespace rzr
 		}
 
 		// RST n, 4 cycles
-		public static IEnumerable<Op> Rst( byte vec )
+		public static IEnumerable<CpuOp> Rst( byte vec )
 		{
 			yield return Nop;
 			yield return ( reg, mem ) => mem[--reg.SP] = reg.PC.GetMsb();
@@ -612,25 +612,25 @@ namespace rzr
 		}
 
 		// CCF
-		public static IEnumerable<Op> Ccf()
+		public static IEnumerable<CpuOp> Ccf()
 		{
 			yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: !reg.Carry );
 		}
 
 		// SCF
-		public static IEnumerable<Op> Scf()
+		public static IEnumerable<CpuOp> Scf()
 		{
 			yield return ( reg, mem ) => reg.SetFlags( Z: reg.Zero, N: false, H: false, C: true );
 		}
 
 		// SCF
-		public static IEnumerable<Op> Cpl()
+		public static IEnumerable<CpuOp> Cpl()
 		{
 			yield return ( reg, mem ) => { reg.A = reg.A.Flip(); reg.SetFlags( Z: reg.Zero, N: true, H: true, C: reg.Carry ); };
 		}
 
 		// DAA
-		public static IEnumerable<Op> Daa()
+		public static IEnumerable<CpuOp> Daa()
 		{
 			yield return ( reg, mem ) =>
 			{
@@ -657,7 +657,7 @@ namespace rzr
 		private delegate byte AluFunc( Reg reg, byte val );
 
 		// RLC r, RRC r etc - 1 or 3 cycles (+1 fetch)
-		private static IEnumerable<Op> MemAluMemHelper( RegX dst, AluFunc func )
+		private static IEnumerable<CpuOp> MemAluMemHelper( RegX dst, AluFunc func )
 		{
 			if( dst.Is8() )
 			{
@@ -685,7 +685,7 @@ namespace rzr
 		}
 
 		// RLC r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
+		public static IEnumerable<CpuOp> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
 
 		private static byte RrcHelper( Reg reg, byte val )
 		{
@@ -700,7 +700,7 @@ namespace rzr
 		}
 
 		// RRC r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
+		public static IEnumerable<CpuOp> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
 
 		private static byte RlHelper( Reg reg, byte val )
 		{
@@ -715,7 +715,7 @@ namespace rzr
 		}
 
 		// RL r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
+		public static IEnumerable<CpuOp> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
 
 		private static byte RrHelper( Reg reg, byte val )
 		{
@@ -730,7 +730,7 @@ namespace rzr
 		}
 
 		// RR r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
+		public static IEnumerable<CpuOp> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
 
 		private static byte SlaHelper( Reg reg, byte val )
 		{
@@ -743,7 +743,7 @@ namespace rzr
 		}
 
 		// SLA r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Sla( RegX dst ) => MemAluMemHelper( dst, SlaHelper );
+		public static IEnumerable<CpuOp> Sla( RegX dst ) => MemAluMemHelper( dst, SlaHelper );
 
 		private static byte SraHelper( Reg reg, byte val )
 		{
@@ -757,7 +757,7 @@ namespace rzr
 		}
 
 		// SRA r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Sra( RegX dst ) => MemAluMemHelper( dst, SraHelper );
+		public static IEnumerable<CpuOp> Sra( RegX dst ) => MemAluMemHelper( dst, SraHelper );
 
 		private static byte SwapHelper( Reg reg, byte val )
 		{
@@ -772,7 +772,7 @@ namespace rzr
 		}
 
 		// SWAP r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Swap( RegX dst ) => MemAluMemHelper( dst, SwapHelper );
+		public static IEnumerable<CpuOp> Swap( RegX dst ) => MemAluMemHelper( dst, SwapHelper );
 
 		private static byte SrlHelper( Reg reg, byte val )
 		{
@@ -785,6 +785,6 @@ namespace rzr
 		}
 
 		// SRL r - 1 or 3 cycles (+1 fetch)
-		public static IEnumerable<Op> Srl( RegX dst ) => MemAluMemHelper( dst, SrlHelper );
+		public static IEnumerable<CpuOp> Srl( RegX dst ) => MemAluMemHelper( dst, SrlHelper );
 	}
 }
