@@ -29,8 +29,8 @@ namespace dbg.ui
 			m_debugger = debugger;
 			m_renderer = renderer;
 
-			m_registers = new RegisterWindow( m_debugger.CurrentState );
-			m_assembly = new AssemblyWindow( m_debugger.CurrentState );
+			m_registers = new RegisterWindow( m_debugger );
+			m_assembly = new AssemblyWindow( m_debugger );
 			m_memory = new MemoryWindow();
 			m_game = new GameWindow(m_debugger, m_renderer);
 
@@ -131,9 +131,7 @@ namespace dbg.ui
 			if( m_biosLoadPicker.Visible )
 				m_biosLoadPicker.Update();
 
-			m_registers.SetState(m_debugger.CurrentState);
 			m_registers.Update();
-			m_assembly.SetState(m_debugger.CurrentState);
 			m_assembly.Update();
 			m_memory.Update();
 			m_game.Update();

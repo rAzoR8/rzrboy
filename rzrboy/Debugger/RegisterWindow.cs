@@ -5,23 +5,18 @@ namespace dbg.ui
 {
 	public class RegisterWindow : Window
 	{
-		private rzr.State m_state;
-		public RegisterWindow( rzr.State state ) : base(label: "Registers")
+		private Debugger m_dbg;
+		public RegisterWindow( Debugger dbg ) : base(label: "Registers")
 		{
 			Scale = 1f;
-			m_state = state;
-		}
-
-		public void SetState( rzr.State state )
-		{
-			m_state = state;
+			m_dbg = dbg;
 		}
 
 		protected override bool BodyFunc()
 		{
-			var reg = m_state.reg;
-			var IO = m_state.mem.io;
-			var mem = m_state.mem;
+			var reg = m_dbg.CurrentState.reg;
+			var IO = m_dbg.CurrentState.mem.io;
+			var mem = m_dbg.CurrentState.mem;
 
 			ImGui.Text($"Halted: {reg.Halted} Booting: {mem.Booting}" );
 
