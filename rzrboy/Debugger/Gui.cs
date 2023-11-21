@@ -5,6 +5,7 @@ namespace dbg.ui
 	public class Gui : IUiElement
 	{
 		private Debugger m_debugger;
+		private Renderer m_renderer;
 
 		//UI
 		private Logger m_logger = Logger.Instance;
@@ -12,6 +13,7 @@ namespace dbg.ui
 		private RegisterWindow m_registers;
 		private AssemblyWindow m_assembly; // main/central window
 		private MemoryWindow m_memory;
+		private GameWindow m_game;
 		private FilePicker m_romLoadPicker;
 		private FilePicker m_biosLoadPicker;
 
@@ -22,12 +24,16 @@ namespace dbg.ui
 		private bool m_showStackTool = false;
 		private bool m_showDebugLog = false;
 
-		public Gui(Debugger debugger)
+		public Gui(Debugger debugger, Renderer renderer)
 		{
 			m_debugger = debugger;
+			m_renderer = renderer;
+
 			m_registers = new RegisterWindow( m_debugger.CurrentState );
 			m_assembly = new AssemblyWindow( m_debugger.CurrentState );
 			m_memory = new MemoryWindow();
+			m_game = new GameWindow(m_debugger, m_renderer);
+
 			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: Environment.CurrentDirectory, allowedExtensions: ".gb|.gbc");
 			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
 		}
@@ -130,6 +136,7 @@ namespace dbg.ui
 			m_assembly.SetState(m_debugger.CurrentState);
 			m_assembly.Update();
 			m_memory.Update();
+			m_game.Update();
 			m_logger.Update();
 
 			if(m_showMetrics) ImGui.ShowMetricsWindow();

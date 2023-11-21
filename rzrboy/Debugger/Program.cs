@@ -8,7 +8,7 @@ RgbaFloat _clearColor = new RgbaFloat(0.45f, 0.55f, 0.6f, 1f);
 Sdl2Window window;
 GraphicsDevice gpu;
 CommandList cmds;
-ImGuiController renderer;
+dbg.ui.Renderer renderer;
 
 // Create window, GraphicsDevice, and all resources necessary for the demo.
 VeldridStartup.CreateWindowAndGraphicsDevice(
@@ -18,7 +18,7 @@ VeldridStartup.CreateWindowAndGraphicsDevice(
 	out gpu);
 
 cmds = gpu.ResourceFactory.CreateCommandList();
-renderer = new ImGuiController(gpu, gpu.MainSwapchain.Framebuffer.OutputDescription, window.Width, window.Height);
+renderer = new dbg.ui.Renderer(gpu, gpu.MainSwapchain.Framebuffer.OutputDescription, window.Width, window.Height);
 //renderer = new Veldrid.ImGuiRenderer(gpu, gpu.MainSwapchain.Framebuffer.OutputDescription, window.Width, window.Height);
 
 window.Resized += () =>
@@ -28,10 +28,10 @@ window.Resized += () =>
 };
 
 dbg.ui.Fonts.Init( );
-renderer.RecreateFontDeviceTexture( gpu );
+renderer.RecreateFontDeviceTexture();
 
 dbg.Debugger debugger = new();
-dbg.ui.Gui gui = new(debugger);
+dbg.ui.Gui gui = new(debugger, renderer);
 
 gui.Init();
 
@@ -52,7 +52,7 @@ while (window.Exists)
 	cmds.Begin();
 	cmds.SetFramebuffer(gpu.MainSwapchain.Framebuffer);
 	cmds.ClearColorTarget(0, _clearColor);
-	renderer.Render(gpu, cmds);
+	renderer.Render(cmds);
 	cmds.End();
 	gpu.SubmitCommands(cmds);
 	gpu.SwapBuffers(gpu.MainSwapchain);
