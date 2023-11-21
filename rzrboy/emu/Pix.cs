@@ -66,8 +66,31 @@ namespace rzr
 			public byte BgPrioCGB; // TODO convert to bool? Priority: 0 = No, 1 = BG and Window colors 1–3 are drawn over this OBJ
 		}
 
-		public List<Pixel> BgFifo  {get;} = new();
+		public List<Pixel> BgWinFifo  {get;} = new();
 		public List<Pixel> ObjFifo {get;} = new();
+
+		[Flags]
+		public enum SpriteAttributes : byte
+		{
+			Priority = 0b1000,
+			FlipY = 0b0100,
+			FlipX = 0b0010,
+			Palette = 0b0001,
+		}
+
+		[StructLayout(LayoutKind.Sequential)] 
+		public struct Sprite // https://gbdev.io/pandocs/OAM.html
+		{
+			public byte X;
+			public byte Y;
+			public byte Tile; // Tile index
+			public SpriteAttributes Attrib;
+
+			public bool FlipY => Attrib.HasFlag(SpriteAttributes.FlipY); // TODO: move to extension function?
+			public bool FlipX => Attrib.HasFlag(SpriteAttributes.FlipX);
+			public bool Priority => Attrib.HasFlag(SpriteAttributes.Priority);
+			public bool Palette => Attrib.HasFlag(SpriteAttributes.Palette);	
+		}
 
 		public Pix()
 		{
