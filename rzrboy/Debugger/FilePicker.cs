@@ -46,7 +46,8 @@ namespace dbg.ui
 
 			ImGui.Text(CurrentFolder);
 
-			if (ImGui.BeginChildFrame(1, new System.Numerics.Vector2(400, 400)))
+			// https://github.com/ocornut/imgui/releases/tag/v1.90
+			if (ImGui.BeginChild(1, new System.Numerics.Vector2(400, 400), ImGuiChildFlags.FrameStyle))
 			{
 				var di = new DirectoryInfo(CurrentFolder);
 				if (di.Exists)
@@ -87,7 +88,7 @@ namespace dbg.ui
 					}
 				}
 			}
-			ImGui.EndChildFrame();
+			ImGui.EndChild();
 
 			if (ImGui.Button("Cancel"))
 			{

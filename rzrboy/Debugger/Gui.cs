@@ -134,7 +134,7 @@ namespace dbg.ui
 
 			if(m_showMetrics) ImGui.ShowMetricsWindow();
 			if(m_showStyleEditor) ImGui.ShowStyleEditor();
-			if(m_showStackTool) ImGui.ShowStackToolWindow();
+			if(m_showStackTool) ImGui.ShowIDStackToolWindow();
 			if(m_showDebugLog) ImGui.ShowDebugLogWindow();
 
 			Fonts.Pop();
