@@ -59,7 +59,7 @@ namespace rzr
 			try
 			{
 				cont = cpu.Tick( state );
-				ppu.Tick( state.reg, state.mem );
+				ppu.Tick( state );
 				apu.Tick( state.reg, state.mem );
 			}
 			catch( rzr.ExecException e )

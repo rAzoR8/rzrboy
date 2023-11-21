@@ -2,9 +2,9 @@ namespace rzr
 {
     public class Cpu
     {
-        private IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
+        private static IEnumerable<Op>[] m_instr = new IEnumerable<Op>[256];
 
-		public Cpu( ) 
+		static Cpu( ) 
         {
             // cache instructions
 			Isa isa = new();

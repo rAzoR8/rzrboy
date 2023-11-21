@@ -6,8 +6,9 @@
         {
         }
 
-        public void Tick( Reg reg, ISection mem )
+        public void Tick( State state )
 		{
+			state.pix.Tick++;
         }
     }
 }
