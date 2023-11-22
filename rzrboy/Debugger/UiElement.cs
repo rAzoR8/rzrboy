@@ -140,8 +140,8 @@ namespace dbg.ui
 
 	public abstract class Window : ImGuiScopeBase
 	{
-		// TODO: generic settings
 		public float Scale = 1f;
+		public bool Visible = true;
 
 		public Window(string label) : base(label: label)
 		{
@@ -149,10 +149,7 @@ namespace dbg.ui
 
 		protected override bool BeginFunc(string label)
 		{
-			//ImGuiWindowClass test2_flags;
-			//test2_flags.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_CentralNode;
-			//ImGui.SetNextWindowClass(test2_flags);
-			var ret = ImGui.Begin(label);
+			var ret = Visible && ImGui.Begin(label, ref Visible);
 			if( ret )
 			{
 				ImGui.SetWindowFontScale( Scale );

@@ -4,7 +4,7 @@ using System.Runtime.ExceptionServices;
 
 namespace dbg.ui
 {
-	public class Logger : ImGuiScopeBase, rzr.ILogger
+	public class Logger : Window, rzr.ILogger
 	{
 		public static Logger Instance {get;} = new();
 		
@@ -29,16 +29,11 @@ namespace dbg.ui
 
 		private List<Message> m_messages = new();
 		private ListBox m_listBox;
-		private bool m_throw = false;
-		private bool m_autoScroll = true;
+
+		public GuiState.LoggerState? State { get; set; } = new();
 
 		// Default logger window
-		public Logger(): base(ImGuiNET.ImGui.Begin, ImGuiNET.ImGui.End, label: "Logger")
-		{
-			m_listBox = new(label: "Messages", m_messages);
-		}
-
-		public Logger(BeginFn begin, EndFn end, string label) : base(begin, end, label)
+		public Logger(): base( label: "Logger")
 		{
 			m_listBox = new(label: "Messages", m_messages);
 		}
@@ -48,27 +43,33 @@ namespace dbg.ui
 			Instance.Log(msg, action);
 		}
 
-		public static void LogException( rzr.Exception e )
+		public static void LogException( System.Exception e )
 		{
 			Instance.Log( e );
 		}
 
 		protected override bool BodyFunc()
 		{
-			ImGui.Checkbox( "Re-Throw Exceptions", ref m_throw );
-			ImGui.SameLine();
-			if( ImGui.Checkbox( "Auto Scroll", ref m_autoScroll ) )
-				m_listBox.ScrollToEnd = m_autoScroll;
+			if( State != null )
+			{
+				bool rethrow = State.ReThrow;
+				bool autoscroll = State.AutoScroll;
+				if( ImGui.Checkbox( "Re-Throw Exceptions", ref rethrow ) )
+					State.ReThrow = rethrow;
+				ImGui.SameLine();
+				if( ImGui.Checkbox( "Auto Scroll", ref autoscroll ) )
+					m_listBox.ScrollToEnd = State.AutoScroll = autoscroll;
+			}
 
 			var ret = m_listBox.Update();
 			return ret;
 		}
 
-		public void Log( rzr.Exception e )
+		public void Log( System.Exception e )
 		{
 			Log( e.Message );
 			var stack = e.StackTrace?.Clone();
-			if( m_throw ) ExceptionDispatchInfo.Capture( e ).Throw(); ;
+			if( State?.ReThrow ?? false ) ExceptionDispatchInfo.Capture( e ).Throw(); ;
 		}
 
 		public void Log(string msg, Action? action = null)

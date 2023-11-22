@@ -6,10 +6,23 @@ namespace dbg.ui
 	[Serializable]
 	public class GuiState
 	{
-		public string RomLoadPickerDir = Environment.CurrentDirectory;
-		public string BiosLoadPickerDir = Environment.CurrentDirectory;
-		public string StateLoadPickerDir = Environment.CurrentDirectory;
-		public string StateSavePickerDir = Environment.CurrentDirectory;
+		public string RomLoadPickerDir { get; set; } = Environment.CurrentDirectory;
+		public string BiosLoadPickerDir { get; set; } = Environment.CurrentDirectory;
+		public string StateLoadPickerDir { get; set; } = Environment.CurrentDirectory;
+		public string StateSavePickerDir { get; set; } = Environment.CurrentDirectory;
+
+		public bool LoadStateOnStart { get; set; } = false;
+		public bool SaveStateOnExit { get; set; } = false;
+		public float UIScale { get; set; } = 0.5f;
+
+		[Serializable]
+		public class LoggerState
+		{
+			public bool AutoScroll { get; set; } = false;
+			public bool ReThrow { get; set; } = false;
+		}
+
+		public LoggerState Logger { get; set; } = new();
 	}
 
 	public class Gui : IUiElement
@@ -19,11 +32,11 @@ namespace dbg.ui
 
 		//UI
 		private Logger m_logger = Logger.Instance;
-		private ViewMenu m_viewMenu = new();
 		private RegisterWindow m_registers;
 		private AssemblyWindow m_assembly; // main/central window
 		private MemoryWindow m_memory;
 		private GameWindow m_game;
+		private SettingsWindow m_settings;
 
 		private FilePicker m_romLoadPicker;
 		private FilePicker m_biosLoadPicker;
@@ -31,8 +44,6 @@ namespace dbg.ui
 		private FilePicker m_stateSavePicker;
 
 		private GuiState m_guiState = new();
-
-		private float m_scaleFactor = 0.5f;
 
 		private bool m_showMetrics = false;
 		private bool m_showStyleEditor = false;
@@ -44,12 +55,15 @@ namespace dbg.ui
 			m_debugger = debugger;
 			m_renderer = renderer;
 
+			LoadGuiState();
+
+			m_logger.State = m_guiState.Logger;
+
+			m_settings = new SettingsWindow( m_guiState );
 			m_registers = new RegisterWindow( m_debugger );
 			m_assembly = new AssemblyWindow( m_debugger );
 			m_memory = new MemoryWindow();
 			m_game = new GameWindow(m_debugger, m_renderer);
-
-			LoadGuiState();
 
 			// todo: load start folders from file
 			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: m_guiState.RomLoadPickerDir, allowedExtensions: ".gb|.gbc");
@@ -62,23 +76,52 @@ namespace dbg.ui
 		{
 			//Fonts.MonaspaceNeon.FontSize *= 2f;
 			Logger.LogMsg("Welcome to rzrBoy Studio");
+
+			if( m_guiState.LoadStateOnStart )
+			{
+				m_debugger.LoadState( m_guiState.StateSavePickerDir );
+			}
+		}
+
+		public void Exit() 
+		{
+			if( m_guiState.SaveStateOnExit )
+				m_debugger.SaveState( m_guiState.StateSavePickerDir );
+
+			SaveGuiState();
 		}
 
 		private void LoadGuiState()
 		{
-			File.ReadAllTextAsync( "guistate.json" ).ContinueWith( (json) =>
+			try
 			{
-				var state = JsonSerializer.Deserialize<GuiState>( json.Result );
-				if( state != null )
+				File.ReadAllTextAsync( "guistate.json" ).ContinueWith( ( json ) =>
 				{
-					m_guiState = state;
-				}
-			} );			
+					var state = JsonSerializer.Deserialize<GuiState>( json.Result );
+					if( state != null )
+					{
+						m_guiState = state;
+					}
+				} );
+			}
+			catch( System.Exception e )
+			{
+				Logger.LogException( e );
+			}		
 		}
 
-		public void SaveGuiState()
+		private void SaveGuiState()
 		{
-			File.WriteAllText("guistate.json", JsonSerializer.Serialize(m_guiState));
+			try
+			{
+				JsonSerializerOptions options = new () { WriteIndented = true };
+				string json = JsonSerializer.Serialize( m_guiState, options: options );
+				File.WriteAllText( "guistate.json", json );
+			}
+			catch( System.Exception e )
+			{
+				Logger.LogException( e );
+			}
 		}
 
 		private void Step()
@@ -111,6 +154,7 @@ namespace dbg.ui
 			if( m_stateSavePicker.Visible )
 				m_stateSavePicker.Update();
 
+			m_settings.Update();
 			m_registers.Update();
 			m_assembly.Update();
 			m_memory.Update();
@@ -137,6 +181,11 @@ namespace dbg.ui
 						m_romLoadPicker.Visible = true;
 					if( ImGui.Selectable( "Load Bios" ) )
 						m_biosLoadPicker.Visible = true;
+					if( ImGui.Selectable( "Load State" ) )
+						m_stateLoadPicker.Visible = true;
+					if( ImGui.Selectable( "Save State" ) )
+						m_stateSavePicker.Visible = true;
+
 					ImGui.EndMenu();
 				}
 
@@ -148,11 +197,11 @@ namespace dbg.ui
 
 					if( ImGui.Selectable( "+Size" ) )
 					{
-						ImGui.GetStyle().ScaleAllSizes( 1f + m_scaleFactor );
+						ImGui.GetStyle().ScaleAllSizes( 1f + m_guiState.UIScale );
 					}
 					else if( ImGui.Selectable( "-Size" ) )
 					{
-						ImGui.GetStyle().ScaleAllSizes( 1f - m_scaleFactor );
+						ImGui.GetStyle().ScaleAllSizes( 1f - m_guiState.UIScale );
 					}
 
 					ImGui.EndMenu();
@@ -168,7 +217,27 @@ namespace dbg.ui
 					ImGui.EndMenu();
 				}
 
-				m_viewMenu.Update();
+				if( ImGui.BeginMenu( "View" ) )
+				{
+					if( ImGui.Selectable( "Load Preset" ) )
+						ImGui.LoadIniSettingsFromDisk( "preset.ini" );
+					if( ImGui.Selectable( "Save Preset" ) )
+						ImGui.SaveIniSettingsToDisk( "preset.ini" );
+					if( ImGui.Selectable( "Settings" ) )
+						m_settings.Visible = true;
+					if( ImGui.Selectable( "Registers" ) )
+						m_registers.Visible = true;
+					if( ImGui.Selectable( "Assembly" ) )
+						m_assembly.Visible = true;
+					if( ImGui.Selectable( "Memory" ) )
+						m_memory.Visible = true;
+					if( ImGui.Selectable( "Game" ) )
+						m_game.Visible = true;
+					if( ImGui.Selectable( "Logger" ) )
+						m_logger.Visible = true;
+
+					ImGui.EndMenu();
+				}
 
 				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRightToBracket ) )
 				{

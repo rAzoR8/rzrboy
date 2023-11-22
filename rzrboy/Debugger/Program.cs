@@ -58,7 +58,7 @@ while (window.Exists)
 	gpu.SwapBuffers(gpu.MainSwapchain);
 }
 
-gui.SaveGuiState();
+gui.Exit();
 
 // Clean up Veldrid resources
 gpu.WaitForIdle();
