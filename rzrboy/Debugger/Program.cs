@@ -1,4 +1,4 @@
-﻿using ImGuiNET;
+using ImGuiNET;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
@@ -57,6 +57,8 @@ while (window.Exists)
 	gpu.SubmitCommands(cmds);
 	gpu.SwapBuffers(gpu.MainSwapchain);
 }
+
+gui.SaveGuiState();
 
 // Clean up Veldrid resources
 gpu.WaitForIdle();

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace rzr
 {
 	public class State
@@ -35,18 +37,25 @@ namespace rzr
 		{
 			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];
 			if( type == mbc.Header.Type )
-			{
 				mbc.LoadRom( cart );
-			}
 			else
-			{
 				mem.mbc = Cartridge.CreateMbc( type, cart );			
-			}
 		}
+		public byte[] SaveRom() => mbc.Rom();
 
-		public void LoadERam( byte[] eram ) 
-		{
-			mbc.LoadRam( eram );
-		}
+		public void LoadRegs( byte[] regs ) => reg.Load( regs );
+		public byte[] SaveRegs() => reg.Save();
+		public void LoadERam( byte[] eram ) => mbc.LoadRam( eram );
+		public byte[] SaveERam() => mbc.Ram();
+		public void LoadWRam( byte[] wram ) => mem.wram.Load( wram );
+		public byte[] SaveWRam() => mem.wram.Save();
+		public void LoadVRam( byte[] vram ) => mem.vram.Load( vram ); // TODO: select bank
+		public byte[] SaveVRam() => mem.vram.Save();
+		public void LoadIO( byte[] io ) { mem.io.Load(io); }
+		public byte[] SaveIO() => mem.io.Save();
+		public void LoadHRam( byte[] hram ) => mem.hram.Load( hram );
+		public byte[] SaveHRam() => mem.hram.Save();
+		public void LoadOam( byte[] oam ) => mem.oam.Load( oam );
+		public byte[] SaveOam() => mem.oam.Save();
 	}
 }

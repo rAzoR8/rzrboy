@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace rzr
 {
     public enum Reg8 : byte
@@ -42,7 +44,7 @@ namespace rzr
 		}
     }
 
-    public enum IMEState
+    public enum IMEState : byte
 	{
         Disabled,
         Enabled,
@@ -64,7 +66,33 @@ namespace rzr
         public bool Halted = false;
         //public bool Stopped = false;
 
-        public ushort AF { get { return A.Combine( F ); } set { Binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
+		public byte[] Save() 
+		{
+			byte[] regs = new byte[14];
+			regs[0] = A; regs[1] = _flags;
+			regs[2] = B; regs[3] = C;
+			regs[4] = D; regs[5] = E;
+			regs[6] = H; regs[7] = L;
+			regs[8] = SP.GetLsb(); regs[9] = SP.GetMsb();
+			regs[10] = PC.GetLsb(); regs[11] = PC.GetMsb();
+			regs[12] = (byte)IME; regs[13] = (byte)(Halted ? 1 : 0);
+			// TODO: save IE 0xFFFF here?
+			return regs;
+		}
+
+		public void Load( byte[] regs ) 
+		{
+			Debug.Assert( regs.Length >= 14 );
+			A = regs[0]; _flags = regs[1];
+			B = regs[2]; C = regs[3];
+			D = regs[4]; E = regs[5];
+			H = regs[6]; L = regs[7];
+			SP = regs[9].Combine( lsb: regs[8] );
+			PC = regs[11].Combine( lsb: regs[10] );
+			IME = (IMEState)regs[12]; Halted = regs[13] == 1;
+		}
+
+		public ushort AF { get { return A.Combine( F ); } set { Binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
         public ushort BC { get { return B.Combine( C ); } set { Binutil.Split( value, out B, out C ); } }
         public ushort DE { get { return D.Combine( E ); } set { Binutil.Split( value, out D, out E ); } }
         public ushort HL { get { return H.Combine( L ); } set { Binutil.Split( value, out H, out L ); } }

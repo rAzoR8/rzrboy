@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 namespace rzr
 {
@@ -55,9 +55,12 @@ namespace rzr
         public ushort Length { get; set; }
 
 		// Section
-		public IList<byte> Data { get; }
+		public IList<byte> Data { get; private set; }
 		public int BufferOffset { get; set; } = 0;
 		public SectionAccess Access { get; } = SectionAccess.ReadWrite;
+
+		public byte[] Save() => Data.Skip(BufferOffset).Take(Length).ToArray();
+		public void Load( byte[] data, int bufferOffset = 0) { Data = data; BufferOffset = bufferOffset; }
 
 		public Section AsReadOnly() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.Read, data: Data, offset: BufferOffset );
 		public Section AsReadWrite() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.ReadWrite, data: Data, offset: BufferOffset );

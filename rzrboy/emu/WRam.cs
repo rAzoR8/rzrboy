@@ -29,7 +29,7 @@ namespace rzr
 			}
 		}
 
-		public byte[] Ram(int numBanks = 8) => Banks.Take( numBanks ).SelectMany(x=>x).ToArray();
+		public byte[] Save(int numBanks = 8) => Banks.Take( numBanks ).SelectMany(x=>x).ToArray();
 
 		public void Load( byte[] wram )
 		{

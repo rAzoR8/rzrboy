@@ -1,7 +1,17 @@
 using ImGuiNET;
+using System.Text.Json;
 
 namespace dbg.ui
 {
+	[Serializable]
+	public class GuiState
+	{
+		public string RomLoadPickerDir = Environment.CurrentDirectory;
+		public string BiosLoadPickerDir = Environment.CurrentDirectory;
+		public string StateLoadPickerDir = Environment.CurrentDirectory;
+		public string StateSavePickerDir = Environment.CurrentDirectory;
+	}
+
 	public class Gui : IUiElement
 	{
 		private Debugger m_debugger;
@@ -14,8 +24,13 @@ namespace dbg.ui
 		private AssemblyWindow m_assembly; // main/central window
 		private MemoryWindow m_memory;
 		private GameWindow m_game;
+
 		private FilePicker m_romLoadPicker;
 		private FilePicker m_biosLoadPicker;
+		private FilePicker m_stateLoadPicker;
+		private FilePicker m_stateSavePicker;
+
+		private GuiState m_guiState = new();
 
 		private float m_scaleFactor = 0.5f;
 
@@ -34,14 +49,36 @@ namespace dbg.ui
 			m_memory = new MemoryWindow();
 			m_game = new GameWindow(m_debugger, m_renderer);
 
-			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: Environment.CurrentDirectory, allowedExtensions: ".gb|.gbc");
-			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: Environment.CurrentDirectory, ".bin");
+			LoadGuiState();
+
+			// todo: load start folders from file
+			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: m_guiState.RomLoadPickerDir, allowedExtensions: ".gb|.gbc");
+			m_biosLoadPicker = new( onSelect: m_debugger.LoadBios, startFolder: m_guiState.RomLoadPickerDir, ".bin");
+			m_stateLoadPicker = new( onSelect: m_debugger.LoadState, startFolder: m_guiState.StateLoadPickerDir );
+			m_stateSavePicker = new( onSelect: m_debugger.SaveState, startFolder: m_guiState.StateSavePickerDir );
 		}
 
 		public void Init()
 		{
 			//Fonts.MonaspaceNeon.FontSize *= 2f;
 			Logger.LogMsg("Welcome to rzrBoy Studio");
+		}
+
+		private void LoadGuiState()
+		{
+			File.ReadAllTextAsync( "guistate.json" ).ContinueWith( (json) =>
+			{
+				var state = JsonSerializer.Deserialize<GuiState>( json.Result );
+				if( state != null )
+				{
+					m_guiState = state;
+				}
+			} );			
+		}
+
+		public void SaveGuiState()
+		{
+			File.WriteAllText("guistate.json", JsonSerializer.Serialize(m_guiState));
 		}
 
 		private void Step()
@@ -67,6 +104,12 @@ namespace dbg.ui
 
 			if( m_biosLoadPicker.Visible )
 				m_biosLoadPicker.Update();
+
+			if( m_stateLoadPicker.Visible )
+				m_stateLoadPicker.Update();
+
+			if( m_stateSavePicker.Visible )
+				m_stateSavePicker.Update();
 
 			m_registers.Update();
 			m_assembly.Update();
