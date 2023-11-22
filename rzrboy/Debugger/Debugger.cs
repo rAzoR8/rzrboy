@@ -1,5 +1,3 @@
-using rzr;
-
 namespace dbg
 {
 	public class Debugger
@@ -35,6 +33,11 @@ namespace dbg
 			StateChanged?.Invoke(oldState, CurrentState);
 		}
 
+		public void LoadCpuState( string path )
+		{
+			ui.Logger.LogMsg( $"Loading CpuState: {Path.GetFileName( path )}" );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadCpuState( task.Result ) );
+		}
 		public void LoadRom( string path )
 		{
 			ui.Logger.LogMsg( $"Loading ROM: {Path.GetFileName( path )}" );
@@ -83,6 +86,8 @@ namespace dbg
 
 		public void LoadState( string stateFolder ) 
 		{
+			var cpu = Path.Combine( stateFolder, "cpu.bin" );
+			if( File.Exists( cpu ) ) LoadCpuState( cpu );
 			var regs = Path.Combine( stateFolder, "regs.bin" );
 			if( File.Exists( regs ) ) LoadRegs( regs );
 			var rom = Path.Combine( stateFolder, "rom.gb" );
@@ -99,11 +104,11 @@ namespace dbg
 			if( File.Exists( io ) ) LoadIO( io );
 			var hram = Path.Combine( stateFolder, "hram.bin" );
 			if( File.Exists( hram ) ) LoadHRam( hram );
-			// TODO: mem.IE regiser
 		}
 
 		public void SaveState( string stateFolder )
 		{
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "cpu.bin" ), CurrentState.SaveCpuState() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "regs.bin" ), CurrentState.SaveRegs() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "rom.gb" ), CurrentState.SaveRom() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "eram.bin" ), CurrentState.SaveERam() );
@@ -112,7 +117,6 @@ namespace dbg
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "io.bin" ), CurrentState.SaveIO() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "hram.bin" ), CurrentState.SaveHRam() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "oam.bin" ), CurrentState.SaveOam() );
-			// TODO: mem.IE register
 		}
 	}
 }

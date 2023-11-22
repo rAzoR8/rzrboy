@@ -25,9 +25,20 @@ namespace rzr
 
 		public static IEnumerable<T[]> Split<T>( this T[] arr, int size )
 		{
-			for( var i = 0; i < arr.Length / size + 1; i++ )
+			if( arr.Length <= size )
 			{
-				yield return arr.Skip( i * size ).Take( size ).ToArray();
+				yield return arr;
+			}
+			else
+			{
+				int cur = 0;
+				while( cur < arr.Length )
+				{
+					yield return arr.Skip( cur ).Take( size ).ToArray();
+					cur += size;
+					int remainder = arr.Length - cur;
+					size = remainder >= size ? size : remainder; 
+				}
 			}
 		}
 	}

@@ -2,7 +2,7 @@ namespace rzr
 {
     public class Cpu
     {
-        private static IEnumerable<CpuOp>[] m_instr = new IEnumerable<CpuOp>[256];
+        public static IEnumerable<CpuOp>[] Instructions = new IEnumerable<CpuOp>[256];
 
 		static Cpu( ) 
         {
@@ -10,15 +10,15 @@ namespace rzr
 			Isa isa = new();
 			foreach( (ExecInstr instr, int i) in isa.Indexed() )
 			{
-                m_instr[i] = instr.Make();
+                Instructions[i] = instr.Make();
             }
         }
 
-        /// <summary>
-        /// execute one M-cycle
-        /// </summary>
-        /// <returns>true if executing the same instruction, false after a new one is fetched</returns>
-        public bool Tick( State state )
+		/// <summary>
+		/// execute one M-cycle
+		/// </summary>
+		/// <returns>true if executing the same instruction, false after a new one is fetched</returns>
+		public bool Tick( State state )
         {
 			bool moreOps = true;
             if( state.curOp != null )
@@ -62,7 +62,7 @@ namespace rzr
 				state.curOpCode = state.mem[state.curInstrPC]; // fetch
                 ++state.reg.PC;
 
-				state.curOp = m_instr[state.curOpCode].GetEnumerator();
+				state.curOp = Instructions[state.curOpCode].GetEnumerator();
 				state.curOp.MoveNext();
             }
 

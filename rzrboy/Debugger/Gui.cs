@@ -95,14 +95,12 @@ namespace dbg.ui
 		{
 			try
 			{
-				File.ReadAllTextAsync( "guistate.json" ).ContinueWith( ( json ) =>
+				string json = File.ReadAllText( "guistate.json" );
+				var state = JsonSerializer.Deserialize<GuiState>( json );
+				if( state != null )
 				{
-					var state = JsonSerializer.Deserialize<GuiState>( json.Result );
-					if( state != null )
-					{
-						m_guiState = state;
-					}
-				} );
+					m_guiState = state;
+				}
 			}
 			catch( System.Exception e )
 			{
@@ -126,7 +124,14 @@ namespace dbg.ui
 
 		private void Step()
 		{
-			m_debugger.Step();
+			try
+			{
+				m_debugger.Step();
+			}
+			catch( rzr.ExecException e )
+			{
+				m_logger.Log( e );
+			}
 		}
 
 		private void Restart()
@@ -153,6 +158,12 @@ namespace dbg.ui
 
 			if( m_stateSavePicker.Visible )
 				m_stateSavePicker.Update();
+
+			if( ImGui.IsKeyPressed( ImGuiKey.LeftCtrl ) )
+			{
+				if( ImGui.IsKeyDown( ImGuiKey.S ) )
+					m_debugger.LoadState( m_guiState.StateSavePickerDir );
+			}
 
 			m_settings.Update();
 			m_registers.Update();

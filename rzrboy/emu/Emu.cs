@@ -53,7 +53,7 @@ namespace rzr
             return cycles;
         }
 
-		public bool Tick( State state, CancellationToken token = default )
+		public bool Tick( State state, CancellationToken? token = null )
 		{
             bool cont;
 			try
@@ -64,9 +64,10 @@ namespace rzr
 			}
 			catch( rzr.ExecException e )
 			{
-				Logger.Log( e.Message );
+				Logger.Log( e );
                 cont = false;
-                throw new OperationCanceledException( message: e.Message, innerException: e, token );
+				if( token != null )
+					throw new OperationCanceledException( message: e.Message, innerException: e, token.Value );
 			}
 
 			return cont;
@@ -76,7 +77,7 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( State state, bool debugPrint, CancellationToken token = default )
+        public uint Step( State state, bool debugPrint, CancellationToken? token = null )
         {
             uint cycles = 1;
 

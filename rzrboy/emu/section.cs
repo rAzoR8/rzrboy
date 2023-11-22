@@ -186,6 +186,7 @@ namespace rzr
 
 		public ByteSection( ushort start, byte val, string name )
 		{
+			StartAddr = start;
 			Value = val;
             Name = name;
 		}
@@ -197,5 +198,5 @@ namespace rzr
 		public byte this[ushort address] { get => Value; set => Value = value; }
 
         public static implicit operator byte( ByteSection sec ) { return sec.Value; }
-    }
+	}
 }
