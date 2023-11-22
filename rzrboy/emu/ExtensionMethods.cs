@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
 	public static class ExtensionMethods
 	{
@@ -17,10 +17,18 @@
 			return Enum.GetValues<T>().Where( v => v.CompareTo( from ) > -1 );
 		}
 
-		// (from, to) inclusive ragne from-to
+		// (from, to) inclusive range from-to
 		public static IEnumerable<T> EnumValues<T>( this T from, T to ) where T : struct, System.Enum
 		{
 			return Enum.GetValues<T>( ).Where( v => v.CompareTo( from ) > -1 && v.CompareTo( to ) <= 0 );
+		}
+
+		public static IEnumerable<T[]> Split<T>( this T[] arr, int size )
+		{
+			for( var i = 0; i < arr.Length / size + 1; i++ )
+			{
+				yield return arr.Skip( i * size ).Take( size ).ToArray();
+			}
 		}
 	}
 }

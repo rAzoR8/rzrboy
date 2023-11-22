@@ -43,5 +43,10 @@ namespace rzr
 				mem.mbc = Cartridge.CreateMbc( type, cart );			
 			}
 		}
+
+		public void LoadERam( byte[] eram ) 
+		{
+			mbc.LoadRam( eram );
+		}
 	}
 }

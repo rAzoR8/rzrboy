@@ -57,73 +57,10 @@ namespace dbg.ui
 		// Update UI state
 		public bool Update()
 		{
+			ImGui.DockSpaceOverViewport( ImGui.GetMainViewport() );
 			Fonts.MonaspaceNeon.Push();
 
-			if( ImGui.BeginMainMenuBar())
-            {
-				if(ImGui.BeginMenu("File"))
-				{
-					if( ImGui.Selectable( "Load ROM" ))
-						m_romLoadPicker.Visible = true;
-					if( ImGui.Selectable( "Load Bios" ) )
-						m_biosLoadPicker.Visible = true;
-					ImGui.EndMenu();
-				}
-
-                if (ImGui.BeginMenu("Themes"))
-                {
-                    if (ImGui.Selectable("Dark")) ImGui.StyleColorsDark();
-                    if (ImGui.Selectable("Light")) ImGui.StyleColorsLight();
-                    if (ImGui.Selectable("Classic")) ImGui.StyleColorsClassic();
-
-					if (ImGui.Selectable("+Size"))
-					{
-						ImGui.GetStyle().ScaleAllSizes(1f + m_scaleFactor);
-					}
-					else if(ImGui.Selectable("-Size"))
-					{
-						ImGui.GetStyle().ScaleAllSizes(1f - m_scaleFactor);
-					}
-
-                    ImGui.EndMenu();
-                }
-
-				if( ImGui.BeginMenu( "ImGui" ) )
-				{
-					if( ImGui.Selectable( "Metrics" ) ) m_showMetrics = !m_showMetrics;
-					if( ImGui.Selectable( "StackTool" ) ) m_showStackTool = !m_showStackTool;
-					if( ImGui.Selectable( "StyleEditor" ) ) m_showStyleEditor = !m_showStyleEditor;
-					if( ImGui.Selectable( "DebugLog" ) ) m_showDebugLog = !m_showDebugLog;
-
-					ImGui.EndMenu();
-				}
-
-				m_viewMenu.Update();
-
-				if(ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRightToBracket ) )
-				{
-					if(ImGui.IsItemClicked())
-						Step();
-
-					ImGui.Text("F11");
-					ImGui.EndMenu();
-				}
-
-				if( ImGui.IsKeyPressed( ImGuiKey.F11 ) ) Step();
-
-				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRotateRight ) )
-				{
-					if( ImGui.IsItemClicked() )
-						Restart();
-
-					ImGui.Text( "F12" );
-					ImGui.EndMenu();
-				}
-
-				if( ImGui.IsKeyPressed( ImGuiKey.F12 ) ) Restart();
-
-				ImGui.EndMainMenuBar();
-            }
+			MainMenu();
 			
 			if( m_romLoadPicker.Visible )
 				m_romLoadPicker.Update();
@@ -145,6 +82,75 @@ namespace dbg.ui
 			Fonts.Pop();
 
 			return true;
+		}
+
+		public void MainMenu() 
+		{
+			if( ImGui.BeginMainMenuBar() )
+			{
+				if( ImGui.BeginMenu( "File" ) )
+				{
+					if( ImGui.Selectable( "Load ROM" ) )
+						m_romLoadPicker.Visible = true;
+					if( ImGui.Selectable( "Load Bios" ) )
+						m_biosLoadPicker.Visible = true;
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.BeginMenu( "Themes" ) )
+				{
+					if( ImGui.Selectable( "Dark" ) ) ImGui.StyleColorsDark();
+					if( ImGui.Selectable( "Light" ) ) ImGui.StyleColorsLight();
+					if( ImGui.Selectable( "Classic" ) ) ImGui.StyleColorsClassic();
+
+					if( ImGui.Selectable( "+Size" ) )
+					{
+						ImGui.GetStyle().ScaleAllSizes( 1f + m_scaleFactor );
+					}
+					else if( ImGui.Selectable( "-Size" ) )
+					{
+						ImGui.GetStyle().ScaleAllSizes( 1f - m_scaleFactor );
+					}
+
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.BeginMenu( "ImGui" ) )
+				{
+					if( ImGui.Selectable( "Metrics" ) ) m_showMetrics = !m_showMetrics;
+					if( ImGui.Selectable( "StackTool" ) ) m_showStackTool = !m_showStackTool;
+					if( ImGui.Selectable( "StyleEditor" ) ) m_showStyleEditor = !m_showStyleEditor;
+					if( ImGui.Selectable( "DebugLog" ) ) m_showDebugLog = !m_showDebugLog;
+
+					ImGui.EndMenu();
+				}
+
+				m_viewMenu.Update();
+
+				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRightToBracket ) )
+				{
+					if( ImGui.IsItemClicked() )
+						Step();
+
+					ImGui.Text( "F11" );
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.IsKeyPressed( ImGuiKey.F11 ) ) Step();
+
+				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRotateRight ) )
+				{
+					if( ImGui.IsItemClicked() )
+						Restart();
+
+					ImGui.Text( "F12" );
+					ImGui.EndMenu();
+				}
+
+				if( ImGui.IsKeyPressed( ImGuiKey.F12 ) ) Restart();
+
+				ImGui.EndMainMenuBar();
+			}
 		}
 	}
 }

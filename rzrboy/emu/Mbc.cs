@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace rzr
 {
@@ -38,14 +38,6 @@ namespace rzr
 				address < 0xC000 );
 		}
 
-		private static IEnumerable<T[]> Split<T>( T[] arr, int size )
-		{
-			for( var i = 0; i < arr.Length / size + 1; i++ )
-			{
-				yield return arr.Skip( i * size ).Take( size ).ToArray();
-			}
-		}
-
 		public Mbc()
         {
             m_rom.Add( new byte[RomBankSize] ); // 0000->3FFF
@@ -60,7 +52,7 @@ namespace rzr
 
 		public Mbc( byte[] rom, byte[]? ram = null )
 		{
-            m_rom = new( Split( rom, RomBankSize ) );
+            m_rom = new( rom.Split( RomBankSize ) );
             Header = new( m_rom[0] );
 
 			Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
@@ -69,7 +61,7 @@ namespace rzr
             if( ram != null )
             {
                 Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
-                m_ram = new( Split( ram, RamBankSize ) );
+                m_ram = new( ram.Split( RamBankSize ) );
             }
             else
             {
@@ -81,7 +73,7 @@ namespace rzr
         {
             Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
             m_ram.Clear();
-            m_ram.AddRange( Split( ram, RamBankSize ) );
+            m_ram.AddRange( ram.Split( RamBankSize ) );
         }
 
         // Load rom of identical MBC type
@@ -92,7 +84,7 @@ namespace rzr
 			Debug.Assert( rom.Length >= RomBankSize );
 			//Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
 
-            m_rom = new( Split( rom, RomBankSize ) );
+            m_rom = new( rom.Split( RomBankSize ) );
         }
 
         public void ResizeRom( int bankCount )

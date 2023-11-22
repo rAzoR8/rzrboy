@@ -30,7 +30,7 @@ namespace dbg.ui
 		private List<Message> m_messages = new();
 		private ListBox m_listBox;
 		private bool m_throw = false;
-		private bool m_autoScroll = false;
+		private bool m_autoScroll = true;
 
 		// Default logger window
 		public Logger(): base(ImGuiNET.ImGui.Begin, ImGuiNET.ImGui.End, label: "Logger")
