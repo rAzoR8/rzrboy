@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
 		/// <summary>
 	/// Each op (operation) takes one m-cycle.
@@ -51,9 +51,9 @@
         }
 
 		// TODO: make static
-        public void Tick( State state )
+        public void Tick( IState state )
 		{
-			state.pix.Tick++;
+			//state.pix.Tick++;
         }
     }
 }

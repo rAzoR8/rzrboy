@@ -1,4 +1,4 @@
-﻿namespace rzr
+namespace rzr
 {
     public class Apu
     {
@@ -6,7 +6,7 @@
         {
         }
 
-        public void Tick( Reg reg, ISection mem )
+        public void Tick( IState state )
         {
         }
     }

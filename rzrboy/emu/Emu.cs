@@ -1,6 +1,6 @@
 namespace rzr
 {
-    public class Emu
+    public class Emu : IEmulator
     {
 		public Ppu ppu { get; }
 		public Cpu cpu { get; }
@@ -25,49 +25,19 @@ namespace rzr
             Logger = logger;
         }
 
-		public delegate State NextStateFn();
-        public async Task<ulong> Execute( NextStateFn nextState, CancellationToken token = default )
-        {
-            ulong cycles = 0;
-
-            try
-            {
-                await Task.Run( () =>
-                {
-                    IsRunning = true;
-                    while( true )
-                    {
-                        token.ThrowIfCancellationRequested();
-                        cycles += Step( state: nextState(), token: token, debugPrint: true );
-                    }
-                } );
-            }
-            catch( OperationCanceledException e )
-            {
-                if(e.CancellationToken == token)
-                    IsRunning = false;
-                else
-                    return await Execute( nextState: nextState, token );
-            }
-
-            return cycles;
-        }
-
-		public bool Tick( State state, CancellationToken? token = null )
+		public bool Tick( State state )
 		{
             bool cont;
 			try
 			{
 				cont = cpu.Tick( state );
 				ppu.Tick( state );
-				apu.Tick( state.reg, state.mem );
+				apu.Tick( state );
 			}
 			catch( rzr.ExecException e )
 			{
 				Logger.Log( e );
-                cont = false;
-				if( token != null )
-					throw new OperationCanceledException( message: e.Message, innerException: e, token.Value );
+				cont = false;
 			}
 
 			return cont;
@@ -77,7 +47,7 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( State state, bool debugPrint, CancellationToken? token = null )
+        public uint Step( State state )
         {
             uint cycles = 1;
 
@@ -87,9 +57,8 @@ namespace rzr
 			}
 
 			// execute all ops
-			while ( Tick( state, token ) ) { ++cycles; }
+			while ( Tick( state ) ) { ++cycles; }
 
-            if ( debugPrint )
             {
                 ushort pc = state.prevInstrPC;
                 Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{state.prevInstrCycles} cycles|fetch" );

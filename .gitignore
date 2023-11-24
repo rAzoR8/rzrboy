@@ -13,3 +13,5 @@ rzrboy/Deploy/bin
 rzrboy/Deploy/obj
 rzrboy/Debugger/bin/*
 rzrboy/Debugger/obj/*
+rzrboy/Interface/bin
+rzrboy/Interface/obj

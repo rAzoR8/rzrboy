@@ -43,6 +43,7 @@ namespace rzr
 			m_onwer = owner;
 		}
 
+		// TODO: move to extension functions or section wrapper
 		// https://gbdev.io/pandocs/Memory_Map.html#io-ranges
 		// https://gbdev.io/pandocs/Hardware_Reg_List.html
 		public byte Joypad => this[0xFF00];

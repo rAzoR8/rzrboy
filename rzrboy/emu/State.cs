@@ -23,7 +23,7 @@ namespace rzr
 		public void Read (ref string value ) => value = ReadString();
 	}
 
-	public class State
+	public class State : IState
 	{
 		public Mem mem { get; }
 		public Reg reg { get; }
