@@ -24,7 +24,7 @@ namespace dbg
 		public void Restart() // only reload ROM
 		{
 			var rom = CurrentState.SaveRom();
-			var boot = CurrentState.mem.boot.Data.ToArray();
+			var boot = CurrentState.SaveBootRom();
 			var oldState = CurrentState;
 			CurrentState = new();
 			CurrentState.LoadRom(rom);

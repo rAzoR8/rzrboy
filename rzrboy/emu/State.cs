@@ -34,7 +34,7 @@ namespace rzr
 		public Snd snd { get; }
 		public Mbc mbc => m_mem.mbc;
 
-		// TODO: rename to CPU tick, or encapsulate in CpuState struct
+		// TODO: remove
 		public ulong tick = 0;// current cycle/tick
 		public byte curOpCode = 0; // opcode od the currenlty executed instruction
 		public ushort curInstrPC = 0; // start ProgramCounter of the currently executed instruction
@@ -49,7 +49,7 @@ namespace rzr
 			snd = new();
 		}
 		
-		public byte[] SaveCpuState()
+		public byte[] SaveCpuState() // TODO: remove
 		{
 			BinaryWriter bw = new();
 			bw.Write( tick );
@@ -63,7 +63,7 @@ namespace rzr
 			return bw.ToArray();
 		}
 
-		public void LoadCpuState( byte[] cpu )
+		public void LoadCpuState( byte[] cpu ) // TODO: remove
 		{
 			BinaryReader br = new( cpu );
 			br.Read( ref tick );
@@ -83,6 +83,8 @@ namespace rzr
 			m_mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read, data: boot, offset: 0 );
 		}
 		
+		public byte[] SaveBootRom() { return m_mem.boot.Data.ToArray(); }
+
 		public void LoadRom(  byte[] cart )
 		{
 			var type = (CartridgeType)cart[(ushort)HeaderOffsets.Type];

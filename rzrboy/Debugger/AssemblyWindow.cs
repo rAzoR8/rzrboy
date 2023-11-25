@@ -89,11 +89,9 @@ namespace dbg.ui
 
 				// in case the boot section is smaller than the preview, we read from the rom
 				rzr.ISection mem = state.mem;
-				if( state.mem.Booting && pc >= state.mem.boot.Length )
-					mem = state.mem.mbc;
 
-				if( !mem.Accepts( pc ) )
-					return false;
+				//if( !mem.Accepts( pc ) )
+				//	return false;
 
 				rzr.AsmInstr instr;
 				try
