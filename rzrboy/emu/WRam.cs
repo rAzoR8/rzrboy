@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace rzr
 {
-	public class WRam : ISection
+	public class WRam : ISection, IBankedMemory
 	{
 		public string Name = "WRAM";
 		public ushort StartAddr => 0xC000;

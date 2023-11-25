@@ -39,6 +39,7 @@ namespace rzr
 		public IBankedMemory vram => throw new NotImplementedException();
 		public IBankedMemory rom => m_mem.mbc.Rom;
 		public IBankedMemory eram => m_mem.mbc.Ram;
+		public IBankedMemory wram => m_mem.wram;
 		public ISection oam => m_mem.oam;
 		public ISection io => m_mem.io;
 		public ISection hram => m_mem.hram;

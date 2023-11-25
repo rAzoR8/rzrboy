@@ -12,7 +12,7 @@ namespace rzr
 		public bool Accepts( ushort address ) => address >= StartAddr && address < ( StartAddr + Length );
 	}
 
-	public interface IBankedMemory //: ISection
+	public interface IBankedMemory : IState
 	{
 		public int Banks { get; }
 		public int SelectedBank { get; set; }
@@ -88,6 +88,8 @@ namespace rzr
 		/// <returns></returns>
 		public bool Tick(IEmuState state);
 		public void Step(IEmuState state);
+
+		public IEmuState CreateState();
 	}
 
 	public interface IGuiPlugin
@@ -98,9 +100,14 @@ namespace rzr
 		public void OnWindow();
 	}
 
+	public interface ILogger
+	{
+		public void Log( string msg );
+		public void Log( System.Exception exception );
+	}
+
 	public interface IEmuPlugin : IGuiPlugin
 	{
-		public IEmulator CreateEmulator();
-		public IEmuState CreateState();
+		public IEmulator CreateEmulator( ILogger logger );
 	}
 }

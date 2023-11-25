@@ -2,18 +2,18 @@ namespace dbg
 {
 	public class Debugger
 	{
-		public delegate void StateChangedFn(rzr.State? oldState, rzr.State newState);
+		public delegate void StateChangedFn(rzr.IEmuState? oldState, rzr.IEmuState newState );
 
 		public event StateChangedFn? StateChanged;
 
 		// TODO: make private
-		public rzr.State CurrentState { get; private set; }
-		private rzr.Emu m_emu;
+		public rzr.IEmuState CurrentState { get; private set; }
+		private rzr.IEmulator m_emu;
 
-		public Debugger()
+		public Debugger(rzr.IEmuPlugin provider)
 		{
-			m_emu = new(ui.Logger.Instance);
-			CurrentState = new rzr.State( m_emu.cpu );
+			m_emu = provider.CreateEmulator( ui.Logger.Instance );
+			CurrentState = m_emu.CreateState();//new rzr.State( m_emu.cpu );
 			StateChanged?.Invoke(null, CurrentState);
 		}
 
@@ -24,12 +24,12 @@ namespace dbg
 
 		public void Restart() // only reload ROM
 		{
-			var rom = CurrentState.SaveRom();
-			var boot = CurrentState.SaveBootRom();
+			var rom = CurrentState.rom.Save();
+			//var boot = CurrentState.SaveBootRom();
 			var oldState = CurrentState;
-			CurrentState = new(m_emu.cpu);
-			CurrentState.LoadRom(rom);
-			CurrentState.LoadBootRom(boot);
+			CurrentState = m_emu.CreateState();
+			CurrentState.rom.Load(rom);
+			//CurrentState.LoadBootRom(boot);
 
 			StateChanged?.Invoke(oldState, CurrentState);
 		}
@@ -42,7 +42,7 @@ namespace dbg
 		public void LoadRom( string path )
 		{
 			ui.Logger.LogMsg( $"Loading ROM: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadRom( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.rom.Load( task.Result ) );
 		}
 		public void LoadBios( string path )
 		{
@@ -52,17 +52,17 @@ namespace dbg
 		public void LoadEram( string path )
 		{
 			ui.Logger.LogMsg( $"Loading ERam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadERam( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.eram.Load( task.Result ) );
 		}
 		public void LoadVRam( string path )
 		{
 			ui.Logger.LogMsg( $"Loading VRam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadVRam( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.vram.Load( task.Result ) );
 		}
 		public void LoadWRam( string path )
 		{
 			ui.Logger.LogMsg( $"Loading WRam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadWRam( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.wr( task.Result ) );
 		}
 		public void LoadIO( string path )
 		{

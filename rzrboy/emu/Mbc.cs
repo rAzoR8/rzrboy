@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace rzr
 {
-	public class BankedMemory : IBankedMemory, IState
+	public class BankedMemory : IBankedMemory
 	{
 		private List<byte[]> m_banks = new();
 
