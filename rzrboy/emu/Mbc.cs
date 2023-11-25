@@ -8,6 +8,8 @@ namespace rzr
 
 		public ushort BankSize { get; }
 		public int Banks => (ushort)m_banks.Count;
+		public int SelectedBank { get; set; } = 0;
+
 		public IList<byte> this[int bank] => m_banks[bank];
 
 		public BankedMemory( ushort bankSize, ushort numBanks )
@@ -53,14 +55,8 @@ namespace rzr
 		public BankedMemory Rom { get; } = new( bankSize: RomBankSize, 2 );
 		public BankedMemory Ram { get; } = new( bankSize: RamBankSize, 0 );
 
-		public int SelectedRomBank { get; protected set; } = 0;
-		public int SelectedRamBank { get; protected set; } = 0;
-
 		protected bool m_ramEnabled = false;
 		public bool RamEnabled => m_ramEnabled && Ram.Banks != 0 && Header.Type.HasRam();
-
-		//public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom[bankIndex], offset: 0 );
-		//public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram[bankIndex], offset: 0 );
 
         public HeaderView Header { get; }
 
@@ -70,6 +66,9 @@ namespace rzr
 		public ushort Length => RomBankSize * 2 + RamBankSize;
 		public bool Accepts( ushort address )
 		{
+            // 0000->3FFF
+			// 4000->7FFF
+			// A000->BFFF
 			return
 				address < 0x8000 ||     // 2x 16KiB banks banks
 										// 0x8000-0x9FFF vram ( gap )
@@ -78,11 +77,7 @@ namespace rzr
 		}
 
 		public Mbc()
-        {
-            //m_rom.Add( new byte[RomBankSize] ); // 0000->3FFF
-			//m_rom.Add( new byte[RomBankSize] ); // 4000->7FFF
-			//m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
-
+		{
 			Header = new HeaderView( Rom[0] );
 
             Header.RomBanks = 2;
@@ -142,11 +137,11 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    return Rom[SelectedRomBank][address - StartAddr];
+                    return Rom[Rom.SelectedBank][address - StartAddr];
                 }
                 else if( RamEnabled )
                 {
-					return Ram[SelectedRamBank][address - StartAddr];
+					return Ram[Ram.SelectedBank][address - StartAddr];
 				}
 				return 0xFF;
             }
@@ -154,16 +149,16 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( SelectedRomBank * Header.RomBanks ) + address - StartAddr;
+                    var bankAdr = ( Rom.SelectedBank * Header.RomBanks ) + address - StartAddr;
                     throw new SectionWriteAccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
                 else if( RamEnabled )
                 {
-                    Ram[SelectedRamBank][address - StartAddr] = value;
+                    Ram[Ram.SelectedBank][address - StartAddr] = value;
                 }
                 else
                 {
-                    var bankAdr = ( SelectedRamBank * Header.RamBanks ) + address - StartAddr;
+                    var bankAdr = ( Ram.SelectedBank * Header.RamBanks ) + address - StartAddr;
                     throw new SectionWriteAccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
                 }
             }
@@ -220,8 +215,8 @@ namespace rzr
                     base[address] = value;
                 }
 
-                SelectedRomBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % Header.RomBanks;
-                Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{SelectedRomBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
+                Rom.SelectedBank = ( ( m_secondaryRomBank << 5 ) + m_primaryRomBank ) % Header.RomBanks;
+                Debug.WriteLine( $"[{address:X4}:{value:X2}] Selected rom{Rom.SelectedBank} [{m_primaryRomBank}:{m_secondaryRomBank}]" );
             }
         }
     }

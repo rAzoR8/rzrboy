@@ -7,12 +7,13 @@ namespace dbg
 		public event StateChangedFn? StateChanged;
 
 		// TODO: make private
-		public rzr.State CurrentState { get; private set; } = new();
+		public rzr.State CurrentState { get; private set; }
 		private rzr.Emu m_emu;
 
 		public Debugger()
 		{
 			m_emu = new(ui.Logger.Instance);
+			CurrentState = new rzr.State( m_emu.cpu );
 			StateChanged?.Invoke(null, CurrentState);
 		}
 
@@ -26,7 +27,7 @@ namespace dbg
 			var rom = CurrentState.SaveRom();
 			var boot = CurrentState.SaveBootRom();
 			var oldState = CurrentState;
-			CurrentState = new();
+			CurrentState = new(m_emu.cpu);
 			CurrentState.LoadRom(rom);
 			CurrentState.LoadBootRom(boot);
 
@@ -36,7 +37,7 @@ namespace dbg
 		public void LoadCpuState( string path )
 		{
 			ui.Logger.LogMsg( $"Loading CpuState: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadCpuState( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.cpu.Load(task.Result));
 		}
 		public void LoadRom( string path )
 		{
@@ -108,7 +109,7 @@ namespace dbg
 
 		public void SaveState( string stateFolder )
 		{
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "cpu.bin" ), CurrentState.SaveCpuState() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "cpu.bin" ), CurrentState.cpu.Save() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "regs.bin" ), CurrentState.SaveRegs() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "rom.gb" ), CurrentState.SaveRom() );
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "eram.bin" ), CurrentState.SaveERam() );

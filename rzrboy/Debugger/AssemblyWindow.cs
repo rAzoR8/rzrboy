@@ -27,8 +27,8 @@ namespace dbg.ui
 				m_bankPCs.Clear();
 
 			ImGui.SameLine();
-			if( ImGui.Button( $"Goto Current 0x{state.curInstrPC}" ) )
-				Offset = state.curInstrPC;
+			if( ImGui.Button( $"Goto Current 0x{state.cpu.CurrentInstrPC}" ) )
+				Offset = state.cpu.CurrentInstrPC;
 
 			ImGui.SameLine();
 			if( ImGui.Button( "Goto Auto" ) )
@@ -47,35 +47,27 @@ namespace dbg.ui
 
 			ushort pc;
 
-			if( !m_bankPCs.TryGetValue( state.mbc.SelectedRomBank, out var knownPCs ) ) // we haven't seen this bank yet
+			if( !m_bankPCs.TryGetValue( state.mbc.Rom.SelectedBank, out var knownPCs ) ) // we haven't seen this bank yet
 			{
-				pc = state.curInstrPC;
-				knownPCs = new();
-				if( state.prevInstrPC < state.curInstrPC )
-				{
-					pc = state.prevInstrPC; // set start PC to prev if valid
-					knownPCs.Add( state.prevInstrPC );
-				}
-				knownPCs.Add( state.curInstrPC );
-				if( state.prevInstrPC > state.curInstrPC )
-					knownPCs.Add( state.prevInstrPC );
-				m_bankPCs.Add( state.mbc.SelectedRomBank, knownPCs );
+				pc = state.cpu.CurrentInstrPC;
+				knownPCs = new(){state.cpu.CurrentInstrPC};
+				m_bankPCs.Add( state.mbc.Rom.SelectedBank, knownPCs );
 			}
 			else
 			{
-				int idx = knownPCs.BinarySearch( state.curInstrPC );
+				int idx = knownPCs.BinarySearch( state.cpu.CurrentInstrPC );
 				if( idx < 0 ) // PC we havent seen yet for this bank
 				{
 					idx = ~idx;
-					knownPCs.Insert( idx, state.curInstrPC );
+					knownPCs.Insert( idx, state.cpu.CurrentInstrPC );
 				}
 
 				// TODO: we can use BinarySearch to get the previous idx still in range
-				pc = state.curInstrPC;
+				pc = state.cpu.CurrentInstrPC;
 				for( int i = idx, r = 0; i > -1 && r < Range; ++r, --i )
 				{
 					ushort prev = knownPCs[i];
-					if( ( state.curInstrPC - prev ) <= Range * 2 ) // assume average 2 bytes per instr
+					if( ( state.cpu.CurrentInstrPC - prev ) <= Range * 2 ) // assume average 2 bytes per instr
 					{
 						pc = prev;
 					}
@@ -108,7 +100,7 @@ namespace dbg.ui
 				string op1 = pc > _pc + 1 ? $"{mem[(ushort)( _pc + 1 )]:X2}" : "__";
 				string op2 = pc > _pc + 2 ? $"{mem[(ushort)( _pc + 2 )]:X2}" : "__";
 
-				bool isCur = _pc == state.curInstrPC;
+				bool isCur = _pc == state.cpu.CurrentInstrPC;
 
 				if( isCur ) ImGui.PushStyleColor( ImGuiCol.Text, new Vector4( 0.75f, 0, 0, 1 ) );
 				ImGui.Selectable( $"[0x{_pc:X4}:0x{op0:X2}{op1}{op2}] {instr.ToString( _pc ).ToUpper()}" );
@@ -120,7 +112,7 @@ namespace dbg.ui
 				pc = (ushort)Offset;
 
 			// draw instruction up until current PC
-			while( pc < state.curInstrPC )
+			while( pc < state.cpu.CurrentInstrPC )
 			{
 				Element();
 			}

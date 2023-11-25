@@ -27,9 +27,11 @@ namespace rzr
 	{
 		private Mem m_mem = new();
 		private Reg m_reg = new();
+		private Cpu m_cpu;
 
 		public ISection mem => m_mem;
 		public IRegisters reg => m_reg;
+		public ICpuState cpu => m_cpu;
 		public Pix pix { get; }
 		public Snd snd { get; }
 		public Mbc mbc => m_mem.mbc;
@@ -41,8 +43,9 @@ namespace rzr
 		public ISection io => m_mem.io;
 		public ISection hram => m_mem.hram;
 
-		public State()
+		public State(Cpu cpu)
 		{
+			m_cpu = cpu;
 			pix = new();
 			snd = new();
 		}		

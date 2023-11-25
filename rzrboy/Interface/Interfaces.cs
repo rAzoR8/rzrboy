@@ -15,6 +15,7 @@ namespace rzr
 	public interface IBankedMemory //: ISection
 	{
 		public int Banks { get; }
+		public int SelectedBank { get; set; }
 		IList<byte> this[int bank] { get; }
 	}
 
@@ -74,7 +75,7 @@ namespace rzr
 		public ISection io { get; }
 		public ISection hram { get; }
 
-		//public ICpuState cpu { get; }
+		public ICpuState cpu { get; }
 		//public IPpuState ppu { get; }
 	}
 
