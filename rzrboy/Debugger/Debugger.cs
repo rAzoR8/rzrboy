@@ -18,7 +18,7 @@ namespace dbg
 
 		public void Step()
 		{
-			m_emu.Step(CurrentState, debugPrint: true);
+			m_emu.Step(CurrentState);
 		}
 
 		public void Restart() // only reload ROM
