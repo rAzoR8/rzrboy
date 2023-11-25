@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace rzr
 {
 	public interface ISection
@@ -8,6 +10,12 @@ namespace rzr
 
 		public string Name => "unnamed";
 		public bool Accepts( ushort address ) => address >= StartAddr && address < ( StartAddr + Length );
+	}
+
+	public interface IBankedMemory //: ISection
+	{
+		public int Banks { get; }
+		IList<byte> this[int bank] { get; }
 	}
 
 	public enum IMEState : byte
@@ -37,13 +45,9 @@ namespace rzr
 		public ushort SP { get; set; }
 		public ushort PC { get; set; }
 
+		// TODO: move to CPU state
 		public IMEState IME { get; set; }
 		public bool Halted { get; set; }
-
-		//public ushort AF { get; set; }
-		//public ushort BC { get; set; }
-		//public ushort DE { get; set; }
-		//public ushort HL { get; set; }
 	}
 
 	public interface ICpuState : IState
@@ -52,7 +56,7 @@ namespace rzr
 		public byte CurrentInstrCycle { get; set; }
 	}
 
-	public interface IPpuState 
+	public interface IPpuState : IState
 	{
 		public ushort CurrentDot { get; set; }
 	}
@@ -60,7 +64,16 @@ namespace rzr
 	public interface IEmuState
 	{
 		public IRegisters reg { get; }
-		public ISection mem { get; }
+		public ISection mem { get; } // map complete address space
+		public IBankedMemory vram { get; }
+		public IBankedMemory rom { get; }
+		public IBankedMemory eram { get; }
+
+		// Optional ?
+		public ISection oam {  get; }
+		public ISection io { get; }
+		public ISection hram { get; }
+
 		//public ICpuState cpu { get; }
 		//public IPpuState ppu { get; }
 	}

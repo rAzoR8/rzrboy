@@ -2,26 +2,65 @@ using System.Diagnostics;
 
 namespace rzr
 {
-    // MBC Memory Banking Controller
+	public class BankedMemory : IBankedMemory, IState
+	{
+		private List<byte[]> m_banks = new();
+
+		public ushort BankSize { get; }
+		public int Banks => (ushort)m_banks.Count;
+		public IList<byte> this[int bank] => m_banks[bank];
+
+		public BankedMemory( ushort bankSize, ushort numBanks )
+		{
+			BankSize = bankSize;
+			for ( int i = 0; i < numBanks; i++ ) 
+			{
+				m_banks.Add(new byte[BankSize]);
+			}
+		}
+
+		public void Resize(ushort bankCount)
+		{
+			if( bankCount > m_banks.Count )
+			{
+				for( int i = m_banks.Count; i < bankCount; ++i )
+				{
+					m_banks.Add( new byte[BankSize] );
+				}
+			}
+			else if( bankCount < m_banks.Count )
+			{
+				m_banks.RemoveRange( bankCount - 1, m_banks.Count - bankCount );
+			}
+		}
+
+		public void Load( byte[] data )
+		{
+			Debug.Assert( data.Length % BankSize == 0);
+			m_banks.Clear();
+			m_banks.AddRange( data.Split( BankSize ) );			
+		}
+
+		public byte[] Save() => m_banks.SelectMany(x => x ).ToArray();
+	}
+
+	// MBC Memory Banking Controller
 	public class Mbc : ISection
 	{
         public const ushort RomBankSize = 0x4000; // 16KiB
         public const ushort RamBankSize = 0x2000; // 8KiB
 
-        private List<byte[]> m_rom = new();
-		private List<byte[]> m_ram = new();
+		public BankedMemory Rom { get; } = new( bankSize: RomBankSize, 2 );
+		public BankedMemory Ram { get; } = new( bankSize: RamBankSize, 0 );
 
 		public int SelectedRomBank { get; protected set; } = 0;
 		public int SelectedRamBank { get; protected set; } = 0;
 
 		protected bool m_ramEnabled = false;
-		public bool RamEnabled => m_ramEnabled && m_ram != null && m_ram.Count != 0 && Header.Type.HasRam();
+		public bool RamEnabled => m_ramEnabled && Ram.Banks != 0 && Header.Type.HasRam();
 
-		public byte[] Ram() => m_ram.SelectMany( x => x ).ToArray();
-		public byte[] Rom() => m_rom.SelectMany( x => x ).ToArray();
-
-		public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom[bankIndex], offset: 0 );
-		public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram[bankIndex], offset: 0 );
+		//public Section RomBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RomBankSize, name: $"RomBank{bankIndex}", access: SectionAccess.Read, data: m_rom[bankIndex], offset: 0 );
+		//public Section RamBank( int bankIndex, ushort sectionStart = 0 ) => new Section( start: sectionStart, len: RamBankSize, name: $"RamBank{bankIndex}", access: SectionAccess.ReadWrite, data: m_ram[bankIndex], offset: 0 );
 
         public HeaderView Header { get; }
 
@@ -40,11 +79,11 @@ namespace rzr
 
 		public Mbc()
         {
-            m_rom.Add( new byte[RomBankSize] ); // 0000->3FFF
-			m_rom.Add( new byte[RomBankSize] ); // 4000->7FFF
-			m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
+            //m_rom.Add( new byte[RomBankSize] ); // 0000->3FFF
+			//m_rom.Add( new byte[RomBankSize] ); // 4000->7FFF
+			//m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
 
-			Header = new HeaderView( m_rom[0] );
+			Header = new HeaderView( Rom[0] );
 
             Header.RomBanks = 2;
             Header.RamBanks = 1;
@@ -52,28 +91,23 @@ namespace rzr
 
 		public Mbc( byte[] rom, byte[]? ram = null )
 		{
-            m_rom = new( rom.Split( RomBankSize ) );
-            Header = new( m_rom[0] );
+            Rom.Load( rom );
+            Header = new( Rom[0] );
 
 			Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
-			Debug.Assert( m_rom.Count > 1 );
+			Debug.Assert( Rom.Banks > 1 );
 
             if( ram != null )
             {
                 Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
-                m_ram = new( ram.Split( RamBankSize ) );
+                Rom.Load( ram );
             }
-            else
-            {
-				m_ram.Add( new byte[RamBankSize] ); // A000->BFFF
-			}
         }
 
         public void LoadRam( byte[] ram )
         {
             Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
-            m_ram.Clear();
-            m_ram.AddRange( ram.Split( RamBankSize ) );
+			Ram.Load( ram );
         }
 
         // Load rom of identical MBC type
@@ -84,42 +118,20 @@ namespace rzr
 			Debug.Assert( rom.Length >= RomBankSize );
 			//Debug.Assert( rom.Length == RomBankSize * Header.RomBanks );
 
-            m_rom = new( rom.Split( RomBankSize ) );
+            Rom.Load( rom );
         }
 
-        public void ResizeRom( int bankCount )
+        public void ResizeRom( ushort bankCount )
         {
-			if( bankCount > m_rom.Count )
-			{
-				for( int i = m_rom.Count; i < bankCount; ++i )
-				{
-					m_rom.Add( new byte[RomBankSize] );
-				}
-			}
-			else if( bankCount < m_rom.Count )
-			{
-				m_rom.RemoveRange( bankCount - 1, m_rom.Count - bankCount );
-			}
-
+			Rom.Resize( bankCount );
 			Header.RomBanks = bankCount;
         }
 
-        public void ResizeRam( int bankCount )
+        public void ResizeRam( ushort bankCount )
         {
             bankCount = HeaderView.RamBankSizes.SkipWhile( b => b < bankCount ).First();
 
-			if( bankCount > m_ram.Count )
-			{
-				for( int i = m_ram.Count; i < bankCount; ++i )
-				{
-					m_ram.Add( new byte[RamBankSize] );
-				}
-			}
-			else if( bankCount < m_ram.Count )
-			{
-				m_ram.RemoveRange( bankCount - 1, m_ram.Count - bankCount );
-			}
-
+			Ram.Resize( bankCount );
 			Header.RamBanks = bankCount;
         }
 
@@ -130,11 +142,11 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    return m_rom[SelectedRomBank][address - StartAddr];
+                    return Rom[SelectedRomBank][address - StartAddr];
                 }
                 else if( RamEnabled )
                 {
-					return m_rom[SelectedRamBank][address - StartAddr];
+					return Ram[SelectedRamBank][address - StartAddr];
 				}
 				return 0xFF;
             }
@@ -147,7 +159,7 @@ namespace rzr
                 }
                 else if( RamEnabled )
                 {
-                    m_ram[SelectedRamBank][address - StartAddr] = value;
+                    Ram[SelectedRamBank][address - StartAddr] = value;
                 }
                 else
                 {
@@ -159,8 +171,8 @@ namespace rzr
 
         public bool FinalizeRom() 
         {
-			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( m_rom[0] );
-            Header.RomChecksum = HeaderView.ComputeRomChecksum( m_rom.SelectMany(b=>b) );
+			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( Rom[0] );
+            Header.RomChecksum = HeaderView.ComputeRomChecksum( Rom.Save() );
             return Header.Valid();
         }
     }
@@ -175,8 +187,8 @@ namespace rzr
 
         private BankingMode m_bankingMode = default;
 
-        private int m_primaryRomBank = 0;
-        private int m_secondaryRomBank = 0;
+        private ushort m_primaryRomBank = 0;
+        private ushort m_secondaryRomBank = 0;
 
         public Mbc1( byte[] rom ) : base( rom )
 		{

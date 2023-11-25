@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace rzr
 {
@@ -100,12 +100,12 @@ namespace rzr
 		{
 			mbc.FinalizeRom();
 
-			System.IO.File.WriteAllBytes( path, mbc.Rom() );
+			System.IO.File.WriteAllBytes( path, mbc.Rom.Save() );
 		}
 
 		public static void SaveRam( this Mbc mbc, string path )
 		{
-			System.IO.File.WriteAllBytes( path, mbc.Ram() );
+			System.IO.File.WriteAllBytes( path, mbc.Ram.Save() );
 		}
 
 		public static Mbc CreateMbc( CartridgeType type, byte[] cart )

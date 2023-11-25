@@ -34,49 +34,18 @@ namespace rzr
 		public Snd snd { get; }
 		public Mbc mbc => m_mem.mbc;
 
-		// TODO: remove
-		public ulong tick = 0;// current cycle/tick
-		public byte curOpCode = 0; // opcode od the currenlty executed instruction
-		public ushort curInstrPC = 0; // start ProgramCounter of the currently executed instruction
-		public ushort prevInstrPC = 0; // start ProgramCounter of the previously executed instruction
+		public IBankedMemory vram => throw new NotImplementedException();
+		public IBankedMemory rom => m_mem.mbc.Rom;
+		public IBankedMemory eram => m_mem.mbc.Ram;
+		public ISection oam => m_mem.oam;
+		public ISection io => m_mem.io;
+		public ISection hram => m_mem.hram;
 
-		public byte curInstrCycle = 1; // number of Non-fetch cycles already spent on executing the current instruction
-		public byte prevInstrCycles = 1; // number of non-fetch cycles spend on the previous instructions
-		
 		public State()
 		{
 			pix = new();
 			snd = new();
-		}
-		
-		public byte[] SaveCpuState() // TODO: remove
-		{
-			BinaryWriter bw = new();
-			bw.Write( tick );
-			bw.Write( curOpCode );
-			bw.Write( curInstrPC );
-			bw.Write( prevInstrPC );
-			bw.Write( curInstrCycle );
-			bw.Write( prevInstrCycles );
-
-			bw.Write( m_mem.IE.Value );
-			return bw.ToArray();
-		}
-
-		public void LoadCpuState( byte[] cpu ) // TODO: remove
-		{
-			BinaryReader br = new( cpu );
-			br.Read( ref tick );
-			br.Read( ref curOpCode );
-			br.Read( ref curInstrPC );
-			br.Read( ref prevInstrPC );
-			br.Read( ref curInstrCycle );
-			br.Read( ref prevInstrCycles );
-
-			byte IE = 0;
-			br.Read( ref IE );
-			m_mem.IE.Value = IE;
-		}
+		}		
 
 		public void LoadBootRom( byte[] boot )
 		{
@@ -93,12 +62,12 @@ namespace rzr
 			else
 				m_mem.mbc = Cartridge.CreateMbc( type, cart );			
 		}
-		public byte[] SaveRom() => mbc.Rom();
+		public byte[] SaveRom() => mbc.Rom.Save();
 
 		public void LoadRegs( byte[] regs ) => m_reg.Load( regs );
 		public byte[] SaveRegs() => m_reg.Save();
 		public void LoadERam( byte[] eram ) => mbc.LoadRam( eram );
-		public byte[] SaveERam() => mbc.Ram();
+		public byte[] SaveERam() => mbc.Ram.Save();
 		public void LoadWRam( byte[] wram ) => m_mem.wram.Load( wram );
 		public byte[] SaveWRam() => m_mem.wram.Save();
 		public void LoadVRam( byte[] vram ) => m_mem.vram.Load( vram ); // TODO: select bank
