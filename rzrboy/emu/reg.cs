@@ -42,9 +42,134 @@ namespace rzr
                 default: throw new ArgumentException( $"{left} can't be extended to 16 bit register with {right}" );
 			}
 		}
+
+		public static RegView AsView(this IRegisters reg) => new RegView(reg);
     }
 
-    public class Reg : IRegisters
+	public class RegView : IRegisters
+	{
+		private IRegisters m_reg;
+
+		public RegView( IRegisters reg ) { m_reg = reg; }
+
+		public byte A { get => m_reg.A; set => m_reg.A = value; }
+		public byte F { get => m_reg.F; set => m_reg.F = value; }
+		public byte B { get => m_reg.B; set => m_reg.B = value; }
+		public byte C { get => m_reg.C; set => m_reg.C = value; }
+		public byte D { get => m_reg.D; set => m_reg.D = value; }
+		public byte E { get => m_reg.E; set => m_reg.E = value; }
+		public byte H { get => m_reg.H; set => m_reg.H = value; }
+		public byte L { get => m_reg.L; set => m_reg.L = value; }
+		public ushort SP { get => m_reg.SP; set => m_reg.SP = value; }
+		public ushort PC { get => m_reg.PC; set => m_reg.PC = value; }
+		public IMEState IME { get => m_reg.IME; set => m_reg.IME = value; }
+		public bool Halted { get => m_reg.Halted; set => m_reg.Halted = value; }
+
+		public ushort AF { get { return (ushort)( ( A << 8 ) | F ); } set { A = (byte)( value >> 8 ); F = (byte)( value & 0xFF ); } } // TODO masking?
+		public ushort BC { get { return (ushort)( ( B << 8 ) | C ); } set { B = (byte)( value >> 8 ); C = (byte)( value & 0xFF ); } }
+		public ushort DE { get { return (ushort)( ( D << 8 ) | E ); } set { D = (byte)( value >> 8 ); E = (byte)( value & 0xFF ); } }
+		public ushort HL { get { return (ushort)( ( H << 8 ) | L ); } set { H = (byte)( value >> 8 ); L = (byte)( value & 0xFF ); } }
+
+		public bool Zero { get => F.IsBitSet( 7 ); set { F = Binutil.SetBit( F, 7, value ); } }
+		public bool Sub { get => F.IsBitSet( 6 ); set { F = Binutil.SetBit( F, 6, value ); } }
+		public bool HalfCarry { get => F.IsBitSet( 5 ); set { F = F = Binutil.SetBit( F, 5, value ); } }
+		public bool Carry { get => F.IsBitSet( 4 ); set { F = Binutil.SetBit( F, 4, value ); } }
+
+		public void SetFlags( bool Z, bool N, bool H, bool C )
+		{
+			Zero = Z;
+			Sub = N;
+			HalfCarry = H;
+			Carry = C;
+		}
+
+		public Reg Clone() => new Reg
+		{
+			F = this.F,
+			A = this.A,
+			B = this.B,
+			C = this.C,
+			D = this.D,
+			E = this.E,
+			H = this.H,
+			L = this.L,
+			SP = this.SP,
+			PC = this.PC,
+			IME = this.IME,
+			Halted = this.Halted
+		};
+
+		public byte this[Reg8 type]
+		{
+			get
+			{
+				switch( type )
+				{
+					case Reg8.A: return A;
+					case Reg8.F: return F;
+					case Reg8.B: return B;
+					case Reg8.C: return C;
+					case Reg8.D: return D;
+					case Reg8.E: return E;
+					case Reg8.H: return H;
+					case Reg8.L: return L;
+					default: throw new ArgumentOutOfRangeException( "type" );
+				}
+			}
+			set
+			{
+				switch( type )
+				{
+					case Reg8.A: A = value; break;
+					case Reg8.F: F = value; break;
+					case Reg8.B: B = value; break;
+					case Reg8.C: C = value; break;
+					case Reg8.D: D = value; break;
+					case Reg8.E: E = value; break;
+					case Reg8.H: H = value; break;
+					case Reg8.L: L = value; break;
+					default: throw new ArgumentOutOfRangeException( "type" );
+				}
+			}
+		}
+
+		public ushort this[Reg16 type]
+		{
+			get
+			{
+				switch( type )
+				{
+					case Reg16.AF: return AF;
+					case Reg16.BC: return BC;
+					case Reg16.DE: return DE;
+					case Reg16.HL: return HL;
+					case Reg16.SP: return SP;
+					case Reg16.PC: return PC;
+					default: throw new ArgumentOutOfRangeException( "type" );
+				}
+			}
+			set
+			{
+				switch( type )
+				{
+					case Reg16.AF: AF = value; break;
+					case Reg16.BC: BC = value; break;
+					case Reg16.DE: DE = value; break;
+					case Reg16.HL: HL = value; break;
+					case Reg16.SP: SP = value; break;
+					case Reg16.PC: PC = value; break;
+					default: throw new ArgumentOutOfRangeException( "type" );
+				}
+			}
+		}
+
+		public override string ToString()
+		{
+			return $"AF={AF:X4}, BC={BC:X4}, DE={DE:X4}, HL={HL:X4}, SP={SP:X4}, PC={PC:X4}, Z={Zero}, N={Sub}, H={HalfCarry}, C={Carry}";
+		}
+	}
+
+    public class Reg : IRegisters, IState
     {
         private byte _flags;       
         
@@ -91,122 +216,19 @@ namespace rzr
 			IME = (IMEState)regs[12]; Halted = regs[13] == 1;
 		}
 
-		//public ushort AF { get { return A.Combine( F ); } set { Binutil.Split( (ushort)( value & FlagMask16 ), out A, out _flags ); } }
-  //      public ushort BC { get { return B.Combine( C ); } set { Binutil.Split( value, out B, out C ); } }
-  //      public ushort DE { get { return D.Combine( E ); } set { Binutil.Split( value, out D, out E ); } }
-  //      public ushort HL { get { return H.Combine( L ); } set { Binutil.Split( value, out H, out L ); } }
+		//public static Reg DMG() { return new Reg() { AF = 0x01B0, BC = 0x0013, DE = 0x00D8, HL = 0x014D, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg MGB() { return new Reg() { AF = 0xFFB0, BC = 0x0013, DE = 0x00D8, HL = 0x014D, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg SGB() { return new Reg() { AF = 0x0100, BC = 0x0014, DE = 0x0000, HL = 0xC060, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg CBG() { return new Reg() { AF = 0x1180, BC = 0x0000, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg AGB() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg AGS() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
 
-        public bool Zero { get => _flags.IsBitSet(7); set { Binutil.SetBit( ref _flags, 7, value ); } }
-        public bool Sub { get => _flags.IsBitSet( 6 ); set { Binutil.SetBit( ref _flags, 6, value ); } }
-        public bool HalfCarry { get => _flags.IsBitSet( 5 ); set { Binutil.SetBit( ref _flags, 5, value); } }
-        public bool Carry { get => _flags.IsBitSet( 4 ); set { Binutil.SetBit( ref _flags, 4, value); } }
-        
-        public void SetFlags( bool Z, bool N, bool H, bool C )
-        {
-            Zero = Z;
-            Sub = N;
-            HalfCarry = H;
-            Carry = C;
-        }
-        
-        public Reg Clone() => new Reg
-        {
-	        _flags = this._flags,
-	        A = this.A,
-	        B = this.B,
-	        C = this.C,
-	        D = this.D,
-	        E = this.E,
-	        H = this.H,
-	        L = this.L,
-	        SP = this.SP,
-	        PC = this.PC,
-	        IME =  this.IME,
-	        Halted = this.Halted
-        };
+		//// GBC modes
+		//public static Reg CBG_GBC() { return new Reg() { AF = 0x1180, BC = 0x0000, DE = 0xFF56, HL = 0x000D, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg AGB_GBC() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0xFF56, HL = 0x000D, SP = 0xFFFE, PC = 0x0100 }; }
+		//public static Reg AGS_GBC() { return AGB_GBC(); }
 
-        public byte this[Reg8 type]
-        {
-            get
-            {
-                switch (type)
-                {
-                    case Reg8.A: return A;
-                    case Reg8.F: return F;
-                    case Reg8.B: return B;
-                    case Reg8.C: return C;
-                    case Reg8.D: return D;
-                    case Reg8.E: return E;
-                    case Reg8.H: return H;
-                    case Reg8.L: return L;
-                    default: throw new ArgumentOutOfRangeException("type");
-                }
-            }
-            set
-            {
-                switch (type)
-                {
-                    case Reg8.A: A = value; break;
-                    case Reg8.F: F = value; break;
-                    case Reg8.B: B = value; break;
-                    case Reg8.C: C = value; break;
-                    case Reg8.D: D = value; break;
-                    case Reg8.E: E = value; break;
-                    case Reg8.H: H = value; break;
-                    case Reg8.L: L = value; break;
-                    default: throw new ArgumentOutOfRangeException("type");
-                }
-            }
-        }
-
-        public ushort this[Reg16 type]
-        {
-            get
-            {
-                switch (type)
-                {
-                    case Reg16.AF: return AF;
-                    case Reg16.BC: return BC;
-                    case Reg16.DE: return DE;
-                    case Reg16.HL: return HL;
-                    case Reg16.SP: return SP;
-                    case Reg16.PC: return PC;
-                    default: throw new ArgumentOutOfRangeException("type");
-                }
-            }
-            set
-            {
-                switch (type)
-                {
-                    case Reg16.AF: AF = value; break;
-                    case Reg16.BC: BC = value; break;
-                    case Reg16.DE: DE = value; break;
-                    case Reg16.HL: HL = value; break;
-                    case Reg16.SP: SP = value; break;
-                    case Reg16.PC: PC = value; break;
-                    default: throw new ArgumentOutOfRangeException("type");
-                }
-            }
-        }
-
-        public override string ToString()
-        {
-            return $"AF={AF:X4}, BC={BC:X4}, DE={DE:X4}, HL={HL:X4}, SP={SP:X4}, PC={PC:X4}, Z={Zero}, N={Sub}, H={HalfCarry}, C={Carry}";
-        }
-
-        public static Reg DMG() { return new Reg() { AF = 0x01B0, BC = 0x0013, DE = 0x00D8, HL = 0x014D, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg MGB() { return new Reg() { AF = 0xFFB0, BC = 0x0013, DE = 0x00D8, HL = 0x014D, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg SGB() { return new Reg() { AF = 0x0100, BC = 0x0014, DE = 0x0000, HL = 0xC060, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg CBG() { return new Reg() { AF = 0x1180, BC = 0x0000, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg AGB() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg AGS() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0x0008, HL = 0x007C, SP = 0xFFFE, PC = 0x0100 }; }
-        
-        // GBC modes
-        public static Reg CBG_GBC() { return new Reg() { AF = 0x1180, BC = 0x0000, DE = 0xFF56, HL = 0x000D, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg AGB_GBC() { return new Reg() { AF = 0x1100, BC = 0x0100, DE = 0xFF56, HL = 0x000D, SP = 0xFFFE, PC = 0x0100 }; }
-        public static Reg AGS_GBC() { return AGB_GBC(); }
-
-        public const byte FlagMask8 = 0b1111_0000;
+		public const byte FlagMask8 = 0b1111_0000;
         public const ushort FlagMask16 = 0b11111111_11110000;
 
         public const byte ZFlagMask8 = 0b10000000; // ZERO

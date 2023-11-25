@@ -26,7 +26,16 @@ namespace rzr
             return target;
         }
 
-        public static bool IsBitSet( this ushort value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
+		public static byte SetBit( byte target, byte index, bool value )
+		{
+			if( value )
+				target |= (byte)( 1 << index );
+			else
+				target &= (byte)~( 1 << index );
+			return target;
+		}
+
+		public static bool IsBitSet( this ushort value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
 		public static ushort GetBit( this ushort value, byte bit ) { return (ushort)( ( value & ( 1 << bit ) ) >> bit ); }
 
 		public static ushort SetBit( ref ushort target, byte index, bool value )
@@ -38,7 +47,16 @@ namespace rzr
             return target;
         }
 
-        public static byte Flip( this byte val ) => (byte)( ~val );
+		public static ushort SetBit( ushort target, byte index, bool value )
+		{
+			if( value )
+				target |= (byte)( 1 << index );
+			else
+				target &= (byte)~( 1 << index );
+			return target;
+		}
+
+		public static byte Flip( this byte val ) => (byte)( ~val );
         public static ushort Flip( this ushort val ) => (ushort)( ~val );
     }
 }

@@ -1,6 +1,6 @@
 namespace rzr
 {
-    public class Cpu
+    public class Cpu : ICpuState
     {
         public static IEnumerable<CpuOp>[] Instructions = new IEnumerable<CpuOp>[256];
 
@@ -14,28 +14,35 @@ namespace rzr
             }
         }
 
+		private IEnumerator<CpuOp>? curOp = null;
+
+		// ICpuState
+		public ushort CurrentInstrPC { get; /*private*/ set; }
+		public byte CurrentInstrCycle { get; set; }
+
+		// internal for now
+		public ulong CurrentCycle { get; private set; } = 0;
+		public byte CurrentOpCode { get; private set; } = 0;
+
 		/// <summary>
 		/// execute one M-cycle
 		/// </summary>
 		/// <returns>true if executing the same instruction, false after a new one is fetched</returns>
-		public bool Tick( State state )
+		public bool Tick( IEmuState state )
         {
 			bool moreOps = true;
-            if( state.curOp != null )
+            if( curOp != null )
             {
-				state.curOp.Current( state.reg, state.mem );
-				moreOps = state.curOp.MoveNext();
-				++state.curInstrCycle;
+				curOp.Current( state.reg.AsView() , state.mem );
+				moreOps = curOp.MoveNext();
+				++CurrentInstrCycle;
             }
 
 			// fetch
-            if( state.curOp == null || !moreOps )
+            if( curOp == null || !moreOps )
             {
-				state.prevInstrCycles = state.curInstrCycle;
-				state.curInstrCycle = 1;
-
-				state.prevInstrPC = state.curInstrPC;
-				state.curInstrPC = state.reg.PC;
+				CurrentInstrCycle = 1;
+				CurrentInstrPC = state.reg.PC;
 
                 // handle interrupts, if any
                 if( state.reg.IME == IMEState.Enabled ) 
@@ -45,8 +52,8 @@ namespace rzr
 					{
 						state.reg.Halted = false;
 
-						state.curOp = Interrupt.HandlePending().GetEnumerator();
-						state.curOp.MoveNext();
+						curOp = Interrupt.HandlePending().GetEnumerator();
+						curOp.MoveNext();
 						return false; // TODO: check if this is still correct
 					}
 				}
@@ -59,15 +66,39 @@ namespace rzr
                     return false;
                 }
 
-				state.curOpCode = state.mem[state.curInstrPC]; // fetch
+				CurrentOpCode = state.mem[CurrentInstrPC]; // fetch
                 ++state.reg.PC;
 
-				state.curOp = Instructions[state.curOpCode].GetEnumerator();
-				state.curOp.MoveNext();
+				curOp = Instructions[CurrentOpCode].GetEnumerator();
+				curOp.MoveNext();
             }
 
-			state.tick++;
+			CurrentCycle++;
             return moreOps;
         }
-    }
+
+		public void Load( byte[] data )
+		{
+			BinaryReader br = new( data );
+			CurrentCycle = br.ReadUInt32();
+			CurrentInstrCycle = br.ReadByte();
+			CurrentInstrPC = br.ReadUInt16();
+			CurrentOpCode = br.ReadByte();
+
+			// catch up on the passed cycles on this instruction
+			curOp = Instructions[CurrentOpCode].GetEnumerator();
+			for( int i = 0; i < CurrentInstrCycle; ++i )
+				curOp.MoveNext();
+		}
+
+		public byte[] Save()
+		{
+			BinaryWriter bw = new();
+			bw.Write( CurrentCycle );
+			bw.Write( CurrentInstrCycle );
+			bw.Write( CurrentInstrPC );
+			bw.Write( CurrentOpCode );
+			return bw.ToArray();
+		}
+	}
 }

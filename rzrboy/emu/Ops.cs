@@ -202,7 +202,7 @@ namespace rzr
 			yield return ( reg, mem ) => reg.A = mem[nn];
 		}
 
-		private static void AddHelper( Reg reg, byte rhs, byte carry = 0 )
+		private static void AddHelper( RegView reg, byte rhs, byte carry = 0 )
 		{
 			carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
 
@@ -227,7 +227,7 @@ namespace rzr
 			};
 		}
 
-		private static ushort SignedAddHelper( Reg reg, ushort lhs, sbyte rhs )
+		private static ushort SignedAddHelper( RegView reg, ushort lhs, sbyte rhs )
 		{
 			var res = lhs + rhs;
 
@@ -261,7 +261,7 @@ namespace rzr
 		public static IEnumerable<CpuOp> AddHl( Reg16 src )
 		{
 			yield return Nop;
-			yield return ( Reg reg, ISection mem ) =>
+			yield return ( RegView reg, ISection mem ) =>
 			{
 				ushort l = reg.HL;
 				ushort r = reg[src];
@@ -272,7 +272,7 @@ namespace rzr
 			};
 		}
 
-		public static void SubHelper( Reg reg, byte rhs, byte carry = 0 )
+		public static void SubHelper( RegView reg, byte rhs, byte carry = 0 )
 		{
 			carry = (byte)( carry != 0 && reg.Carry ? 1 : 0 );
 
@@ -311,7 +311,7 @@ namespace rzr
 		{
 			byte val = 0;
 			if( src.Is16() ) yield return ( reg, mem ) => val = mem[reg.HL];
-			yield return ( Reg reg, ISection mem ) =>
+			yield return ( RegView reg, ISection mem ) =>
 			{
 				if( src.Is8() ) val = reg[src.To8()];
 				reg.SetFlags( Z: ( reg.A &= val ) == 0, N: false, H: true, C: false );
@@ -346,7 +346,7 @@ namespace rzr
 			yield return ( reg, mem ) => reg.SetFlags( Z: ( reg.A |= val ) == 0, N: false, H: false, C: false );
 		}
 
-		public static void CpHelper( Reg reg, byte rhs )
+		public static void CpHelper( RegView reg, byte rhs )
 		{
 			var res = reg.A - rhs;
 			reg.Zero = (byte)res == 0;
@@ -378,11 +378,11 @@ namespace rzr
 		// JP HL 1 cycle
 		public static readonly CpuOp JpHl = ( reg, mem ) => { reg.PC = reg.HL; };
 
-		public delegate bool Condition( Reg reg );
-		public readonly static Condition NZ = ( Reg reg ) => !reg.Zero;
-		public readonly static Condition Z = ( Reg reg ) => reg.Zero;
-		public readonly static Condition NC = ( Reg reg ) => !reg.Carry;
-		public readonly static Condition C = ( Reg reg ) => reg.Carry;
+		public delegate bool Condition( RegView reg );
+		public readonly static Condition NZ = ( RegView reg ) => !reg.Zero;
+		public readonly static Condition Z = ( RegView reg ) => reg.Zero;
+		public readonly static Condition NC = ( RegView reg ) => !reg.Carry;
+		public readonly static Condition C = ( RegView reg ) => reg.Carry;
 
 		// JP cc, a16 3/4 cycles
 		public static IEnumerable<CpuOp> JpImm16( Condition? cc = null )
@@ -474,7 +474,7 @@ namespace rzr
 			yield return ( reg, mem ) => { reg[dst] += 1; };
 		}
 
-		private static byte Inc8Helper( byte val, Reg reg )
+		private static byte Inc8Helper( byte val, RegView reg )
 		{
 			byte res = (byte)( val + 1 );
 			reg.Zero = res == 0;
@@ -502,7 +502,7 @@ namespace rzr
 			yield return ( reg, mem ) => { reg[dst] -= 1; };
 		}
 
-		private static byte Dec8Helper( byte val, Reg reg )
+		private static byte Dec8Helper( byte val, RegView reg )
 		{
 			byte res = (byte)( val - 1 );
 			reg.Zero = res == 0;
@@ -654,7 +654,7 @@ namespace rzr
 			};
 		}
 
-		private delegate byte AluFunc( Reg reg, byte val );
+		private delegate byte AluFunc( RegView reg, byte val );
 
 		// RLC r, RRC r etc - 1 or 3 cycles (+1 fetch)
 		private static IEnumerable<CpuOp> MemAluMemHelper( RegX dst, AluFunc func )
@@ -672,7 +672,7 @@ namespace rzr
 			}
 		}
 
-		private static byte RlcHelper( Reg reg, byte val )
+		private static byte RlcHelper( RegView reg, byte val )
 		{
 			reg.Carry = val.IsBitSet( 7 );
 			val <<= 1;
@@ -687,7 +687,7 @@ namespace rzr
 		// RLC r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Rlc( RegX dst ) => MemAluMemHelper( dst, RlcHelper );
 
-		private static byte RrcHelper( Reg reg, byte val )
+		private static byte RrcHelper( RegView reg, byte val )
 		{
 			reg.Carry = val.IsBitSet( 0 );
 			val >>= 1;
@@ -702,7 +702,7 @@ namespace rzr
 		// RRC r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Rrc( RegX dst ) => MemAluMemHelper( dst, RrcHelper );
 
-		private static byte RlHelper( Reg reg, byte val )
+		private static byte RlHelper( RegView reg, byte val )
 		{
 			byte res = (byte)( val << 1 );
 			if( reg.Carry ) res |= 1;
@@ -717,7 +717,7 @@ namespace rzr
 		// RL r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Rl( RegX dst ) => MemAluMemHelper( dst, RlHelper );
 
-		private static byte RrHelper( Reg reg, byte val )
+		private static byte RrHelper( RegView reg, byte val )
 		{
 			byte res = (byte)( val >> 1 );
 			if( reg.Carry ) res |= ( 1 << 7 );
@@ -732,7 +732,7 @@ namespace rzr
 		// RR r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Rr( RegX dst ) => MemAluMemHelper( dst, RrHelper );
 
-		private static byte SlaHelper( Reg reg, byte val )
+		private static byte SlaHelper( RegView reg, byte val )
 		{
 			byte res = (byte)( val << 1 );
 			reg.Carry = val.IsBitSet( 7 );
@@ -745,7 +745,7 @@ namespace rzr
 		// SLA r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Sla( RegX dst ) => MemAluMemHelper( dst, SlaHelper );
 
-		private static byte SraHelper( Reg reg, byte val )
+		private static byte SraHelper( RegView reg, byte val )
 		{
 			// shift right into carry, MSB stays the same
 			byte res = (byte)( ( val >> 1 ) | ( val & ( 1 << 7 ) ) );
@@ -759,7 +759,7 @@ namespace rzr
 		// SRA r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Sra( RegX dst ) => MemAluMemHelper( dst, SraHelper );
 
-		private static byte SwapHelper( Reg reg, byte val )
+		private static byte SwapHelper( RegView reg, byte val )
 		{
 			byte low = (byte)( val & 0b0000_1111 );
 			byte high = (byte)( val & 0b1111_0000 );
@@ -774,7 +774,7 @@ namespace rzr
 		// SWAP r - 1 or 3 cycles (+1 fetch)
 		public static IEnumerable<CpuOp> Swap( RegX dst ) => MemAluMemHelper( dst, SwapHelper );
 
-		private static byte SrlHelper( Reg reg, byte val )
+		private static byte SrlHelper( RegView reg, byte val )
 		{
 			byte res = (byte)( val >> 1 ); // shift right into carry, MSB is set to 0
 			reg.Carry = val.IsBitSet( 0 );

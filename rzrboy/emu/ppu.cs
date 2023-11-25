@@ -51,7 +51,7 @@ namespace rzr
         }
 
 		// TODO: make static
-        public void Tick( IState state )
+        public void Tick( IEmuState state )
 		{
 			//state.pix.Tick++;
         }

@@ -23,13 +23,16 @@ namespace rzr
 		public void Read (ref string value ) => value = ReadString();
 	}
 
-	public class State : IState
+	public class State : IEmuState
 	{
-		public Mem mem { get; }
-		public Reg reg { get; }
+		private Mem m_mem = new();
+		private Reg m_reg = new();
+
+		public ISection mem => m_mem;
+		public IRegisters reg => m_reg;
 		public Pix pix { get; }
 		public Snd snd { get; }
-		public Mbc mbc => mem.mbc;
+		public Mbc mbc => m_mem.mbc;
 
 		// TODO: rename to CPU tick, or encapsulate in CpuState struct
 		public ulong tick = 0;// current cycle/tick
@@ -39,13 +42,9 @@ namespace rzr
 
 		public byte curInstrCycle = 1; // number of Non-fetch cycles already spent on executing the current instruction
 		public byte prevInstrCycles = 1; // number of non-fetch cycles spend on the previous instructions
-
-		public IEnumerator<CpuOp>? curOp = null;
-
+		
 		public State()
 		{
-			mem = new();
-			reg = new();
 			pix = new();
 			snd = new();
 		}
@@ -60,7 +59,7 @@ namespace rzr
 			bw.Write( curInstrCycle );
 			bw.Write( prevInstrCycles );
 
-			bw.Write( mem.IE.Value );
+			bw.Write( m_mem.IE.Value );
 			return bw.ToArray();
 		}
 
@@ -76,17 +75,12 @@ namespace rzr
 
 			byte IE = 0;
 			br.Read( ref IE );
-			mem.IE.Value = IE;
-
-			// catch up on the passed cycles on this instruction
-			curOp = Cpu.Instructions[curOpCode].GetEnumerator();
-			for( int i = 0; i < curInstrCycle; ++i )
-				curOp.MoveNext();
+			m_mem.IE.Value = IE;
 		}
 
 		public void LoadBootRom( byte[] boot )
 		{
-			mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read, data: boot, offset: 0 );
+			m_mem.boot = new Section( start: 0x0000, len: (ushort)boot.Length, "bootrom", access: SectionAccess.Read, data: boot, offset: 0 );
 		}
 		
 		public void LoadRom(  byte[] cart )
@@ -95,23 +89,23 @@ namespace rzr
 			if( type == mbc.Header.Type )
 				mbc.LoadRom( cart );
 			else
-				mem.mbc = Cartridge.CreateMbc( type, cart );			
+				m_mem.mbc = Cartridge.CreateMbc( type, cart );			
 		}
 		public byte[] SaveRom() => mbc.Rom();
 
-		public void LoadRegs( byte[] regs ) => reg.Load( regs );
-		public byte[] SaveRegs() => reg.Save();
+		public void LoadRegs( byte[] regs ) => m_reg.Load( regs );
+		public byte[] SaveRegs() => m_reg.Save();
 		public void LoadERam( byte[] eram ) => mbc.LoadRam( eram );
 		public byte[] SaveERam() => mbc.Ram();
-		public void LoadWRam( byte[] wram ) => mem.wram.Load( wram );
-		public byte[] SaveWRam() => mem.wram.Save();
-		public void LoadVRam( byte[] vram ) => mem.vram.Load( vram ); // TODO: select bank
-		public byte[] SaveVRam() => mem.vram.Save();
-		public void LoadIO( byte[] io ) { mem.io.Load(io); }
-		public byte[] SaveIO() => mem.io.Save();
-		public void LoadHRam( byte[] hram ) => mem.hram.Load( hram );
-		public byte[] SaveHRam() => mem.hram.Save();
-		public void LoadOam( byte[] oam ) => mem.oam.Load( oam );
-		public byte[] SaveOam() => mem.oam.Save();
+		public void LoadWRam( byte[] wram ) => m_mem.wram.Load( wram );
+		public byte[] SaveWRam() => m_mem.wram.Save();
+		public void LoadVRam( byte[] vram ) => m_mem.vram.Load( vram ); // TODO: select bank
+		public byte[] SaveVRam() => m_mem.vram.Save();
+		public void LoadIO( byte[] io ) { m_mem.io.Load(io); }
+		public byte[] SaveIO() => m_mem.io.Save();
+		public void LoadHRam( byte[] hram ) => m_mem.hram.Load( hram );
+		public byte[] SaveHRam() => m_mem.hram.Save();
+		public void LoadOam( byte[] oam ) => m_mem.oam.Load( oam );
+		public byte[] SaveOam() => m_mem.oam.Save();
 	}
 }

@@ -1,11 +1,11 @@
-﻿namespace rzr
+namespace rzr
 {
 	/// <summary>
 	/// Each op (operation) takes one m-cycle.
 	/// </summary>
 	/// <param name="reg"></param>
 	/// <param name="mem"></param>
-	public delegate void CpuOp( Reg reg, ISection mem );
+	public delegate void CpuOp( RegView reg, ISection mem );
 
 	/// <summary>
 	/// Operation stream producer

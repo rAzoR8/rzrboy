@@ -12,7 +12,7 @@ namespace rzr
         public uint Speed { get; set; } = 1;
         public uint MCyclesPerSec => 1048576u * Speed;
 
-        public delegate void Callback( State state );
+        public delegate void Callback( IEmuState state );
 
 		public List<Callback> PreStepCallbacks { get; } = new();
 		public List<Callback> PostStepCallbacks { get; } = new();
@@ -25,7 +25,7 @@ namespace rzr
             Logger = logger;
         }
 
-		public bool Tick( State state )
+		public bool Tick( IEmuState state )
 		{
             bool cont;
 			try
@@ -47,7 +47,7 @@ namespace rzr
         /// execute one complete instruction
         /// </summary>
         /// <returns>number of M-cycles the current instruction took with overlapped fetch</returns>
-        public uint Step( State state )
+        public void Step( IEmuState state )
         {
             uint cycles = 1;
 
@@ -59,17 +59,17 @@ namespace rzr
 			// execute all ops
 			while ( Tick( state ) ) { ++cycles; }
 
-            {
-                ushort pc = state.prevInstrPC;
-                Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{state.prevInstrCycles} cycles|fetch" );
-            }
+			//{
+			//	ushort pc = state.prevInstrPC;
+			//	Logger.Log( $"{Isa.Disassemble( ref pc, state.mem )} {cycles}:{state.prevInstrCycles} cycles|fetch" );
+			//}
 
-            foreach ( Callback fun in PostStepCallbacks )
+			foreach ( Callback fun in PostStepCallbacks )
             {
                 fun( state );
             }
 
-            return cycles;
+            //return cycles;
         }
     }
 }

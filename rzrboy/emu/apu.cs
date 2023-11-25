@@ -6,7 +6,7 @@ namespace rzr
         {
         }
 
-        public void Tick( IState state )
+        public void Tick( IEmuState state )
         {
         }
     }
