@@ -4,6 +4,7 @@ namespace rzr
 {
 	public class IOSection : ISection, IState
 	{
+		public string Name => "io";
 		public ushort StartAddr => 0xFF00;
 		public ushort Length => 128;
 
@@ -15,11 +16,13 @@ namespace rzr
 			{
 				switch( address )
 				{
-					//case >= 0xFF00 and < 0xFF80: return io;         // FF00-FF80 128B
-					//case >= 0xFF80 and < 0xFFFF: return hram;       // FF80-FFFF 127B
+					case 0xFF4F: //Reading from this register will return the number of the currently loaded VRAM bank in bit 0, and all other bits will be set to 1.
+						m_onwer.vram.SelectedBank = value & 0b1;
+						Data[0x4F] = (byte)(0b11111110 | ( value & 0b1 ));
+						break;
 					case 0xFF70:
-						m_onwer.wram.SelectedBank = value;
-						Data[address - StartAddr] = value; //TODO: needs 0->1 adjustment?
+						m_onwer.wram.SelectedBank = value & 0b111;
+						Data[0x70] = (byte)(value & 0b111); //TODO: needs 0->1 adjustment?
 						break;
 					default:
 						Data[address - StartAddr] = value; break;

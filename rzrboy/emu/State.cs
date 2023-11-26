@@ -36,7 +36,7 @@ namespace rzr
 		public Snd snd { get; }
 		public Mbc mbc => m_mem.mbc;
 
-		public IBankedMemory vram => throw new NotImplementedException();
+		public IBankedMemory vram => m_mem.vram;
 		public IBankedMemory rom => m_mem.mbc.Rom;
 		public IBankedMemory eram => m_mem.mbc.Ram;
 		public IBankedMemory wram => m_mem.wram;
@@ -44,8 +44,8 @@ namespace rzr
 		public IState io => m_mem.io;
 		public IState hram => m_mem.hram;
 		public IState bios => m_mem.boot;
-
 		public IFramebuffer frame => pix.FrameBuffer;
+
 		public State(Cpu cpu)
 		{
 			m_cpu = cpu;

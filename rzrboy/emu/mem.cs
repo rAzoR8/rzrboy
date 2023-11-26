@@ -31,13 +31,13 @@ namespace rzr
 
 		public Section boot { get; set; } = Boot.Minimal; // 0x0000
 
-		public Mbc			mbc { get; set; } = new(); // including eram (external)
-		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram", SectionAccess.ReadWrite ); // In CGB mode, switchable bank 0/1        
+		public Mbc			mbc { get; set; } = new(); //  0x000 Including eram (external)
+		public VRam			vram { get; set; } = new(); // 0x8000 In CGB mode, switchable bank 0/1        
 		public WRam			wram { get; set; } = new(); // 0xC000 In CGB mode, switchable banks 1-7
 		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
 		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam", SectionAccess.ReadWrite );
 		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused", SectionAccess.None ); // for arbitrary roms it might be necessary to allow ReadWrite access
-		public IOSection	io { get; set; } //  new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
+		public IOSection	io { get; set; } // new( 0xFF00, IOSize, "io", SectionAccess.ReadWrite );
 		public Section		hram { get; set; } = new( 0xFF80, HRamSize, "ram", SectionAccess.ReadWrite);
 		public ByteSection	IE { get; set; } = new( 0xFFFF, val: 0, name: "IE" );
 
