@@ -17,7 +17,7 @@ namespace dbg.ui
 			var reg = m_dbg.CurrentState.reg;
 			var mem = m_dbg.CurrentState.mem;
 
-			ImGui.Text($"Halted: {reg.Halted} Booting: {mem[0xFF50]}" );
+			ImGui.Text($"Halted: {reg.Halted} Booting: {mem[0xFF50] == 0}" );
 
 			ImGui.Text($"A {reg.A:X2}{reg.F:X2} F | Z {reg.F.GetBit(7)} Zero");
 			ImGui.Text($"B {reg.B:X2}{reg.C:X2} C | N {reg.F.GetBit(6)} Sub" );
