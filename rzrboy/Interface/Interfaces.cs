@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace rzr
 {
@@ -62,6 +63,27 @@ namespace rzr
 		public ushort CurrentDot { get; set; }
 	}
 
+	[StructLayout( LayoutKind.Sequential )]
+	public struct Rgba32
+	{
+		public Rgba32(byte r, byte g,byte b,byte a = 0xFF ) { R = r; G = g; B = b; A = a; }
+
+		public byte R;
+		public byte G;
+		public byte B;
+		public byte A;
+	}
+
+	public interface IFramebuffer
+	{
+		public uint Width { get; }
+		public uint Height { get; }
+
+		public bool Dirty { get; set; }
+
+		public Rgba32[] GetPixels();
+	}
+
 	public interface IEmuState
 	{
 		public IRegisters reg { get; }
@@ -78,6 +100,7 @@ namespace rzr
 		public IState bios { get; }
 
 		public ICpuState cpu { get; }
+		public IFramebuffer frame { get; }
 		//public IPpuState ppu { get; }
 	}
 

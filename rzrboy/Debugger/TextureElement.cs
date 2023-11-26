@@ -4,7 +4,7 @@ namespace dbg.ui
 {
 	public class TextureElement : ImGuiScopeBase
 	{
-		private rzr.ImageBuffer m_img;
+		private rzr.IFramebuffer m_img;
 		private Renderer m_rend;
 		private Veldrid.Texture m_tex;
 		private IntPtr m_imguiImg;
@@ -12,7 +12,7 @@ namespace dbg.ui
 		public float Width {get; set;} = 1f;
 		public float Height {get; set;} = 1f;		
 
-		public TextureElement( rzr.ImageBuffer img, Renderer rend, string label ) : base( ImGuiNET.ImGui.BeginChild, ImGuiNET.ImGui.EndChild, label )
+		public TextureElement( rzr.IFramebuffer img, Renderer rend, string label ) : base( ImGuiNET.ImGui.BeginChild, ImGuiNET.ImGui.EndChild, label )
 		{
 			m_img = img;
 			m_rend = rend;

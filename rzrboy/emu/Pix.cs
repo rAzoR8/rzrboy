@@ -2,18 +2,17 @@ using System.Runtime.InteropServices;
 
 namespace rzr
 {
-	[StructLayout(LayoutKind.Sequential)] 
-	public record struct Rgba32(byte R, byte G, byte B, byte A = 0xFF)
+	public static class Color
 	{
 		public static readonly Rgba32 Red = new(0xFF, 0, 0);
-		public static readonly Rgba32 Green = new(0, 0xFF, 0);
-		public static readonly Rgba32 Blue = new(0, 0, 0xFF);
-		public static readonly Rgba32 Black = new(0, 0, 0);
-		public static readonly Rgba32 White = new(0xFF, 0xFF, 0xFF);
+		public static readonly Rgba32 Green = new( 0, 0xFF, 0 );
+		public static readonly Rgba32 Blue = new( 0, 0, 0xFF );
+		public static readonly Rgba32 Black = new( 0, 0, 0 );
+		public static readonly Rgba32 White = new( 0xFF, 0xFF, 0xFF);
 	}
 
 	// https://www.c-sharpcorner.com/article/efficiently-working-with-arrays-and-memory-in-c-sharp-using-spant/
-	public class ImageBuffer
+	public class ImageBuffer : IFramebuffer
 	{
 		public uint Width {get;}
 		public uint Height {get;}
@@ -56,7 +55,7 @@ namespace rzr
 		//A “dot” = one 2^22 Hz (≅ 4.194 MHz) time unit. Dots remain the same regardless of whether the CPU is in double speed, so there are 4 dots per single-speed CPU cycle, and 2 per double-speed CPU cycle.
 		public uint Tick {get;set;} = 0;
 		public PpuMode Mode {get; set;} = PpuMode.VBlank; // TODO: figure out which is the correct starting mode
-		public ImageBuffer FrameBuffer {get;} = new(160, 144, Rgba32.Black);
+		public ImageBuffer FrameBuffer {get;} = new(160, 144, Color.Black);
 
 		public struct Pixel
 		{
@@ -95,7 +94,7 @@ namespace rzr
 		public Pix()
 		{
 			// TODO: remove
-			FrameBuffer[160/2, 144/2] = Rgba32.White;
+			FrameBuffer[160/2, 144/2] = Color.White;
 		}
 	}
 }

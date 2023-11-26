@@ -15,12 +15,12 @@ namespace dbg.ui
 			m_dbg = dbg;
 			m_rend = rend;
 			dbg.StateChanged += OnStateChanged;
-			m_framebuffer = new(dbg.CurrentState.pix.FrameBuffer, rend, "Preview");
+			m_framebuffer = new(dbg.CurrentState.frame, rend, "Preview");
 		}
 
 		private void OnStateChanged(rzr.IEmuState? oldState, rzr.IEmuState newState)
 		{
-			m_framebuffer = new(newState.pix.FrameBuffer, m_rend, "Preview");
+			m_framebuffer = new(newState.frame, m_rend, "Preview");
 		}
 
 		protected override bool BodyFunc()
