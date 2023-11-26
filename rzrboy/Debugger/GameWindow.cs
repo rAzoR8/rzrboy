@@ -18,7 +18,7 @@ namespace dbg.ui
 			m_framebuffer = new(dbg.CurrentState.pix.FrameBuffer, rend, "Preview");
 		}
 
-		private void OnStateChanged(rzr.State? oldState, rzr.State newState)
+		private void OnStateChanged(rzr.IEmuState? oldState, rzr.IEmuState newState)
 		{
 			m_framebuffer = new(newState.pix.FrameBuffer, m_rend, "Preview");
 		}

@@ -20,7 +20,7 @@ namespace dbg.ui
 
 		protected override bool BodyFunc()
 		{
-			rzr.State state = m_dbg.CurrentState;
+			rzr.IEmuState state = m_dbg.CurrentState;
 
 			ImGui.SameLine();
 			if( ImGui.Button("Clear Bank-Cache"))
@@ -47,11 +47,11 @@ namespace dbg.ui
 
 			ushort pc;
 
-			if( !m_bankPCs.TryGetValue( state.mbc.Rom.SelectedBank, out var knownPCs ) ) // we haven't seen this bank yet
+			if( !m_bankPCs.TryGetValue( state.rom.SelectedBank, out var knownPCs ) ) // we haven't seen this bank yet
 			{
 				pc = state.cpu.CurrentInstrPC;
 				knownPCs = new(){state.cpu.CurrentInstrPC};
-				m_bankPCs.Add( state.mbc.Rom.SelectedBank, knownPCs );
+				m_bankPCs.Add( state.rom.SelectedBank, knownPCs );
 			}
 			else
 			{

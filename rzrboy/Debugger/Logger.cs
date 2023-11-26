@@ -72,7 +72,12 @@ namespace dbg.ui
 			if( State?.ReThrow ?? false ) ExceptionDispatchInfo.Capture( e ).Throw(); ;
 		}
 
-		public void Log(string msg, Action? action = null)
+		public void Log( string msg )
+		{
+			Log( msg, action: null );
+		}
+
+		public void Log(string msg, Action? action)
 		{
 			if( m_messages.Count > 0 && m_messages.Last().What == msg )
 			{

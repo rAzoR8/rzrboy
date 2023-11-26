@@ -40,9 +40,9 @@ namespace rzr
 		public IBankedMemory rom => m_mem.mbc.Rom;
 		public IBankedMemory eram => m_mem.mbc.Ram;
 		public IBankedMemory wram => m_mem.wram;
-		public ISection oam => m_mem.oam;
-		public ISection io => m_mem.io;
-		public ISection hram => m_mem.hram;
+		public IState oam => m_mem.oam;
+		public IState io => m_mem.io;
+		public IState hram => m_mem.hram;
 
 		public State(Cpu cpu)
 		{

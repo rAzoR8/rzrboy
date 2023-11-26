@@ -33,7 +33,7 @@ namespace rzr
 
 		public Mbc			mbc { get; set; } = new(); // including eram (external)
 		public Section		vram { get; set; } = new( 0x8000, 0x2000, "vram", SectionAccess.ReadWrite ); // In CGB mode, switchable bank 0/1        
-		public WRam			wram { get; set; } = new(); // C000
+		public WRam			wram { get; set; } = new(); // 0xC000 In CGB mode, switchable banks 1-7
 		public RemapSection echo => new( (address) => (ushort)( address - 0x2000 ), start: 0xE000, len: EchoRamSize, src: wram );
 		public Section		oam { get; set; } = new( 0xFE00, OAMSize, "oam", SectionAccess.ReadWrite );
 		public Section		unused { get; set; } = new( 0xFEA0, UnusedSize, "unused", SectionAccess.None ); // for arbitrary roms it might be necessary to allow ReadWrite access

@@ -29,7 +29,7 @@ namespace rzr
 	/// <summary>
 	/// Section is the implementation of ISection that is backed by memory
 	/// </summary>
-	public class Section : ISection
+	public class Section : ISection, IState
     {
         // ISection
         public string Name { get; }
@@ -41,8 +41,10 @@ namespace rzr
 		public int BufferOffset { get; set; } = 0;
 		public SectionAccess Access { get; } = SectionAccess.ReadWrite;
 
+		// IState
 		public byte[] Save() => Data.Skip(BufferOffset).Take(Length).ToArray();
-		public void Load( byte[] data, int bufferOffset = 0) { Data = data; BufferOffset = bufferOffset; }
+		public void Load( byte[] data, int bufferOffset) { Data = data; BufferOffset = bufferOffset; }
+		public void Load( byte[] data ) => Load( data, bufferOffset: 0 );
 
 		public Section AsReadOnly() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.Read, data: Data, offset: BufferOffset );
 		public Section AsReadWrite() => new Section( start: StartAddr, len: Length, name: Name, access: SectionAccess.ReadWrite, data: Data, offset: BufferOffset );

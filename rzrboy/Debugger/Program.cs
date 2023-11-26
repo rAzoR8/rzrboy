@@ -1,4 +1,5 @@
 using ImGuiNET;
+using rzr;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
@@ -30,7 +31,7 @@ window.Resized += () =>
 dbg.ui.Fonts.Init( );
 renderer.RecreateFontDeviceTexture();
 
-dbg.Debugger debugger = new();
+dbg.Debugger debugger = new( new rzr.EmuPlugin() ); // use built in plugin
 dbg.ui.Gui gui = new(debugger, renderer);
 
 gui.Init();

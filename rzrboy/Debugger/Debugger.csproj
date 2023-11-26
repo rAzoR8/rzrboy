@@ -9,7 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\emu\emu.csproj" />
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
     <PackageReference Include="Veldrid" Version="4.9.0" />
     <!-- <PackageReference Include="Veldrid.ImGui" Version="5.89.2-ga121087cad" /> -->
@@ -30,6 +29,10 @@
 	<EmbeddedResource Include="Fonts/monaspace-neon.ttf" LogicalName="monaspace-neon.ttf" />
 	<EmbeddedResource Include="Fonts/fa-solid-900.ttf" LogicalName="fa-solid-900.ttf" />
 
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EmuPlugin\EmuPlugin.csproj" />
   </ItemGroup>
 
 </Project>

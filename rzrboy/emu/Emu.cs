@@ -71,5 +71,10 @@ namespace rzr
 
             //return cycles;
         }
-    }
+
+		public IEmuState CreateState()
+		{
+			return new State(cpu );
+		}
+	}
 }

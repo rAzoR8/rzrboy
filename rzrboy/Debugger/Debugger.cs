@@ -47,7 +47,7 @@ namespace dbg
 		public void LoadBios( string path )
 		{
 			ui.Logger.LogMsg( $"Loading Bios: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadBootRom( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.bios.Load( task.Result ) );
 		}
 		public void LoadEram( string path )
 		{
@@ -62,27 +62,27 @@ namespace dbg
 		public void LoadWRam( string path )
 		{
 			ui.Logger.LogMsg( $"Loading WRam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.wr( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.wram.Load( task.Result ) );
 		}
 		public void LoadIO( string path )
 		{
 			ui.Logger.LogMsg( $"Loading IO: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadIO( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.io.Load( task.Result ) );
 		}
 		public void LoadHRam( string path )
 		{
 			ui.Logger.LogMsg( $"Loading HRam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadHRam( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.hram.Load( task.Result ) );
 		}
 		public void LoadOam( string path )
 		{
 			ui.Logger.LogMsg( $"Loading Oam: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadOam( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.oam.Load( task.Result ) );
 		}
 		public void LoadRegs( string path )
 		{
 			ui.Logger.LogMsg( $"Loading Regs: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.LoadRegs( task.Result ) );
+			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.reg.Load( task.Result ) );
 		}
 
 		public void LoadState( string stateFolder ) 
@@ -110,14 +110,14 @@ namespace dbg
 		public void SaveState( string stateFolder )
 		{
 			File.WriteAllBytesAsync( Path.Combine( stateFolder, "cpu.bin" ), CurrentState.cpu.Save() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "regs.bin" ), CurrentState.SaveRegs() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "rom.gb" ), CurrentState.SaveRom() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "eram.bin" ), CurrentState.SaveERam() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "wram.bin" ), CurrentState.SaveWRam() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "vram.bin" ), CurrentState.SaveVRam() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "io.bin" ), CurrentState.SaveIO() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "hram.bin" ), CurrentState.SaveHRam() );
-			File.WriteAllBytesAsync( Path.Combine( stateFolder, "oam.bin" ), CurrentState.SaveOam() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "regs.bin" ), CurrentState.reg.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "rom.gb" ), CurrentState.rom.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "eram.bin" ), CurrentState.eram.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "wram.bin" ), CurrentState.wram.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "vram.bin" ), CurrentState.vram.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "io.bin" ), CurrentState.io.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "hram.bin" ), CurrentState.hram.Save() );
+			File.WriteAllBytesAsync( Path.Combine( stateFolder, "oam.bin" ), CurrentState.oam.Save() );
 		}
 	}
 }

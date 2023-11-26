@@ -11,7 +11,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PeliPoika", "PeliPoika\Peli
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Debugger", "Debugger\Debugger.csproj", "{98E1942D-28EC-4A9E-B687-5365F29618FC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Interface", "Interface\Interface.csproj", "{29CC14AF-E641-4777-A6C1-80810AC7BDCF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Interface", "Interface\Interface.csproj", "{29CC14AF-E641-4777-A6C1-80810AC7BDCF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EmuPlugin", "EmuPlugin\EmuPlugin.csproj", "{691AC516-C4CA-4F74-8664-7E4587CCBAA4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +63,14 @@ Global
 		{29CC14AF-E641-4777-A6C1-80810AC7BDCF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{29CC14AF-E641-4777-A6C1-80810AC7BDCF}.Release|x64.ActiveCfg = Release|Any CPU
 		{29CC14AF-E641-4777-A6C1-80810AC7BDCF}.Release|x64.Build.0 = Release|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Debug|x64.Build.0 = Debug|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Release|x64.ActiveCfg = Release|Any CPU
+		{691AC516-C4CA-4F74-8664-7E4587CCBAA4}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

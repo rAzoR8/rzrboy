@@ -167,6 +167,9 @@ namespace rzr
 		{
 			return $"AF={AF:X4}, BC={BC:X4}, DE={DE:X4}, HL={HL:X4}, SP={SP:X4}, PC={PC:X4}, Z={Zero}, N={Sub}, H={HalfCarry}, C={Carry}";
 		}
+
+		public void Load( byte[] data ) => m_reg.Load( data );
+		public byte[] Save() => m_reg.Save();
 	}
 
     public class Reg : IRegisters, IState

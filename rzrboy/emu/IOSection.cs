@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace rzr
 {
-	public class IOSection : ISection
+	public class IOSection : ISection, IState
 	{
 		public ushort StartAddr => 0xFF00;
 		public ushort Length => 128;
@@ -17,7 +17,10 @@ namespace rzr
 				{
 					//case >= 0xFF00 and < 0xFF80: return io;         // FF00-FF80 128B
 					//case >= 0xFF80 and < 0xFFFF: return hram;       // FF80-FFFF 127B
-					case 0xFF70: Data[address - StartAddr] = m_onwer.wram.SwitchableBank = value; break;
+					case 0xFF70:
+						m_onwer.wram.SelectedBank = value;
+						Data[address - StartAddr] = value; //TODO: needs 0->1 adjustment?
+						break;
 					default:
 						Data[address - StartAddr] = value; break;
 				}

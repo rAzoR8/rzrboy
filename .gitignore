@@ -15,3 +15,5 @@ rzrboy/Debugger/bin/*
 rzrboy/Debugger/obj/*
 rzrboy/Interface/bin
 rzrboy/Interface/obj
+rzrboy/EmuPlugin/bin
+rzrboy/EmuPlugin/obj

@@ -16,7 +16,7 @@ namespace rzr
 	{
 		public int Banks { get; }
 		public int SelectedBank { get; set; }
-		IList<byte> this[int bank] { get; }
+		IList<byte> GetBank( int bank );
 	}
 
 	public enum IMEState : byte
@@ -32,7 +32,7 @@ namespace rzr
 		public byte[] Save();
 	}
 
-	public interface IRegisters
+	public interface IRegisters : IState
 	{
 		public byte A { get; set; }
 		public byte F { get; set; }
@@ -67,13 +67,15 @@ namespace rzr
 		public IRegisters reg { get; }
 		public ISection mem { get; } // map complete address space
 		public IBankedMemory vram { get; }
+		public IBankedMemory wram { get; }
 		public IBankedMemory rom { get; }
 		public IBankedMemory eram { get; }
 
-		// Optional ?
-		public ISection oam {  get; }
-		public ISection io { get; }
-		public ISection hram { get; }
+		public IState oam { get; }
+		public IState io { get; }
+		public IState hram { get; }
+
+		public IState bios { get; }
 
 		public ICpuState cpu { get; }
 		//public IPpuState ppu { get; }
