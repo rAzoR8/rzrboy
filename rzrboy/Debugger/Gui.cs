@@ -139,6 +139,8 @@ namespace dbg.ui
 			m_debugger.Restart();
 		}
 
+		private void Clear() => m_debugger.Clear();
+
 		// Update UI state
 		public bool Update()
 		{
@@ -250,7 +252,7 @@ namespace dbg.ui
 					ImGui.EndMenu();
 				}
 
-				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ArrowRightToBracket ) )
+				if( ImGui.BeginMenu( IconFonts.FontAwesome6.ForwardStep ) )
 				{
 					if( ImGui.IsItemClicked() )
 						Step();
@@ -271,6 +273,14 @@ namespace dbg.ui
 				}
 
 				if( ImGui.IsKeyPressed( ImGuiKey.F12 ) ) Restart();
+
+				if( ImGui.BeginMenu( IconFonts.FontAwesome6.TrashCanArrowUp ) )
+				{
+					if( ImGui.IsItemClicked() )
+						Clear();
+
+					ImGui.EndMenu();
+				}
 
 				ImGui.EndMainMenuBar();
 			}

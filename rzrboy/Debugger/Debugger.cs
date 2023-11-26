@@ -9,11 +9,13 @@ namespace dbg
 		// TODO: make private
 		public rzr.IEmuState CurrentState { get; private set; }
 		private rzr.IEmulator m_emu;
+		rzr.IEmuPlugin m_provider;
 
 		public Debugger(rzr.IEmuPlugin provider)
 		{
+			m_provider = provider;
 			m_emu = provider.CreateEmulator( ui.Logger.Instance );
-			CurrentState = m_emu.CreateState();//new rzr.State( m_emu.cpu );
+			CurrentState = m_emu.CreateState();
 			StateChanged?.Invoke(null, CurrentState);
 		}
 
@@ -32,6 +34,14 @@ namespace dbg
 			//CurrentState.LoadBootRom(boot);
 
 			StateChanged?.Invoke(oldState, CurrentState);
+		}
+
+		public void Clear()
+		{
+			var oldState = CurrentState;
+			m_emu = m_provider.CreateEmulator( ui.Logger.Instance );
+			CurrentState = m_emu.CreateState();
+			StateChanged?.Invoke( oldState, CurrentState );
 		}
 
 		public void LoadCpuState( string path )
