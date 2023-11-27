@@ -11,6 +11,8 @@ namespace dbg.ui
 		public string StateLoadPickerDir { get; set; } = Environment.CurrentDirectory;
 		public string StateSavePickerDir { get; set; } = Environment.CurrentDirectory;
 
+		public List<string> RecentProjects {get; set;} = new();
+
 		public bool LoadStateOnStart { get; set; } = false;
 		public bool SaveStateOnExit { get; set; } = false;
 		public float UIScale { get; set; } = 0.5f;
@@ -37,6 +39,7 @@ namespace dbg.ui
 		private MemoryWindow m_memory;
 		private GameWindow m_game;
 		private SettingsWindow m_settings;
+		private ProjectWindow m_project;
 
 		private FilePicker m_romLoadPicker;
 		private FilePicker m_biosLoadPicker;
@@ -64,6 +67,7 @@ namespace dbg.ui
 			m_assembly = new AssemblyWindow( m_debugger );
 			m_memory = new MemoryWindow();
 			m_game = new GameWindow(m_debugger, m_renderer);
+			m_project = new ProjectWindow(m_debugger);
 
 			// todo: load start folders from file
 			m_romLoadPicker = new( onSelect: m_debugger.LoadRom, startFolder: m_guiState.RomLoadPickerDir, allowedExtensions: ".gb|.gbc");
@@ -173,6 +177,7 @@ namespace dbg.ui
 			m_memory.Update();
 			m_game.Update();
 			m_logger.Update();
+			m_project.Update();
 
 			if(m_showMetrics) ImGui.ShowMetricsWindow();
 			if(m_showStyleEditor) ImGui.ShowStyleEditor();

@@ -9,11 +9,11 @@ namespace dbg
 		// TODO: make private
 		public rzr.IEmuState CurrentState { get; private set; }
 		private rzr.IEmulator m_emu;
-		rzr.IEmuPlugin m_provider;
+		public rzr.IEmuPlugin Provider {get;}
 
 		public Debugger(rzr.IEmuPlugin provider)
 		{
-			m_provider = provider;
+			Provider = provider;
 			m_emu = provider.CreateEmulator( ui.Logger.Instance );
 			CurrentState = m_emu.CreateState();
 			StateChanged?.Invoke(null, CurrentState);
@@ -39,7 +39,7 @@ namespace dbg
 		public void Clear()
 		{
 			var oldState = CurrentState;
-			m_emu = m_provider.CreateEmulator( ui.Logger.Instance );
+			m_emu = Provider.CreateEmulator( ui.Logger.Instance );
 			CurrentState = m_emu.CreateState();
 			StateChanged?.Invoke( oldState, CurrentState );
 		}
