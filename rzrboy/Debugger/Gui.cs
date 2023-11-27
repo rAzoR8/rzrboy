@@ -75,7 +75,7 @@ namespace dbg.ui
 		public void Init()
 		{
 			//Fonts.MonaspaceNeon.FontSize *= 2f;
-			Logger.LogMsg("Welcome to rzrBoy Studio");
+			Logger.LogMsg("Welcome to rzrBoy Studio 1.0 by Fabian Wahlster");
 
 			if( m_guiState.LoadStateOnStart )
 			{

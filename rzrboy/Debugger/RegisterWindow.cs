@@ -31,7 +31,7 @@ namespace dbg.ui
 
 			for( ushort i = 0xFF00; i < 0xFF00 + 0x80; )
 			{
-				ImGui.Text( $"{i:X4}: {mem[i++]} | {i:X4}: {mem[i++]}" );
+				ImGui.Text( $"{i:X4}: {mem[i++]:X2} | {i:X4}: {mem[i++]:X2}" );
 			}
 
 			return true;

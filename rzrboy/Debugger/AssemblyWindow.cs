@@ -27,7 +27,7 @@ namespace dbg.ui
 				m_bankPCs.Clear();
 
 			ImGui.SameLine();
-			if( ImGui.Button( $"Goto Current 0x{state.cpu.CurrentInstrPC}" ) )
+			if( ImGui.Button( $"Goto Current 0x{state.cpu.CurrentInstrPC:X4}" ) )
 				Offset = state.cpu.CurrentInstrPC;
 
 			ImGui.SameLine();
