@@ -52,7 +52,9 @@ namespace dbg
 		public void LoadRom( string path )
 		{
 			ui.Logger.LogMsg( $"Loading ROM: {Path.GetFileName( path )}" );
-			File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.rom.Load( task.Result ) );
+			// TODO: make CurrentState.rom.Load() handle switching mbc type!
+			File.ReadAllBytesAsync( path ).ContinueWith( task => (CurrentState as rzr.State).LoadRom( task.Result ) );
+			//File.ReadAllBytesAsync( path ).ContinueWith( task => CurrentState.rom.Load( task.Result ) );
 		}
 		public void LoadBios( string path )
 		{

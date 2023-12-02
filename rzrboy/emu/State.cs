@@ -68,21 +68,5 @@ namespace rzr
 			else
 				m_mem.mbc = Cartridge.CreateMbc( type, cart );			
 		}
-		public byte[] SaveRom() => mbc.Rom.Save();
-
-		public void LoadRegs( byte[] regs ) => m_reg.Load( regs );
-		public byte[] SaveRegs() => m_reg.Save();
-		public void LoadERam( byte[] eram ) => mbc.LoadRam( eram );
-		public byte[] SaveERam() => mbc.Ram.Save();
-		public void LoadWRam( byte[] wram ) => m_mem.wram.Load( wram );
-		public byte[] SaveWRam() => m_mem.wram.Save();
-		public void LoadVRam( byte[] vram ) => m_mem.vram.Load( vram ); // TODO: select bank
-		public byte[] SaveVRam() => m_mem.vram.Save();
-		public void LoadIO( byte[] io ) { m_mem.io.Load(io); }
-		public byte[] SaveIO() => m_mem.io.Save();
-		public void LoadHRam( byte[] hram ) => m_mem.hram.Load( hram );
-		public byte[] SaveHRam() => m_mem.hram.Save();
-		public void LoadOam( byte[] oam ) => m_mem.oam.Load( oam );
-		public byte[] SaveOam() => m_mem.oam.Save();
 	}
 }

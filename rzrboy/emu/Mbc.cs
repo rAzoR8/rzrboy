@@ -55,12 +55,6 @@ namespace rzr
             }
         }
 
-        public void LoadRam( byte[] ram )
-        {
-            Debug.Assert( ram.Length == RamBankSize * Header.RamBanks );
-			Ram.Load( ram );
-        }
-
         // Load rom of identical MBC type
         public void LoadRom( byte[] rom )
         {
