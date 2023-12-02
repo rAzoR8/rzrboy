@@ -93,11 +93,11 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    return Rom.GetBank(Rom.SelectedBank)[address - StartAddr];
+                    return Rom[address];
                 }
                 else if( RamEnabled )
                 {
-					return Ram.GetBank(Ram.SelectedBank)[address - StartAddr];
+					return Ram[address];
 				}
 				return 0xFF;
             }
@@ -105,26 +105,28 @@ namespace rzr
             {
                 if( address < 0x8000 ) // rom
                 {
-                    var bankAdr = ( Rom.SelectedBank * Header.RomBanks ) + address - StartAddr;
-                    throw new SectionWriteAccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+					var bank = address < RomBankSize ? 0 : Rom.SelectedBank;
+					var bankAdr = (bank * RomBankSize) + address - StartAddr;
+					throw new SectionWriteAccessViolationException( $"Trying to write to ROM at 0x{address:X4} BankAddr: 0x{bankAdr:X8}" );
                 }
                 else if( RamEnabled )
                 {
-                    Ram.GetBank( Ram.SelectedBank )[address - StartAddr] = value;
+                    Ram[address] = value;
                 }
                 else
                 {
-                    var bankAdr = ( Ram.SelectedBank * Header.RamBanks ) + address - StartAddr;
-                    throw new SectionWriteAccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X4}" );
+					var bank = address < RamBankSize ? 0 : Ram.SelectedBank;
+					var bankAdr = (bank * RamBankSize) + address - StartAddr;
+                    throw new SectionWriteAccessViolationException( $"Trying to write to disabled RAM at 0x{address:X4} BankAddr: 0x{bankAdr:X8}" );
                 }
             }
         }
 
         public bool FinalizeRom() 
         {
-			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum( Rom.GetBank( 0 ) );
-            Header.RomChecksum = HeaderView.ComputeRomChecksum( Rom.Save() );
-            return Header.Valid();
+			Header.HeaderChecksum = HeaderView.ComputeHeaderChecksum(Rom.GetBank(0));
+			Header.RomChecksum = HeaderView.ComputeRomChecksum(Rom.Save());
+			return Header.Valid();
         }
     }
 

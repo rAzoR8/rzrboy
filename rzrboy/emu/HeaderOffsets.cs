@@ -234,6 +234,16 @@ namespace rzr
 			}
 		}
 
+		/// <summary>
+		/// uint8_t checksum = 0;
+		/// for (uint16_t address = 0x0134; address <= 0x014C; address++) {
+		///     checksum = checksum - rom[address] - 1;
+		/// }
+		/// </summary>
+		/// <param name="header"></param>
+		/// <param name="start"></param>
+		/// <returns></returns>
+
 		public static byte ComputeHeaderChecksum( IEnumerable<byte> header, int start = (int)HeaderOffsets.TitleStart )
 		{
 			int end = start + 25; // 0x19 length of header to validate
@@ -253,7 +263,7 @@ namespace rzr
 		/// </summary>
 		/// <param name="banks"></param>
 		/// <returns>Checksum lsb first, needs to be byte swapped!</returns>
-		public static ushort ComputeRomChecksum( IEnumerable<byte> banks )
+		public static ushort ComputeRomChecksum( IEnumerable<byte> banks, bool subtractRomCheck = true )
 		{
 			ushort checksum = 0;
 
@@ -262,8 +272,11 @@ namespace rzr
 				checksum += b;
 			}
 
-			checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumStart );
-			checksum -= banks.ElementAt( (int)HeaderOffsets.RomChecksumEnd );
+			if (subtractRomCheck)
+			{
+				checksum -= banks.ElementAt((int)HeaderOffsets.RomChecksumStart);
+				checksum -= banks.ElementAt((int)HeaderOffsets.RomChecksumEnd);
+			}
 
 			return checksum;
 		}
