@@ -1,4 +1,3 @@
-﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -232,6 +231,8 @@ namespace rzr
 			{
 				m_data[(int)start + i] = (byte)str[i];
 			}
+			if(strLen<(int)len)
+				m_data[(int)start + strLen] = 0;
 		}
 
 		/// <summary>
