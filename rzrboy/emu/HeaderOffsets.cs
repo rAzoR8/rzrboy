@@ -80,9 +80,10 @@ namespace rzr
 
         public enum CGBFlag : byte
         {
-            PGB = 0b0100_1001, // Values with bit 7 and either bit 2 or 3 set will switch the Game Boy into a special non-CGB-mode called “PGB mode”.
-		    CGBMonochrome = 0x80,
-            CGBOnly = 0xC0
+			CGBMonochrome = 0x80, // 0b1000_0000
+            CGBOnly = 0xC0, // 0b1100_0000
+            PGB1 = 0b1000_1000, // Values with bit 7 and either bit 2 or 3 set will switch the Game Boy into a special non-CGB-mode called “PGB mode”.
+            PGB2 = 0b1000_0100,
         }
 
 		public byte CGBSupport

@@ -14,6 +14,11 @@ namespace dbg.ui
 		{
 			return Enum.GetValues<T>().Select( e => new EnumSelectable<T> { Value = e } );
 		}
+
+		public static IEnumerable<EnumSelectable<T>> GetSorted()
+		{
+			return Enum.GetValues<T>().OrderBy(e => e.ToString()).Select( e => new EnumSelectable<T> { Value = e } );
+		}
 	}
 
 	public class ComboBox : ImGuiScopeBase
