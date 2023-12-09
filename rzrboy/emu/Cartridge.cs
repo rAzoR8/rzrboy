@@ -96,18 +96,6 @@ namespace rzr
 
 		public static Mbc CreateMbc( byte[] cart ) => CreateMbc( (CartridgeType)cart[(ushort)HeaderOffsets.Type], cart );
 		
-		public static void SaveRom( this Mbc mbc, string path ) 
-		{
-			mbc.FinalizeRom();
-
-			System.IO.File.WriteAllBytes( path, mbc.Rom.Save() );
-		}
-
-		public static void SaveRam( this Mbc mbc, string path )
-		{
-			System.IO.File.WriteAllBytes( path, mbc.Ram.Save() );
-		}
-
 		public static Mbc CreateMbc( CartridgeType type, byte[] cart )
 		{
 			Mbc? mbc = null;

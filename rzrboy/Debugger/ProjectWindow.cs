@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using ImGuiNET;
 using rzr;
 
@@ -7,6 +6,7 @@ namespace dbg.ui
 	public class ProjectWindow : Window
 	{
 		private Debugger m_dbg;
+		private static readonly EnumSelectable<CartridgeType>[] EnumSelectables = EnumSelectable<CartridgeType>.Get().ToArray();
 		public string Folder {get; private set;} = "Project";
 
 		public ProjectWindow(Debugger dbg) : base("Project")
@@ -65,6 +65,26 @@ namespace dbg.ui
 			{
 				//header.RamBanks = ramBanks;
 				// TODO: resize rams
+			}
+
+			CartridgeType type = header.Type;
+			ComboBox cartType = new( "MBC Type", EnumSelectables );
+
+			cartType.Selected = EnumSelectables.Where( e => e.Value == type ).First();
+
+			if( cartType.Update() ) 
+			{
+				if( cartType.Selected is EnumSelectable<CartridgeType> s && s.Value != type ) 
+				{
+					// TODO: figure out why this does not write through to the rom
+					header.Type = s.Value;
+
+					// TODO: abstract! own window???
+					if( m_dbg.CurrentState is rzr.State state ) 
+					{
+						state.LoadRom( state.mbc.Rom.Save() );
+					}
+				}
 			}
 
 			header.HeaderChecksum = HeaderView.ComputeHeaderChecksum(bank0);
