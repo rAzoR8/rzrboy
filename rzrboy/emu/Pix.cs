@@ -53,8 +53,8 @@ namespace rzr
 
 		// TODO: count in dots?
 		//A “dot” = one 2^22 Hz (≅ 4.194 MHz) time unit. Dots remain the same regardless of whether the CPU is in double speed, so there are 4 dots per single-speed CPU cycle, and 2 per double-speed CPU cycle.
-		public uint Tick {get;set;} = 0;
-		public PpuMode Mode {get; set;} = PpuMode.VBlank; // TODO: figure out which is the correct starting mode
+		public uint Dot {get;set;} = 0;
+		public PpuMode Mode {get; set;} = PpuMode.OAMSearch;
 		public ImageBuffer FrameBuffer {get;} = new(160, 144, Color.Black);
 
 		public struct Pixel

@@ -1,3 +1,5 @@
+using static rzr.LCDC;
+
 namespace rzr
 {
 	public class LCDC
@@ -10,20 +12,20 @@ namespace rzr
 		// 2 OBJ size: 0 = 8×8; 1 = 8×16
 		// 1 OBJ enable: 0 = Off; 1 = On
 		// 0 BG & Window enable / priority [Different meaning in CGB Mode]: 0 = Off; 1 = On
-		public enum TileDataArea : byte
+		public enum TileDataArea : ushort
 		{
-			Adr8800 = 0, // 8800–97FF
-			Adr8000 = 1 // 8000–8FFF
+			Adr8800 = 0x8800, // 8800–97FF
+			Adr8000 = 0x8000 // 8000–8FFF
 		}
-		public enum TileMapArea : byte
+		public enum TileMapArea : ushort
 		{
-			Adr9800 = 0, // 9800–9BFF
-			Adr9C00 = 1 // 9C00–9FFF
+			Adr9800 = 0x9800, // 9800–9BFF
+			Adr9C00 = 0x9C00 // 9C00–9FFF
 		}
 		public enum ObjectSize : byte
 		{
-			Tile8x8 = 0,
-			Tile8x16 = 1
+			Tile8x8 = 16, // 16 byte
+			Tile8x16 = 32 // 32 byte
 		}
 
 		public const TileDataArea Adr8000 = TileDataArea.Adr8000;
@@ -43,5 +45,11 @@ namespace rzr
 		public ObjectSize ObjSize { get => Value.IsBitSet(2) ? ObjectSize.Tile8x16 : ObjectSize.Tile8x8; set => Binutil.SetBit(ref Value, 2, value == ObjectSize.Tile8x16); }
 		public bool ObjOn { get => Value.IsBitSet(1); set => Binutil.SetBit(ref Value, 1, value); }
 		public bool BGWindow { get => Value.IsBitSet(0); set => Binutil.SetBit(ref Value, 0, value); }
+	}
+
+	public static class LCDCExtensions
+	{
+		public static ushort Adr( this TileDataArea area ) => (ushort) area;
+		public static ushort Adr( this TileMapArea area ) => (ushort) area;
 	}
 }

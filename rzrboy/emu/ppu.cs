@@ -50,10 +50,31 @@ namespace rzr
         {
         }
 
-		// TODO: make static
-        public void Tick( IEmuState state )
+		public const uint FrameDots = 70224;
+
+		public void Tick( IEmuState state )
 		{
-			//state.pix.Tick++;
+			if( state is State s )
+				TickInternal( s );			
         }
-    }
+
+		private void TickInternal( State state ) 
+		{
+			Pix pix = state.pix;
+			VRam vram = state.m_mem.vram;
+			Section oam = state.m_mem.oam;
+			IOSection io = state.m_mem.io;
+
+			if( pix.Dot >= FrameDots ) // done with frame, start anew
+				pix.Dot -= FrameDots;
+
+			LCDC lcdc = new() { Value = io.LcdControl };
+			if( lcdc.LCDOn )
+			{
+			
+			}
+
+			pix.Dot++;
+		}
+	}
 }

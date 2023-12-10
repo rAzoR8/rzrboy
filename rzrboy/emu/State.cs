@@ -25,9 +25,9 @@ namespace rzr
 
 	public class State : IEmuState
 	{
-		private Mem m_mem = new();
-		private Reg m_reg = new();
-		private Cpu m_cpu;
+		public Mem m_mem = new();
+		public Reg m_reg = new();
+		public Cpu m_cpu;
 
 		public ISection mem => m_mem;
 		public IRegisters reg => m_reg;
