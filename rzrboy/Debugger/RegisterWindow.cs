@@ -29,7 +29,7 @@ namespace dbg.ui
 
 			ImGui.Separator();
 
-			for( ushort i = 0xFF00; i < 0xFF00 + 0x7F; )
+			for( ushort i = 0xFF00; i < 0xFF00 + 0x7F-1; )
 			{
 				ImGui.Text( $"{i:X4}: {mem[i++]:X2} | {i:X4}: {mem[i++]:X2}" );
 			}
