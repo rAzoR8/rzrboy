@@ -86,7 +86,7 @@
 		{
 			const byte rAUDENA = 0x26;
 			const byte SCY = 0x42;
-			const byte SCX = 0x43;
+			//const byte SCX = 0x43;
 			const byte BGP = 0x47;
 			// find a tile that is clear / 0 and fint the index to it
 			const byte TileMapClearId = 0xff;
@@ -137,7 +137,6 @@
 					if(tileOffset > 0xFFFF)
 					{
 						throw new System.IndexOutOfRangeException($"Not enough space tile {name} in this bank");
-						break;
 					}
 				}
 			}

@@ -43,18 +43,10 @@ namespace rzr
 	/// 
 	public class Pix
 	{
-		public enum PpuMode : byte
-		{
-			HBlank = 0,
-			VBlank = 1,
-			OAMSearch = 2,
-			Drawing = 3
-		}
-
 		// TODO: count in dots?
 		//A “dot” = one 2^22 Hz (≅ 4.194 MHz) time unit. Dots remain the same regardless of whether the CPU is in double speed, so there are 4 dots per single-speed CPU cycle, and 2 per double-speed CPU cycle.
 		public uint Dot {get;set;} = 0;
-		public PpuMode Mode {get; set;} = PpuMode.OAMSearch;
+		public PPUMode Mode {get; set;} = PPUMode.OAMSearch;
 		public ImageBuffer FrameBuffer {get;} = new(160, 144, Color.Black);
 
 		public struct Pixel

@@ -1,5 +1,3 @@
-using static rzr.LCDC;
-
 namespace rzr
 {
 	public class LCDC
@@ -49,7 +47,7 @@ namespace rzr
 
 	public static class LCDCExtensions
 	{
-		public static ushort Adr( this TileDataArea area ) => (ushort) area;
-		public static ushort Adr( this TileMapArea area ) => (ushort) area;
+		public static ushort Adr( this LCDC.TileDataArea area ) => (ushort) area;
+		public static ushort Adr( this LCDC.TileMapArea area ) => (ushort) area;
 	}
 }
