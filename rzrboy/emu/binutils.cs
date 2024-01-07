@@ -9,13 +9,22 @@ namespace rzr
         public static byte GetLsb( this ushort val ) => (byte)( val & 0xff );
         public static byte GetMsb( this ushort val ) => (byte)( ( val & 0xff00 ) >> 8 );
 
-        public static ushort SetLsb( ushort target, byte lsb ) { return (ushort)( ( target & 0xFF00 ) | lsb ); }
+        public static ushort SetLsb( this ushort target, byte lsb ) { return (ushort)( ( target & 0xFF00 ) | lsb ); }
         public static void SetLsb( ref ushort target, byte lsb ) { target = (ushort)( ( target & 0xFF00 ) | lsb ); }
-        public static ushort SetMsb( ushort target, byte msb ) { return (ushort)( ( target & 0x00FF ) | ( msb << 8 ) ); }
+        public static ushort SetMsb( this ushort target, byte msb ) { return (ushort)( ( target & 0x00FF ) | ( msb << 8 ) ); }
         public static void SetMsb( ref ushort target, byte msb ) { target = (ushort)( ( target & 0x00FF ) | ( msb << 8 ) ); }
 
         public static bool IsBitSet( this byte value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
 		public static byte GetBit( this byte value, byte bit ) { return (byte)(( value & ( 1 << bit ) ) >> bit); }
+
+		public static byte SetBit( this byte target, byte index, bool value )
+		{
+			if( value )
+				target |= (byte)( 1 << index );
+			else
+				target &= (byte)~( 1 << index );
+			return target;
+		}
 
 		public static byte SetBit( ref byte target, byte index, bool value )
         {
@@ -25,15 +34,6 @@ namespace rzr
                 target &= (byte)~( 1 << index );
             return target;
         }
-
-		public static byte SetBit( byte target, byte index, bool value )
-		{
-			if( value )
-				target |= (byte)( 1 << index );
-			else
-				target &= (byte)~( 1 << index );
-			return target;
-		}
 
 		public static bool IsBitSet( this ushort value, byte bit ) { return ( value & ( 1 << bit ) ) != 0; }
 		public static ushort GetBit( this ushort value, byte bit ) { return (ushort)( ( value & ( 1 << bit ) ) >> bit ); }
@@ -47,7 +47,7 @@ namespace rzr
             return target;
         }
 
-		public static ushort SetBit( ushort target, byte index, bool value )
+		public static ushort SetBit( this ushort target, byte index, bool value )
 		{
 			if( value )
 				target |= (byte)( 1 << index );

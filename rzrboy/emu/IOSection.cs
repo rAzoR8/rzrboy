@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace rzr
 {
@@ -86,8 +87,10 @@ namespace rzr
 		public byte STAT { get => this[0xFF41]; set => this[0xFF41] = value; }
 		public byte SCY { get => this[0xFF42]; set => this[0xFF21] = value; } // Viewport Y pos
 		public byte SCX { get => this[0xFF43]; set => this[0xFF43] = value; } // Viewport X pos
+		// LY indicates the current horizontal line, which might be about to be drawn, being drawn, or just been drawn.LY can hold any value from 0 to 153, with values from 144 to 153 indicating the VBlank period.
 		public byte LY { get => this[0xFF44]; set => this[0xFF44] = value; } // LCD Y coord
-		public byte LYC { get => this[0xFF45]; set => this[0xFF45] = value; } // LY compare
+		// The Game Boy constantly compares the value of the LYC and LY registers. When both values are identical, the “LYC=LY” flag in the STAT register is set, and (if enabled) a STAT interrupt is requested.
+		public byte LYC { get => this[0xFF45]; set => this[0xFF45] = value; } // LY compare, to be set by user to request STAT interrupt (if enabnled)
 		public byte DMA { get => this[0xFF46]; set => this[0xFF46] = value; } // OAM DMA src addr & start
 		public byte BGP { get => this[0xFF47]; set => this[0xFF47] = value; } // BG palette data
 		public byte OBP0 { get => this[0xFF48]; set => this[0xFF48] = value; }
