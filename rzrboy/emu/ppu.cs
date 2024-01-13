@@ -60,6 +60,15 @@ namespace rzr
 
 		private void TickInternal( State state ) 
 		{
+			// Single Speed: 4 Dots = 1 M-Cycle
+			// Double Speed: 2 Dots = 1 M-Cycle
+
+			// 456		Dots per Scanline
+			// 80		Dots OAM search (Mode 2)
+			// 172-289	Dots Drawing (Mode 3)
+			// 87–204	Dots HBlank (Mode 0) = (376 - Drawing, Mode 3)
+			// 10x456	Dots VBlank (Mode 1)
+
 			Pix pix = state.pix;
 			VRam vram = state.m_mem.vram;
 			Section oam = state.m_mem.oam;
@@ -69,9 +78,23 @@ namespace rzr
 				pix.Dot -= FrameDots;
 
 			LCDC lcdc = new() { Value = io.LcdControl };
+			STAT stat = new() { Value = io.LcdStatus };
+
+			ushort drawing = 0;
+
+			// TODO: interrupts
 			if( lcdc.LCDOn )
 			{
-			
+				PPUMode mode = stat.Mode;
+				byte LY = io.LY;
+				// [0..456] dot in the current line
+				var dot = pix.Dot - LY * 456;
+				if( LY > 143 ) // VBlank LY 144->153
+					mode = PPUMode.VBlank;
+				else if( dot < 80 ) // OAM Search -> drawing
+					mode = PPUMode.Drawing;
+				else if( dot - 80 - drawing > 0 )
+					mode = PPUMode.HBlank;
 			}
 
 			pix.Dot++;
