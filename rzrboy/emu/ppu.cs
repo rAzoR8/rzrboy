@@ -95,7 +95,12 @@ namespace rzr
 					mode = PPUMode.Drawing;
 				else if( dot - 80 - drawing > 0 )
 					mode = PPUMode.HBlank;
+
+				stat.Mode = mode;
 			}
+
+			io.LcdStatus = stat.Value;
+			io.LcdControl = lcdc.Value;
 
 			pix.Dot++;
 		}
