@@ -52,17 +52,25 @@ namespace rzr
 
 		public const uint FrameDots = 70224;
 
+		// Tick is called once per M-Cycle
 		public void Tick( IEmuState state )
 		{
-			if( state is State s )
-				TickInternal( s );			
-        }
+			// Single Speed: 4 Dots per M-Cycle
+			// Double Speed: 2 Dots per M-Cycle
 
+			var dotsPerCycle = 4; // TODO: switch on double speed
+			if( state is State s )
+			{
+				for( int i = 0; i < dotsPerCycle; ++i )
+				{
+					TickInternal( s );
+				}
+			}
+		}
+
+		// Called per Dot
 		private void TickInternal( State state ) 
 		{
-			// Single Speed: 4 Dots = 1 M-Cycle
-			// Double Speed: 2 Dots = 1 M-Cycle
-
 			// 456		Dots per Scanline
 			// 80		Dots OAM search (Mode 2)
 			// 172-289	Dots Drawing (Mode 3)
@@ -74,21 +82,18 @@ namespace rzr
 			Section oam = state.m_mem.oam;
 			IOSection io = state.m_mem.io;
 
-			if( pix.Dot >= FrameDots ) // done with frame, start anew
-				pix.Dot -= FrameDots;
-
 			LCDC lcdc = new() { Value = io.LcdControl };
 			STAT stat = new() { Value = io.LcdStatus };
 
-			ushort drawing = 0;
+			// number of dots (~pixels) spent in drawing mode 3
+			uint drawing = 0;
 
-			// TODO: interrupts
 			if( lcdc.LCDOn )
 			{
 				PPUMode mode = stat.Mode;
 				byte LY = io.LY;
-				// [0..456] dot in the current line
-				var dot = pix.Dot - LY * 456;
+				uint dot = pix.Dot; // [0..456] dot in the current line
+
 				if( LY > 143 ) // VBlank LY 144->153
 					mode = PPUMode.VBlank;
 				else if( dot < 80 ) // OAM Search -> drawing
@@ -96,13 +101,35 @@ namespace rzr
 				else if( dot - 80 - drawing > 0 )
 					mode = PPUMode.HBlank;
 
+				if( mode == PPUMode.Drawing )
+				{
+					// TODO: drawing
+					drawing++;
+				}
+				else if( mode == PPUMode.OAMSearch ) 
+				{
+					// TODO: search
+				}
+
+				// prepare for next tick
+				if(++dot == 456) // end of scanline
+				{
+					dot = 0;
+					if( ++LY == 154 )
+						LY = 0; // next frame
+				}
+
+				io.LY = LY;
+				pix.Dot = dot;
 				stat.Mode = mode;
+				stat.LYCisLY = io.LYC == LY;
+
+				// TODO: interrupts
+
 			}
 
 			io.LcdStatus = stat.Value;
 			io.LcdControl = lcdc.Value;
-
-			pix.Dot++;
 		}
 	}
 }
